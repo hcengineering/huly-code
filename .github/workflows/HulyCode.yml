@@ -1,9 +1,9 @@
 name: Huly Code
 on:
-  workflow_dispatch
-  #schedule:
-  #  # daily at 4AM for the master branch
-  #  - cron: '0 4 * * *'
+  workflow_dispatch:
+  schedule:
+    # daily at 4AM for the master branch
+    - cron: '0 4 * * *'
   #push:
   #  # for each release
   #  tags:

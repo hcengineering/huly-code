@@ -8,7 +8,6 @@
     <inspection_tool class="2b82dee6-0e1c-36ce-846f-749c578bd315" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="19b1f229-5172-3fef-9e68-ab45f499fec9" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="807b1a20-1c6f-3175-b372-e193a137c304" enabled="true" level="TYPO" enabled_by_default="true" editorAttributes="TYPO" />
-    <inspection_tool class="722cb6a3-860d-3bb9-bfa3-d5ef834939d5" enabled="true" level="Strong Warning" enabled_by_default="true" editorAttributes="Strong Warning" />
     <inspection_tool class="81c39993-de39-3a30-9c64-ab89d04bb566" enabled="true" level="TEXT ATTRIBUTES" enabled_by_default="false" editorAttributes="INFO_ATTRIBUTES">
       <scope name="Production" level="TEXT ATTRIBUTES" enabled="true" editorAttributes="INFO_ATTRIBUTES" />
     </inspection_tool>
@@ -193,7 +192,6 @@
     <inspection_tool class="CloneDeclaresCloneNotSupported" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="CodeBlock2Expr" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="CommaExpressionJS" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="ComparisonOfShortAndChar" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ConditionalBreakInInfiniteLoop" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="noConversionToDoWhile" value="true" />
     </inspection_tool>
@@ -220,6 +218,10 @@
       <scope name="Tests" level="WARNING" enabled="false" />
     </inspection_tool>
     <inspection_tool class="ConstantIfStatementJS" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="ConstantValue" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="WARNING" enabled="true" />
+      <scope name="runtime.classes" level="WARNING" enabled="false" />
+    </inspection_tool>
     <inspection_tool class="ConstraintValidatorCreator" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ContinueOrBreakFromFinallyBlock" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ContinueOrBreakFromFinallyBlockJS" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -252,6 +254,19 @@
           </RegExpInspectionConfiguration>
         </list>
       </option>
+    </inspection_tool>
+    <inspection_tool class="DataFlowIssue" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="WARNING" enabled="true">
+        <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="false" />
+        <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="false" />
+        <option name="REPORT_UNSOUND_WARNINGS" value="false" />
+      </scope>
+      <scope name="runtime.classes" level="WARNING" enabled="false">
+        <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="false" />
+        <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="false" />
+      </scope>
+      <option name="SUGGEST_NULLABLE_ANNOTATIONS" value="false" />
+      <option name="DONT_REPORT_TRUE_ASSERT_STATEMENTS" value="false" />
     </inspection_tool>
     <inspection_tool class="DeclareParentsInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="DeprecatedGemInspection" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -308,7 +323,6 @@
     <inspection_tool class="GlassFish" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="GrUnresolvedAccess" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="GtkPreferredJComboBoxRenderer" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="Guava" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HardcodedActionUrl" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HardwiredNamespacePrefix" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="IOResource" enabled="true" level="WARNING" enabled_by_default="true">
@@ -342,9 +356,6 @@
     <inspection_tool class="InvalidImplementedBy" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InvalidProvidedBy" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InvalidRequestParameters" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="JavadocDeclaration" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="IGNORE_DEPRECATED_ELEMENTS" value="true" />
-    </inspection_tool>
     <inspection_tool class="JBoss" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="JSDeprecatedSymbols" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="JSDuplicatedDeclaration" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -517,6 +528,9 @@
     <inspection_tool class="JavaFxUnresolvedFxIdReference" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JavaFxUnresolvedStyleClassReference" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JavaFxUnusedImports" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="JavadocDeclaration" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="IGNORE_DEPRECATED_ELEMENTS" value="true" />
+    </inspection_tool>
     <inspection_tool class="JavadocReference" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Tests" level="ERROR" enabled="false" />
       <scope name="idea openapi" level="WARNING" enabled="true">
@@ -553,6 +567,139 @@
     <inspection_tool class="MisorderedAssertEqualsParameters" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MissingDeprecatedAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="warnOnMissingJavadoc" value="true" />
+    </inspection_tool>
+    <inspection_tool class="MissingJavadoc" enabled="true" level="WARNING" enabled_by_default="false">
+      <scope name="Tests" level="WARNING" enabled="false">
+        <option name="PACKAGE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="MODULE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="TOP_LEVEL_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="INNER_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="METHOD_SETTINGS">
+          <Options>
+            <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="FIELD_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+      </scope>
+      <scope name="idea openapi" level="WARNING" enabled="true">
+        <option name="IGNORE_DEPRECATED_ELEMENTS" value="true" />
+        <option name="PACKAGE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="MODULE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="TOP_LEVEL_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="INNER_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="METHOD_SETTINGS">
+          <Options>
+            <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="FIELD_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+      </scope>
+      <scope name="runtime.classes" level="WARNING" enabled="true">
+        <option name="PACKAGE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="MODULE_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="TOP_LEVEL_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="INNER_CLASS_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="METHOD_SETTINGS">
+          <Options>
+            <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+        <option name="FIELD_SETTINGS">
+          <Options>
+            <option name="ENABLED" value="false" />
+          </Options>
+        </option>
+      </scope>
+      <option name="PACKAGE_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="MODULE_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="TOP_LEVEL_CLASS_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="INNER_CLASS_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="METHOD_SETTINGS">
+        <Options>
+          <option name="REQUIRED_TAGS" value="@return@param@throws or @exception" />
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
+      <option name="FIELD_SETTINGS">
+        <Options>
+          <option name="ENABLED" value="false" />
+        </Options>
+      </option>
     </inspection_tool>
     <inspection_tool class="MissingOverrideAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoreObjectMethods" value="false" />
@@ -600,6 +747,10 @@
       <option name="ignoreRequiredObsoleteCollectionTypes" value="false" />
     </inspection_tool>
     <inspection_tool class="OctalIntegerJS" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="OptionalOfNullableMisuse" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="WARNING" enabled="true" />
+      <scope name="runtime.classes" level="WARNING" enabled="false" />
+    </inspection_tool>
     <inspection_tool class="PackageName" enabled="true" level="WEAK WARNING" enabled_by_default="true">
       <option name="namePattern" value="[a-z_][a-z\d_]*(\.[a-z_][a-zA-Z\d_]*)*" />
     </inspection_tool>
@@ -771,7 +922,6 @@
         </modules-set>
       </option>
     </inspection_tool>
-    <inspection_tool class="PluginXmlValidity" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PointcutMethodStyleInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PointlessArithmeticExpressionJS" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PointlessBinding" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -2663,14 +2813,10 @@
     <inspection_tool class="StaticCallOnSubclass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StaticNonFinalField" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="StaticPseudoFunctionalStyleMethod" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="StringConstructor" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="ignoreSubstringArguments" value="false" />
     </inspection_tool>
-    <inspection_tool class="StringEquality" enabled="true" level="Strong Warning" enabled_by_default="true" editorAttributes="Strong Warning" />
-    <inspection_tool class="StringEqualsEmptyString" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="SUPPRESS_FOR_VALUES_WHICH_COULD_BE_NULL" value="true" />
-    </inspection_tool>
+    <inspection_tool class="StringEquality" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="Strong Warning" />
     <inspection_tool class="StringOperationCanBeSimplified" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoreStringConstructor" value="true" />
     </inspection_tool>
@@ -2680,9 +2826,8 @@
     <inspection_tool class="StrutsTilesInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="StrutsValidatorFormInspection" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="StrutsValidatorInspection" enabled="false" level="ERROR" enabled_by_default="false" />
-    <inspection_tool class="SuperTearDownInFinally" enabled="true" level="Strong Warning" enabled_by_default="true" />
-    <inspection_tool class="SuspiciousLiteralUnderscore" enabled="true" level="Strong Warning" enabled_by_default="true" />
-    <inspection_tool class="SwitchStatementWithConfusingDeclaration" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SuperTearDownInFinally" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SuspiciousLiteralUnderscore" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SystemOutErr" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Tests" level="WARNING" enabled="false" />
     </inspection_tool>
@@ -2690,9 +2835,7 @@
     <inspection_tool class="TeardownIsPublicVoidNoArg" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TelReferencesInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TestCaseWithConstructor" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="TestCaseWithNoTestMethods" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="ignoreSupers" value="true" />
-    </inspection_tool>
+    <inspection_tool class="TestCaseWithNoTestMethods" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TestOnlyProblems" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="test-framework" level="WARNING" enabled="false" />
     </inspection_tool>
@@ -2709,7 +2852,6 @@
     <inspection_tool class="TrivialConditionalJS" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TrivialIf" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TrivialIfJS" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="TrivialStringConcatenation" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TryWithIdenticalCatches" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TypeParameterExtendsFinalClass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UNCHECKED_WARNING" enabled="true" level="WARNING" enabled_by_default="true">
@@ -2801,7 +2943,6 @@
       <scope name="EntityStorage" level="WARNING" enabled="true" />
     </inspection_tool>
     <inspection_tool class="be0e4d0f-a75b-39d7-8c95-5c554e8fcb40" enabled="true" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="dc4988c0-f98d-38af-8fc4-310d96dbdf1d" enabled="true" level="Strong Warning" enabled_by_default="true" editorAttributes="Strong Warning" />
     <inspection_tool class="osmorcClassInDefaultPackage" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="osmorcNonOsgiMavenDependency" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="osmorcUnknownManifestPackage" enabled="false" level="ERROR" enabled_by_default="false" />

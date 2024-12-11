@@ -20,6 +20,11 @@ jobs:
         with:
           os: linux
           extension: tar.gz
+      - uses: ./.github/actions/upload_ide
+        with:
+          os: linux
+          extension: tar.gz
+          artifacts_dir: ${{env.artifacts_dir}}
   build-windows:
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +33,11 @@ jobs:
         with:
           os: windows
           extension: exe
+      - uses: ./.github/actions/upload_ide
+        with:
+          os: windows
+          extension: exe
+          artifacts_dir: ${{env.artifacts_dir}}
   build-macos:
     runs-on: ubuntu-latest
     steps:
@@ -65,3 +75,9 @@ jobs:
         shell: bash
         # language=bash
         run: /bin/bash ./build.sh
+      - name: Upload .dmg
+        uses: ./.github/actions/upload_ide
+        with:
+          os: mac
+          extension: dmg
+          artifacts_dir: .

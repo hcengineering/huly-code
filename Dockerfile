@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM ubuntu:20.04 AS build_env
-LABEL Description="Community Build Environment"
+LABEL Description="Huly Code Build Environment"
 RUN apt-get update && \
     apt-get install -y wget \
     tar \
@@ -17,10 +17,10 @@ VOLUME /root/.m2
 # Community sources root
 VOLUME /community
 WORKDIR /community
-ENTRYPOINT ["/bin/sh", "./installers.cmd"]
+ENTRYPOINT ["/bin/sh", "./installers-huly.cmd"]
 
 FROM build_env AS build_env_with_docker
-LABEL Description="Community Build Environment with Docker (required to build Snapcraft distributions)"
+LABEL Description="Huly Code Build Environment with Docker (required to build Snapcraft distributions)"
 RUN apt-get update && \
     apt-get install -y docker.io \
     && rm -rf /var/lib/apt/lists/*
@@ -29,4 +29,4 @@ RUN docker buildx version
 # Docker daemon socket is expected to be mounted with --volume /var/run/docker.sock:/var/run/docker.sock
 # and the container should be run as the root user to be able to connect to the socket
 VOLUME /var/run/docker.sock
-CMD ["docker system info && ./installers.cmd"]
+CMD ["docker system info && ./installers-huly.cmd"]

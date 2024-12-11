@@ -10934,6 +10934,7 @@ f:com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginsAdvertise
 - sf:installAndEnablePlugins(java.util.Set,java.lang.Runnable):V
 f:com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginsAdvertiserDialog
 - com.intellij.openapi.ui.DialogWrapper
+- <init>(com.intellij.openapi.project.Project,java.util.Collection):V
 - <init>(com.intellij.openapi.project.Project,java.util.Collection,java.util.List):V
 - doInstallPlugins(Z,com.intellij.openapi.application.ModalityState):V
 - getPreferredFocusedComponent():javax.swing.JComponent
@@ -13275,6 +13276,19 @@ f:com.intellij.ui.AppUIUtilKt
 - sf:loadSmallApplicationIcon(com.intellij.ui.scale.ScaleContext,I):javax.swing.Icon
 - bs:loadSmallApplicationIcon$default(com.intellij.ui.scale.ScaleContext,I,I,java.lang.Object):javax.swing.Icon
 - sf:updateAppWindowIcon(java.awt.Window):V
+f:com.intellij.ui.BadgeIconSupplier
+- <init>(javax.swing.Icon):V
+- f:getErrorIcon():javax.swing.Icon
+- f:getErrorIcon(Z):javax.swing.Icon
+- f:getInfoIcon():javax.swing.Icon
+- f:getInfoIcon(Z):javax.swing.Icon
+- f:getLiveIndicatorIcon():javax.swing.Icon
+- f:getLiveIndicatorIcon(Z):javax.swing.Icon
+- f:getOriginalIcon():javax.swing.Icon
+- f:getSuccessIcon():javax.swing.Icon
+- f:getSuccessIcon(Z):javax.swing.Icon
+- f:getWarningIcon():javax.swing.Icon
+- f:getWarningIcon(Z):javax.swing.Icon
 f:com.intellij.ui.BalloonImpl
 - com.intellij.ide.IdeTooltip$Ui
 - com.intellij.ide.ui.ScreenAreaConsumer
@@ -16244,7 +16258,8 @@ c:com.intellij.ui.popup.AbstractPopup
 - setShowHints(Z):V
 - setSize(java.awt.Dimension):V
 - setSize(java.awt.Point,java.awt.Dimension):V
-- p:setSpeedSearchAlwaysShown():V
+- setSpeedSearchAlwaysShown():V
+- setSpeedSearchEmptyText(java.lang.String):V
 - setStretchToOwnerHeight(Z):V
 - setStretchToOwnerWidth(Z):V
 - setUiVisible(Z):V

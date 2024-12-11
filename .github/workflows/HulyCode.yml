@@ -19,6 +19,7 @@ jobs:
       - uses: ./.github/actions/build_ide
         with:
           os: linux
+          arch: x64
           extension: tar.gz
       - uses: ./.github/actions/upload_ide
         with:
@@ -32,6 +33,7 @@ jobs:
       - uses: ./.github/actions/build_ide
         with:
           os: windows
+          arch: x64
           extension: exe
       - uses: ./.github/actions/upload_ide
         with:
@@ -45,6 +47,7 @@ jobs:
       - uses: ./.github/actions/build_ide
         with:
           os: mac
+          arch: aarch64
           extension: sit
       - uses: ./.github/actions/upload_ide
         with:

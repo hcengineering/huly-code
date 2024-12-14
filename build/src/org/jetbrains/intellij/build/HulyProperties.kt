@@ -6,6 +6,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import org.jetbrains.intellij.build.BuildPaths.Companion.COMMUNITY_ROOT
 import org.jetbrains.intellij.build.impl.BuildContextImpl
+import org.jetbrains.intellij.build.impl.PluginLayout.Companion.pluginAuto
 import org.jetbrains.intellij.build.io.copyDir
 import org.jetbrains.intellij.build.io.copyFileToDir
 import org.jetbrains.intellij.build.kotlin.KotlinBinaries
@@ -68,6 +69,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "intellij.keymap.netbeans",
   "intellij.performanceTesting",
   "intellij.turboComplete",
+  "redhat.lsp4ij",
 )
 
 internal suspend fun createHulyBuildContext(
@@ -118,6 +120,10 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       //JavaPluginLayout.javaPlugin(),
       //CommunityRepositoryModules.androidPlugin(allPlatforms = true),
       //CommunityRepositoryModules.groovyPlugin(),
+      pluginAuto("redhat.lsp4ij") { spec ->
+        spec.withModuleLibrary("eclipse.lsp4j", "redhat.lsp4ij", "org.eclipse.lsp4j-0.21.1.jar")
+        spec.withModuleLibrary("vladsch.flexmark", "redhat.lsp4ij", "flexmark-0.64.8.jar")
+      },
     ))
 
     productLayout.addPlatformSpec { layout, _ ->

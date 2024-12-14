@@ -1,0 +1,3 @@
+[submodule "plugins/lsp4ij"]
+	path = plugins/lsp4ij
+	url = git@github.com:hcengineering/lsp4ij.git

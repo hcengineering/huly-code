@@ -12,6 +12,8 @@ runs:
   using: composite
   steps:
     - name: Update submodule
+      shell: bash
+      # language=bash
       run: git submodule update --init --remote --recursive
     - name: Build environment
       shell: bash

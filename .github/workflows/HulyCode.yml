@@ -10,6 +10,7 @@ on:
   #    - 'huly/*'
 env:
   artifacts_dir: 'out/huly-code/artifacts'
+  android_commit: 'e9980dac3924ac226871629b45163a685d9520c8'
 jobs:
   # a single job for all OSes cannot be used due to free disk space lack on runners
   build-linux:

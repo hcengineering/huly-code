@@ -18,7 +18,7 @@ runs:
         path: android
         # It isn't possible to push release tags to both Community and Android repositories atomically.
         # Therefore, a checkout may fail with the `couldn't find remote ref` error - the next attempt will succeed.
-        ref: ${{github.ref}}
+        ref: ${{env.android_commit}}
     - name: Update submodule
       shell: bash
       # language=bash

@@ -70,6 +70,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "intellij.performanceTesting",
   "intellij.turboComplete",
   "redhat.lsp4ij",
+  "hulylabs.hulycode.lang-configurator",
 )
 
 internal suspend fun createHulyBuildContext(

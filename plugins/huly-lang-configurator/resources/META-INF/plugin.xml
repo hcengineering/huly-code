@@ -1,0 +1,24 @@
+<!-- Copyright © 2024 Hardcore Engineering Inc. Use of this source code is governed by the Apache 2.0 license. -->
+
+<idea-plugin implementation-detail="true">
+  <name>Huly Code Lang Configurator</name>
+  <category>Other Tools</category>
+  <id>hulylabs.hulycode.plugins.hulylangconfigurator</id>
+  <vendor>JetBrains</vendor>
+  <description>
+    Configures languages support for opened files.
+  </description>
+  <depends>com.intellij.modules.platform</depends>
+
+  <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationService
+      id="hulylabs.hulycode.plugins.hulylangconfigurator.templates.HulyLanguageServerTemplateManager"
+      serviceImplementation="hulylabs.hulycode.plugins.hulylangconfigurator.templates.HulyLanguageServerTemplateManager"/>
+
+    <editorNotificationProvider implementation="hulylabs.hulycode.plugins.hulylangconfigurator.LanguageServerConfigSetupNotificationProvider"/>
+    <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
+  </extensions>
+
+</idea-plugin>

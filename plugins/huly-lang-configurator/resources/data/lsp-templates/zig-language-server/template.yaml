@@ -1,0 +1,19 @@
+id: zig-language-server
+name: ZIG Language Server
+
+programArgs:
+  default: "sh -c \"$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls --config-path $APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls.json\""
+  windows: "$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls --config-path $APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls.json"
+
+binaryUrls:
+  windows-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-windows.zip"
+  unix-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-linux.tar.xz"
+  unix-aarch64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-aarch64-linux.tar.xz"
+  mac-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-macos.tar.xz"
+  mac-aarch64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-aarch64-macos.tar.xz"
+
+mappingSettings:
+  - languageId: zig
+    fileType:
+      name: ZIG
+      patterns: ["*.zig"]

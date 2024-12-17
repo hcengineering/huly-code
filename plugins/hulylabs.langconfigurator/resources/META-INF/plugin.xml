@@ -4,7 +4,7 @@
   <name>Huly Code Lang Configurator</name>
   <category>Other Tools</category>
   <id>hulylabs.hulycode.plugins.hulylangconfigurator</id>
-  <vendor>JetBrains</vendor>
+  <vendor>Huly Labs</vendor>
   <description>
     Configures languages support for opened files.
   </description>
@@ -14,10 +14,10 @@
 
   <extensions defaultExtensionNs="com.intellij">
     <applicationService
-      id="hulylabs.hulycode.plugins.hulylangconfigurator.templates.HulyLanguageServerTemplateManager"
-      serviceImplementation="hulylabs.hulycode.plugins.hulylangconfigurator.templates.HulyLanguageServerTemplateManager"/>
+      id="com.hulylabs.intellij.plugins.langconfigurator.templates.HulyLanguageServerTemplateManager"
+      serviceImplementation="com.hulylabs.intellij.plugins.langconfigurator.templates.HulyLanguageServerTemplateManager"/>
 
-    <editorNotificationProvider implementation="hulylabs.hulycode.plugins.hulylangconfigurator.LanguageServerConfigSetupNotificationProvider"/>
+    <editorNotificationProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
   </extensions>
 

@@ -1,5 +1,5 @@
 // Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
-package hulylabs.hulycode.plugins.hulylangconfigurator.templates;
+package com.hulylabs.intellij.plugins.langconfigurator.templates;
 
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.util.system.CpuArch;
@@ -13,7 +13,7 @@ import java.util.Objects;
 
 public class HulyLanguageServerTemplate {
   private static final String DEFAULT_KEY = "default";
-  private static final String OS_KEY = SystemInfo.isWindows ? "windows" : (SystemInfo.isMac ? "mac" : (SystemInfo.isUnix ? "unix" : ""));
+  private static final String OS_KEY = SystemInfo.isWindows ? "windows" : (SystemInfo.isMac ? "mac" : (SystemInfo.isLinux ? "linux" : ""));
   private static final String OS_ARCH_KEY = OS_KEY + "-" + (CpuArch.isArm64() ? "aarch64" : "x86_64");
 
   public String id;
@@ -21,6 +21,7 @@ public class HulyLanguageServerTemplate {
   public String installCommand;
   public Map<String, String> programArgs;
   public Map<String, String> binaryUrls;
+  public String binaryExecutable;
   public String settingsJson;
   public String initializationOptionsJson;
   public String clientSettingsJson;

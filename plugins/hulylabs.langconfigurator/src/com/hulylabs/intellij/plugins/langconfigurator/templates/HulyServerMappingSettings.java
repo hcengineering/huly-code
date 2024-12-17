@@ -1,5 +1,5 @@
 // Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
-package hulylabs.hulycode.plugins.hulylangconfigurator.templates;
+package com.hulylabs.intellij.plugins.langconfigurator.templates;
 
 import com.redhat.devtools.lsp4ij.launching.ServerMappingSettings;
 import org.jetbrains.annotations.Nullable;

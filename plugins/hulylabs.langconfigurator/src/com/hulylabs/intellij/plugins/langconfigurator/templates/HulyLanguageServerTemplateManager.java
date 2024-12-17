@@ -1,16 +1,16 @@
 // Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
-package hulylabs.hulycode.plugins.hulylangconfigurator.templates;
+package com.hulylabs.intellij.plugins.langconfigurator.templates;
 
 import com.esotericsoftware.yamlbeans.YamlReader;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.JarFileSystem;
 import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,17 +24,11 @@ import java.util.Locale;
 import java.util.Map;
 
 public class HulyLanguageServerTemplateManager {
-  private static final Logger LOG = LoggerFactory.getLogger(HulyLanguageServerTemplateManager.class);
-  private static final String TEMPLATES_DIR = "data/lsp-templates";
+  private static final Logger LOG = Logger.getInstance(HulyLanguageServerTemplateManager.class);
+  private static final String TEMPLATES_DIR = "lsp-templates";
 
   private final Map<String, HulyLanguageServerTemplate> templatesByExt = new HashMap<>();
   private final Map<String, HulyLanguageServerTemplate> templatesByLangName = new HashMap<>();
-
-  private String lsName;
-
-  public static HulyLanguageServerTemplateManager getInstance() {
-    return ApplicationManager.getApplication().getService(HulyLanguageServerTemplateManager.class);
-  }
 
   private HulyLanguageServerTemplateManager() {
     VirtualFile templateRoot = getTemplateRoot();
@@ -60,7 +54,7 @@ public class HulyLanguageServerTemplateManager {
               });
             }
             else {
-              LOG.warn("No template found in {}", templateDir);
+              LOG.warn(String.format("No template found in %s", templateDir));
             }
           }
           catch (IOException ex) {
@@ -70,7 +64,7 @@ public class HulyLanguageServerTemplateManager {
       }
     }
     else {
-      LOG.warn("No templateRoot found, no templates ");
+      LOG.warn("No templateRoot found, no templates");
     }
   }
 
@@ -87,12 +81,13 @@ public class HulyLanguageServerTemplateManager {
       LOG.debug("Templates filePart : {}", filePart);
       String resourcePath = new URI(filePart).getSchemeSpecificPart();
       LOG.debug("Templates resources path from uri : {}", resourcePath);
-      if (resourcePath.contains(".jar")) {
-        return JarFileSystem.getInstance().findFileByPath(resourcePath);
-      }
-      else {
-        return LocalFileSystem.getInstance().findFileByPath(resourcePath);
-      }
+      return VfsUtil.findFileByURL(url);
+      //if (resourcePath.contains(".jar")) {
+      //  return JarFileSystem.getInstance().findFileByPath(resourcePath);
+      //}
+      //else {
+      //  return LocalFileSystem.getInstance().findFileByPath(resourcePath);
+      //}
     }
     catch (URISyntaxException e) {
       LOG.warn(e.getMessage());
@@ -101,7 +96,7 @@ public class HulyLanguageServerTemplateManager {
   }
 
   @Nullable
-  public HulyLanguageServerTemplate getTemplate(@NotNull Project project, @NotNull VirtualFile file) {
+  public HulyLanguageServerTemplate getTemplate(@NotNull VirtualFile file) {
     String ext = file.getExtension();
     String langName = file.getFileType().getName();
     return templatesByLangName.getOrDefault(langName, ext != null ? templatesByExt.get(ext.toLowerCase(Locale.ROOT)) : null);

@@ -229,6 +229,6 @@
     <orderEntry type="module" module-name="intellij.java.byteCodeViewer" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.vcs.github.json" scope="RUNTIME" />
     <orderEntry type="module" module-name="redhat.lsp4ij" scope="RUNTIME" />
-    <orderEntry type="module" module-name="hulylabs.hulycode.lang-configurator" scope="RUNTIME" />
+    <orderEntry type="module" module-name="hulylabs.langconfigurator" scope="RUNTIME" />
   </component>
 </module>

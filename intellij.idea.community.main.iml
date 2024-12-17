@@ -230,5 +230,6 @@
     <orderEntry type="module" module-name="intellij.vcs.github.json" scope="RUNTIME" />
     <orderEntry type="module" module-name="redhat.lsp4ij" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.langconfigurator" scope="RUNTIME" />
+    <orderEntry type="module" module-name="hulylabs.intellij.customization" scope="RUNTIME" />
   </component>
 </module>

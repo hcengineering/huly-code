@@ -70,7 +70,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "intellij.performanceTesting",
   "intellij.turboComplete",
   "redhat.lsp4ij",
-  "hulylabs.hulycode.lang-configurator",
+  "hulylabs.langconfigurator",
 )
 
 internal suspend fun createHulyBuildContext(
@@ -104,14 +104,14 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
 
   init {
     platformPrefix = "Huly"
-    applicationInfoModule = "intellij.idea.community.customization"
+    applicationInfoModule = "hulylabs.intellij.customization"
     scrambleMainJar = false
     useSplash = true
     buildCrossPlatformDistribution = true
 
     productLayout.productImplementationModules = listOf(
       "intellij.platform.starter",
-      "intellij.idea.community.customization",
+      "hulylabs.intellij.customization",
     )
     productLayout.bundledPluginModules = HULY_BUNDLED_PLUGINS + sequenceOf("intellij.vcs.github.community")
 
@@ -124,6 +124,10 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       pluginAuto("redhat.lsp4ij") { spec ->
         spec.withModuleLibrary("eclipse.lsp4j", "redhat.lsp4ij", "org.eclipse.lsp4j-0.21.1.jar")
         spec.withModuleLibrary("vladsch.flexmark", "redhat.lsp4ij", "flexmark-0.64.8.jar")
+      },
+      pluginAuto("hulylabs.langconfigurator") { spec ->
+        spec.withModuleLibrary("tukaani.xz", "hulylabs.langconfigurator", "xz-1.10.jar")
+        spec.withModuleLibrary("esotericsoftware.yamlbeans", "hulylabs.langconfigurator", "yamlbeans-1.17.jar")
       },
     ))
 
@@ -168,9 +172,9 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
 
   protected open inner class HulyCodeWindowsDistributionCustomizer : WindowsDistributionCustomizer() {
     init {
-      icoPath = "${communityHomeDir}/build/conf/ideaCE/win/images/idea_CE.ico"
-      icoPathForEAP = "${communityHomeDir}/build/conf/ideaCE/win/images/idea_CE_EAP.ico"
-      installerImagesPath = "${communityHomeDir}/build/conf/ideaCE/win/images"
+      icoPath = "${communityHomeDir}/build/conf/hulycode/win/images/idea_CE.ico"
+      icoPathForEAP = "${communityHomeDir}/build/conf/hulycode/win/images/idea_CE_EAP.ico"
+      installerImagesPath = "${communityHomeDir}/build/conf/hulycode/win/images"
       fileAssociations = listOf("ts", "rs", "toml", "zig")
     }
 
@@ -185,8 +189,8 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
 
   protected open inner class HulyCodeLinuxDistributionCustomizer : LinuxDistributionCustomizer() {
     init {
-      iconPngPath = "${communityHomeDir}/build/conf/ideaCE/linux/images/icon_CE_128.png"
-      iconPngPathForEAP = "${communityHomeDir}/build/conf/ideaCE/linux/images/icon_CE_EAP_128.png"
+      iconPngPath = "${communityHomeDir}/build/conf/hulycode/linux/images/icon_CE_128.png"
+      iconPngPathForEAP = "${communityHomeDir}/build/conf/hulycode/linux/images/icon_CE_EAP_128.png"
       snapName = "intellij-idea-community"
       snapDescription =
         "The most intelligent Java IDE. Every aspect of IntelliJ IDEA is specifically designed to maximize developer productivity. " +
@@ -204,13 +208,13 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
 
   protected open inner class HulyCodeMacDistributionCustomizer : MacDistributionCustomizer() {
     init {
-      icnsPath = "${communityHomeDir}/build/conf/ideaCE/mac/images/idea.icns"
-      icnsPathForEAP = "${communityHomeDir}/build/conf/ideaCE/mac/images/communityEAP.icns"
+      icnsPath = "${communityHomeDir}/build/conf/hulycode/mac/images/idea.icns"
+      icnsPathForEAP = "${communityHomeDir}/build/conf/hulycode/mac/images/communityEAP.icns"
       urlSchemes = listOf("huly-code")
       associateIpr = true
-      fileAssociations = FileAssociation.from("java", "groovy", "kt", "kts")
-      bundleIdentifier = "engineering.hc.huly.code"
-      dmgImagePath = "${communityHomeDir}/build/conf/ideaCE/mac/images/dmg_background.tiff"
+      fileAssociations = FileAssociation.from("ts", "rs", "toml", "zig")
+      bundleIdentifier = "hulylabs.huly.code"
+      dmgImagePath = "${communityHomeDir}/build/conf/hulycode/mac/images/dmg_background.tiff"
     }
 
     override fun getRootDirectoryName(appInfo: ApplicationInfoProperties, buildNumber: String): String {

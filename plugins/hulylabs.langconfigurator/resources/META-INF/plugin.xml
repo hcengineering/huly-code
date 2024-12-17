@@ -1,14 +1,16 @@
-<!-- Copyright © 2024 Hardcore Engineering Inc. Use of this source code is governed by the Apache 2.0 license. -->
+<!-- Copyright © 2024 Huly Labs. Use of this source code is governed by the Apache 2.0 license. -->
 
-<idea-plugin implementation-detail="true">
+<idea-plugin>
   <name>Huly Code Lang Configurator</name>
   <category>Other Tools</category>
   <id>hulylabs.hulycode.plugins.hulylangconfigurator</id>
-  <vendor>Huly Labs</vendor>
+  <vendor url="https://hulylabs.com/">Huly Labs</vendor>
   <description>
     Configures languages support for opened files.
   </description>
+
   <depends>com.intellij.modules.platform</depends>
+  <depends>com.redhat.devtools.lsp4ij</depends>
 
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
 

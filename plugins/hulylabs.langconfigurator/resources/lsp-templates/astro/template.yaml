@@ -1,0 +1,14 @@
+id: astro-language-server
+name: Astro Language Server
+
+programArgs:
+  default: "sh -c \"astro-ls --stdio\""
+  windows: "$USER_HOME$/AppData/Roaming/npm/astro-ls.cmd --stdio"
+
+installCommand: "npm install -g @astrojs/language-server prettier prettier-plugin-astro"
+
+mappingSettings:
+  - languageId: astro
+    fileType:
+      name: Astro
+      patterns: ["*.astro"]

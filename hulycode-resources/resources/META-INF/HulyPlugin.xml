@@ -1,12 +1,8 @@
 <idea-plugin xmlns:xi="http://www.w3.org/2001/XInclude">
   <xi:include href="/META-INF/JavaIdePlugin.xml"/>
-  <xi:include href="/META-INF/tips-intellij-idea-community.xml"/>
 
   <module value="com.intellij.modules.idea"/>
   <module value="com.intellij.modules.idea.community"/>
-  <!--<module value="com.intellij.modules.java-capable"/>-->
-  <!--<module value="com.intellij.modules.python-core-capable"/> &lt;!&ndash; Python plugin can be installed &ndash;&gt;-->
-  <!--<module value="com.intellij.modules.python-in-non-pycharm-ide-capable"/> &lt;!&ndash; Enable Non-Pycharm-IDE support in Python plugin &ndash;&gt;-->
   <content>
     <module name="intellij.platform.coverage"/>
     <module name="intellij.platform.coverage.agent"/>
@@ -14,7 +10,6 @@
     <module name="intellij.platform.ide.newUiOnboarding"/>
     <module name="intellij.platform.ide.newUsersOnboarding"/>
     <module name="intellij.ide.startup.importSettings"/>
-    <!--<module name="intellij.kotlin.onboarding-promoter"/>-->
     <module name="intellij.idea.customization.base"/>
     <module name="intellij.platform.tips"/>
   </content>

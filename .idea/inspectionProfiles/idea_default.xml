@@ -226,7 +226,7 @@
     <inspection_tool class="ContinueOrBreakFromFinallyBlock" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ContinueOrBreakFromFinallyBlockJS" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="Convert2Lambda" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="android" level="WARNING" enabled="false" />
+      <scope name="android" level="WARNING" enabled="false" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" />
       <option name="reportNotAnnotatedInterfaces" value="false" />
     </inspection_tool>
     <inspection_tool class="Convert2MethodRef" enabled="true" level="INFORMATION" enabled_by_default="true" />
@@ -922,6 +922,7 @@
         </modules-set>
       </option>
     </inspection_tool>
+    <inspection_tool class="PluginXmlValidity" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="PointcutMethodStyleInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PointlessArithmeticExpressionJS" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PointlessBinding" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -2868,7 +2869,7 @@
     <inspection_tool class="UninstantiableImplementedByClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UninstantiableProvidedByClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnnecessarilyQualifiedStaticUsage" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Tests" level="WARNING" enabled="false">
+      <scope name="Tests" level="WARNING" enabled="false" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES">
         <option name="m_ignoreStaticFieldAccesses" value="false" />
         <option name="m_ignoreStaticMethodCalls" value="false" />
         <option name="m_ignoreStaticAccessFromStaticContext" value="false" />
@@ -2881,7 +2882,7 @@
     <inspection_tool class="UnnecessaryBoxing" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnnecessaryContinueJS" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnnecessaryFullyQualifiedName" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="Tests" level="WARNING" enabled="false">
+      <scope name="Tests" level="WARNING" enabled="false" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES">
         <option name="m_ignoreJavadoc" value="true" />
         <option name="ignoreInModuleStatements" value="true" />
       </scope>

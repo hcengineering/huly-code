@@ -1327,6 +1327,7 @@
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-fe10/kotlin.util.test-generator-fe10.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-fe10/kotlin.util.test-generator-fe10.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/kotlin/util/test-generator-fir/kotlin.util.test-generator-fir.iml" filepath="$PROJECT_DIR$/plugins/kotlin/util/test-generator-fir/kotlin.util.test-generator-fir.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/lsp4ij/redhat.lsp4ij.iml" filepath="$PROJECT_DIR$/plugins/lsp4ij/redhat.lsp4ij.iml" />
+      <module fileurl="file://$PROJECT_DIR$/hulycode-resources/hulylabs.intellij.customization.iml" filepath="$PROJECT_DIR$/hulycode-resources/hulylabs.intellij.customization.iml" />
     </modules>
   </component>
 </project>

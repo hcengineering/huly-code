@@ -1,4 +1,4 @@
-// Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
+// Copyright © 2024 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.langconfigurator;
 
 import com.hulylabs.intellij.plugins.langconfigurator.templates.HulyLanguageServerTemplate;
@@ -18,6 +18,7 @@ import com.intellij.ui.EditorNotificationPanel;
 import com.intellij.ui.EditorNotificationProvider;
 import com.intellij.ui.EditorNotifications;
 import com.redhat.devtools.lsp4ij.LanguageServersRegistry;
+import kotlin.Unit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +48,7 @@ public class LanguageServerConfigSetupNotificationProvider implements EditorNoti
 
     return fileEditor -> {
       EditorNotificationPanel panel = new EditorNotificationPanel(fileEditor, EditorNotificationPanel.Status.Info);
-      panel.setText(message("message.addlang.title"));
+      panel.setText(message("message.addlang.title", template.name));
       Runnable onSuccess = () -> {
         EditorNotifications.getInstance(project).updateAllNotifications();
         PsiFile psiFile = PsiManager.getInstance(project).findFile(file);
@@ -55,13 +56,15 @@ public class LanguageServerConfigSetupNotificationProvider implements EditorNoti
         getNotificationGroup().createNotification(message("message.langconfigurator.title"), message("message.addlang.configure.success"),
                                                   NotificationType.INFORMATION).notify(project);
       };
-      Runnable onFailure = () -> {
-        getNotificationGroup().createNotification(message("message.langconfigurator.title"), message("message.addlang.cannot.configre"),
-                                                  NotificationType.ERROR)
-          .notify(project);
-      };
       panel.createActionLabel(message("message.addlang.yes"), () -> {
-        LanguageServerTemplateInstaller.install(project, template, onSuccess, onFailure);
+        LanguageServerTemplateInstaller.install(project, template, onSuccess, (message) -> {
+          getNotificationGroup().createNotification(message("message.langconfigurator.title"), message,
+                                                    NotificationType.ERROR)
+            .notify(project);
+          panel.show();
+          return Unit.INSTANCE;
+        });
+        panel.hide();
       });
       panel.createActionLabel(message("message.addlang.dismiss"), () -> {
         PropertiesComponent.getInstance(project).setValue(IGNORED_EXTS_KEY_PREFIX + ext, true);

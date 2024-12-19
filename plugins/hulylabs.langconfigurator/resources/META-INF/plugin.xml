@@ -15,10 +15,6 @@
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
 
   <extensions defaultExtensionNs="com.intellij">
-    <applicationService
-      id="com.hulylabs.intellij.plugins.langconfigurator.templates.HulyLanguageServerTemplateManager"
-      serviceImplementation="com.hulylabs.intellij.plugins.langconfigurator.templates.HulyLanguageServerTemplateManager"/>
-
     <editorNotificationProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
   </extensions>

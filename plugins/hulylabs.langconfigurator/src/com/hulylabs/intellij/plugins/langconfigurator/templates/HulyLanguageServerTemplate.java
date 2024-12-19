@@ -1,4 +1,4 @@
-// Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
+// Copyright © 2024 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.langconfigurator.templates;
 
 import com.intellij.openapi.util.SystemInfo;
@@ -19,6 +19,7 @@ public class HulyLanguageServerTemplate {
   public String id;
   public String name;
   public String installCommand;
+  public List<String> installNodeModules;
   public Map<String, String> programArgs;
   public Map<String, String> binaryUrls;
   public String binaryExecutable;

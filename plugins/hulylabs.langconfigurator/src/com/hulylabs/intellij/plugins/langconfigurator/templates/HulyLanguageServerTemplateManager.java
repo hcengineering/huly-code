@@ -1,12 +1,9 @@
-// Copyright © 2024 HulyLabs. Use of this source code is governed by the Apache 2.0 license.
+// Copyright © 2024 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.langconfigurator.templates;
 
 import com.esotericsoftware.yamlbeans.YamlReader;
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.JarFileSystem;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +20,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class HulyLanguageServerTemplateManager {
+@Service(Service.Level.APP)
+public final class HulyLanguageServerTemplateManager {
   private static final Logger LOG = Logger.getInstance(HulyLanguageServerTemplateManager.class);
   private static final String TEMPLATES_DIR = "lsp-templates";
 
@@ -82,12 +80,6 @@ public class HulyLanguageServerTemplateManager {
       String resourcePath = new URI(filePart).getSchemeSpecificPart();
       LOG.debug("Templates resources path from uri : {}", resourcePath);
       return VfsUtil.findFileByURL(url);
-      //if (resourcePath.contains(".jar")) {
-      //  return JarFileSystem.getInstance().findFileByPath(resourcePath);
-      //}
-      //else {
-      //  return LocalFileSystem.getInstance().findFileByPath(resourcePath);
-      //}
     }
     catch (URISyntaxException e) {
       LOG.warn(e.getMessage());

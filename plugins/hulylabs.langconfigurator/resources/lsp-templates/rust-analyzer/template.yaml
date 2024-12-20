@@ -2,8 +2,8 @@ id: rust-analyzer
 name: Rust Language Server
 
 programArgs:
-  default: "sh -c $APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer"
-  windows: "$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer.exe"
+  default: "sh -c '$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer'"
+  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer.exe\""
 
 binaryUrls:
   windows-x86_64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-x86_64-pc-windows-msvc.zip"

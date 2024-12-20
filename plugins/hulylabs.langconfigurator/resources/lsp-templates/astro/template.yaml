@@ -2,8 +2,8 @@ id: astro-language-server
 name: Astro Language Server
 
 programArgs:
-  default: "sh -c \"$APPLICATION_CONFIG_DIR$/lsp4ij/astro-language-server/node_modules/.bin/astro-ls --stdio\""
-  windows: "$APPLICATION_CONFIG_DIR$/lsp4ij/astro-language-server/node_modules/.bin/astro-ls.cmd --stdio"
+  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/astro-language-server/node_modules/.bin/astro-ls' --stdio\""
+  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/astro-language-server/node_modules/.bin/astro-ls.cmd\" --stdio"
 
 installNodeModules: ["@astrojs/language-server", "prettier", "prettier-plugin-astro"]
 

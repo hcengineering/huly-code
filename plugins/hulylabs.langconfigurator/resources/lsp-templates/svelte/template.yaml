@@ -2,8 +2,8 @@ id: svelte-language-server
 name: Svelte Language Server
 
 programArgs:
-  default: "sh -c \"$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver --stdio\""
-  windows: "$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver.cmd --stdio"
+  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver' --stdio\""
+  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver.cmd\" --stdio"
 
 installNodeModules: ["svelte-language-server"]
 

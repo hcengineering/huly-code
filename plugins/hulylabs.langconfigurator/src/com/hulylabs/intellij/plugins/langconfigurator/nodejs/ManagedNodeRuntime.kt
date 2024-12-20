@@ -89,7 +89,7 @@ class ManagedNodeRuntime(private val installationPath: Path) : NodeRuntime() {
     suspend fun installIfNeeded(): NodeRuntime {
       LOG.info("Node runtime installIfNeeded")
       val os = if (SystemInfo.isWindows) "win" else (if (SystemInfo.isMac) "darwin" else (if (SystemInfo.isLinux) "linux" else null))
-      val arch = if (CpuArch.isArm64()) "aarch64" else (if (CpuArch.isIntel64()) "x64" else null)
+      val arch = if (CpuArch.isArm64()) "arm64" else (if (CpuArch.isIntel64()) "x64" else null)
 
       if (os == null || arch == null) {
         throw IOException("Unsupported platform")

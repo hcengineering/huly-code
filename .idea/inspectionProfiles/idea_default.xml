@@ -2940,6 +2940,7 @@
     <inspection_tool class="XsltTemplateInvocation" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="XsltUnusedDeclaration" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="XsltVariableShadowing" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="YAMLSchemaValidation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="acb41802-9e8a-3e32-8b29-0e1d0a2aa770" enabled="true" level="WARNING" enabled_by_default="false">
       <scope name="EntityStorage" level="WARNING" enabled="true" />
     </inspection_tool>

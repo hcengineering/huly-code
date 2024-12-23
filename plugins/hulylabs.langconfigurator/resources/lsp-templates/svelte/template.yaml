@@ -2,10 +2,10 @@ id: svelte-language-server
 name: Svelte Language Server
 
 programArgs:
-  default: "sh -c \"svelteserver --stdio\""
-  windows: "$USER_HOME$/AppData/Roaming/npm/svelteserver.cmd --stdio"
+  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver' --stdio\""
+  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/svelte-language-server/node_modules/.bin/svelteserver.cmd\" --stdio"
 
-installCommand: "npm install -g svelte-language-server"
+installNodeModules: ["svelte-language-server"]
 
 mappingSettings:
   - languageId: svelte

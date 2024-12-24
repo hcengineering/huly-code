@@ -4,6 +4,9 @@ on:
 env:
   artifacts_dir: 'out/huly-code/artifacts'
   android_commit: 'c6262f02dcd4f1f813e4820e995861251c8fff54'
+  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 jobs:
   # a single job for all OSes cannot be used due to free disk space lack on runners
   build-linux:

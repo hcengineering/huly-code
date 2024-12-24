@@ -8,10 +8,6 @@ inputs:
   artifacts_dir:
     description: 'IDE artifacts output directory'
     required: true
-env:
-  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 runs:
   using: composite
   steps:
@@ -33,9 +29,9 @@ runs:
     - name: Publish .${{inputs.extension}} to R2
       uses: ryand56/r2-upload-action@latest
       with:
-        r2-account-id: $R2_ACCOUNT_ID
-        r2-access-key-id: $R2_ACCESS_KEY_ID
-        r2-secret-access-key: $R2_SECRET_ACCESS_KEY
+        r2-account-id: ${{env.R2_ACCOUNT_ID}}
+        r2-access-key-id: ${{env.R2_ACCESS_KEY_ID}}
+        r2-secret-access-key: ${env.R2_SECRET_ACCESS_KEY}}
         r2-bucket: desktop-distro
         source-dir: ${{inputs.artifacts_dir}}/publish/
         destination-dir: ./code/

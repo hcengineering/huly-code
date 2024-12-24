@@ -1,3 +1,6 @@
 [submodule "plugins/lsp4ij"]
 	path = plugins/lsp4ij
 	url = git@github.com:hcengineering/lsp4ij.git
+[submodule "plugins/hulylabs.treesitter"]
+	path = plugins/hulylabs.treesitter
+	url = https://github.com/hcengineering/huly-code-treesitter

@@ -15,8 +15,22 @@
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
 
   <extensions defaultExtensionNs="com.intellij">
-    <editorNotificationProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
+    <editorNotificationProvider
+      implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
+    <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
+    <workspaceModel.fileIndexContributor implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
   </extensions>
 
+  <applicationListeners>
+    <listener class="com.hulylabs.intellij.plugins.langconfigurator.gitignore.GitIgnoreFileListener"
+              topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+  </applicationListeners>
+
+  <actions>
+    <group id="WelcomeScreen.QuickStart.IDEA">
+      <action id="WelcomeScreen.OpenProject" class="com.intellij.ide.actions.OpenFileAction$OnWelcomeScreen"/>
+      <add-to-group group-id="WelcomeScreen.QuickStart" anchor="first"/>
+    </group>
+  </actions>
 </idea-plugin>

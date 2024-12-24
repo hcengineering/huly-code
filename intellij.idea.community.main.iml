@@ -241,5 +241,6 @@
     <orderEntry type="module" module-name="redhat.lsp4ij" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.langconfigurator" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.intellij.customization" scope="RUNTIME" />
+    <orderEntry type="module" module-name="hulylabs.treesitter" scope="RUNTIME" />
   </component>
 </module>

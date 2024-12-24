@@ -27,6 +27,7 @@ abstract class NodeRuntime {
     runNpmSubcommand(directory,
                      "install",
                      *packages,
+                     "--prefix", ".",
                      "--save-exact",
                      "--fetch-retry-mintimeout", "2000",
                      "--fetch-retry-maxtimeout", "5000",

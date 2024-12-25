@@ -98,20 +98,20 @@ jobs:
   publish:
     needs: [build-linux, build-windows, build-dmg]
     runs-on: ubuntu-latest
-  steps:
-    - name: Download All Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: publish
-        pattern: artifact-*
-        merge-multiple: true
-    - run: ls -R publish
-    - name: Publish artifacts to R2
-      uses: ryand56/r2-upload-action@latest
-      with:
-        r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
-        r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-        r2-secret-access-key: ${ secrets.R2_SECRET_ACCESS_KEY }}
-        r2-bucket: desktop-distro
-        source-dir: ./publish/
-        destination-dir: ./code/
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: publish
+          pattern: artifact-*
+          merge-multiple: true
+      - run: ls -R publish
+      - name: Publish artifacts to R2
+        uses: ryand56/r2-upload-action@latest
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: desktop-distro
+          source-dir: ./publish/
+          destination-dir: ./code/

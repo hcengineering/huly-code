@@ -92,7 +92,7 @@ jobs:
       - name: Build .dmg
         env:
           CONTENT_SIGNED: true
-          STAPLE: true
+          STAPLE: false
         shell: bash
         # language=bash
         run: /bin/bash ./build.sh

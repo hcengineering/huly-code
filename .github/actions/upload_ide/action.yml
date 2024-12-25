@@ -8,13 +8,17 @@ inputs:
   artifacts_dir:
     description: 'IDE artifacts output directory'
     required: true
+  name-prefix:
+    description: 'Artifact name pattern'
+    default: ''
+    required: false
 runs:
   using: composite
   steps:
     - name: Upload .${{inputs.extension}}
       uses: actions/upload-artifact@v4.4.3
       with:
-        name: ${{inputs.os}}-${{inputs.extension}}
+        name: ${{name-prefix}}${{inputs.os}}-${{inputs.extension}}
         if-no-files-found: 'error'
         retention-days: 1
         path: |

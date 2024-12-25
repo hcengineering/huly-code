@@ -154,10 +154,10 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     ))
 
     //versionCheckerConfig = CE_CLASS_VERSIONS
-    baseDownloadUrl = "https://download.jetbrains.com/idea/"
+    baseDownloadUrl = "https://dist.huly.io/code/"
     buildDocAuthoringAssets = true
 
-    additionalVmOptions = persistentListOf("-Dllm.show.ai.promotion.window.on.start=false")
+    additionalVmOptions = persistentListOf("-Dllm.show.ai.promotion.window.on.start=false", "-Djb.consents.confirmation.enabled=false")
   }
 
   override suspend fun copyAdditionalFiles(context: BuildContext, targetDir: Path) {
@@ -193,7 +193,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     override fun getFullNameIncludingEditionAndVendor(appInfo: ApplicationInfoProperties) = "Huly Code"
 
     override fun getUninstallFeedbackPageUrl(appInfo: ApplicationInfoProperties): String {
-      return "https://www.jetbrains.com/idea/uninstall/?edition=IC-${appInfo.majorVersion}.${appInfo.minorVersion}"
+      return ""//"https://www.jetbrains.com/idea/uninstall/?edition=IC-${appInfo.majorVersion}.${appInfo.minorVersion}"
     }
   }
 
@@ -201,10 +201,9 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     init {
       iconPngPath = "${communityHomeDir}/build/conf/hulycode/linux/images/icon_CE_128.png"
       iconPngPathForEAP = "${communityHomeDir}/build/conf/hulycode/linux/images/icon_CE_EAP_128.png"
-      snapName = "intellij-idea-community"
+      snapName = "huly-code"
       snapDescription =
-        "The most intelligent Java IDE. Every aspect of IntelliJ IDEA is specifically designed to maximize developer productivity. " +
-        "Together, powerful static code analysis and ergonomic design make development not only productive but also an enjoyable experience."
+        "A fast, minimal IDE for productive coding."
     }
 
     override fun getRootDirectoryName(appInfo: ApplicationInfoProperties, buildNumber: String) = "idea-IC-$buildNumber"

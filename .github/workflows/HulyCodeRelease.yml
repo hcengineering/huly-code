@@ -4,9 +4,6 @@ on:
 env:
   artifacts_dir: 'out/huly-code/artifacts'
   android_commit: 'c6262f02dcd4f1f813e4820e995861251c8fff54'
-  R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-  R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-  R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
 jobs:
   # a single job for all OSes cannot be used due to free disk space lack on runners
   build-linux:
@@ -20,11 +17,12 @@ jobs:
           os: linux
           arch: x64
           extension: tar.gz
-      - uses: ./.github/actions/publish_ide
+      - uses: ./.github/actions/upload_ide
         with:
           os: linux
           extension: tar.gz
           artifacts_dir: ${{env.artifacts_dir}}
+          name-prefix: artifact-
   build-windows:
     runs-on: ubuntu-latest
     steps:
@@ -36,16 +34,18 @@ jobs:
           os: windows
           arch: x64
           extension: exe
-      - uses: ./.github/actions/publish_ide
+      - uses: ./.github/actions/upload_ide
         with:
           os: windows
           extension: exe
           artifacts_dir: ${{env.artifacts_dir}}
-      - uses: ./.github/actions/publish_ide
+          name-prefix: artifact-
+      - uses: ./.github/actions/upload_ide
         with:
           os: windows
           extension: zip
           artifacts_dir: ${{env.artifacts_dir}}
+          name-prefix: artifact-
   build-macos:
     runs-on: ubuntu-latest
     steps:
@@ -83,14 +83,35 @@ jobs:
       - name: Download .sit
         uses: actions/download-artifact@v4.1.8
         with:
-          name: mac-sit-unsigned
+          name: mac-sit
       - name: Build .dmg
         shell: bash
         # language=bash
         run: /bin/bash ./build.sh
       - name: Upload .dmg
-        uses: ./.github/actions/publish_ide
+        uses: ./.github/actions/upload_ide
         with:
           os: mac
           extension: dmg
           artifacts_dir: .
+          name-prefix: artifact-
+  publish:
+    needs: [build-linux, build-windows, build-dmg]
+    runs-on: ubuntu-latest
+  steps:
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: publish
+        pattern: artifact-*
+        merge-multiple: true
+    - run: ls -R publish
+    - name: Publish artifacts to R2
+      uses: ryand56/r2-upload-action@latest
+      with:
+        r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+        r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+        r2-secret-access-key: ${ secrets.R2_SECRET_ACCESS_KEY }}
+        r2-bucket: desktop-distro
+        source-dir: ./publish/
+        destination-dir: ./code/

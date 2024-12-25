@@ -18,7 +18,7 @@ object DecompressUtils {
 
   @JvmStatic
   @Throws(IOException::class)
-  suspend fun decompress(filePath: Path, targetDir: Path) {
+  suspend fun decompress(filePath: Path, targetDir: Path, targetFileName: String? = null) {
     val fileName = filePath.name.lowercase()
     if (fileName.endsWith(".zip")) {
       withContext(Dispatchers.IO) {
@@ -32,6 +32,9 @@ object DecompressUtils {
     }
     else if (fileName.endsWith("tar.gz") || fileName.endsWith(".tgz")) {
       decompressTgz(filePath, targetDir)
+    }
+    else if (fileName.endsWith(".gz")) {
+      decompressGz(filePath, targetDir, targetFileName)
     }
     else if (fileName.endsWith("tar.xz") || fileName.endsWith(".txz")) {
       decompressTxz(filePath, targetDir)
@@ -51,6 +54,16 @@ object DecompressUtils {
         Files.copy(gzipInputStream, tarFilePath)
         Decompressor.Tar(tarFilePath).extract(targetDir)
         tarFilePath.deleteExisting()
+      }
+    }
+  }
+
+  @JvmStatic
+  @Throws(IOException::class)
+  suspend fun decompressGz(filePath: Path, targetDir: Path, targetFileName: String? = null) {
+    withContext(Dispatchers.IO) {
+      GZIPInputStream(BufferedInputStream(Files.newInputStream(filePath))).use { gzipInputStream ->
+        Files.copy(gzipInputStream, targetDir.resolve(targetFileName ?: filePath.nameWithoutExtension))
       }
     }
   }

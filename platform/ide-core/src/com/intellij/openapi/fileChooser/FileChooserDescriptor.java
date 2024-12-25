@@ -338,7 +338,8 @@ public class FileChooserDescriptor implements Cloneable {
   }
 
   private static boolean isArchive(VirtualFile file) {
-    return FileTypeRegistry.getInstance().isFileOfType(file, ArchiveFileType.INSTANCE);
+    // WORKAROUND: workaround to allow installing plugins from archives
+    return false;//FileTypeRegistry.getInstance().isFileOfType(file, ArchiveFileType.INSTANCE);
   }
 
   /**

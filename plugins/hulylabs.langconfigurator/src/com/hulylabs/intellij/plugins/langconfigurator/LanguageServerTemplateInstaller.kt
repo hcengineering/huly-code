@@ -15,6 +15,7 @@ import com.intellij.openapi.components.ComponentManagerEx
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.util.io.createDirectories
@@ -99,7 +100,10 @@ object LanguageServerTemplateInstaller {
       throw IOException("Can't parse binary url", e)
     }
     val file = DownloadUtils.downloadFile(template.binaryUrl!!, downloadName, directory.toFile())
-    DecompressUtils.decompress(file.toPath(), directory)
+    DecompressUtils.decompress(file.toPath(), directory, template.binaryExecutable)
+    if (template.binaryExecutable != null) {
+      FileUtil.setExecutable(directory.resolve(template.binaryExecutable).toFile());
+    }
   }
 
   @Throws(IOException::class)

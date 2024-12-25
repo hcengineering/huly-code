@@ -43,7 +43,7 @@ jobs:
       - uses: ./.github/actions/upload_ide
         with:
           os: windows
-          extension: zip
+          extension: win.zip
           artifacts_dir: ${{env.artifacts_dir}}
           name-prefix: artifact-
   build-macos:
@@ -105,10 +105,6 @@ jobs:
           path: publish
           pattern: artifact-*
           merge-multiple: true
-      - run: |
-          rm publish/content-report.zip
-          rm publish/inspections-ic.zip
-          rm publish/keymap-ic.zip
       - run: ls -R publish
       - name: Publish artifacts to R2
         uses: ryand56/r2-upload-action@latest

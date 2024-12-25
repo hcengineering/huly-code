@@ -84,7 +84,15 @@ jobs:
         uses: actions/download-artifact@v4.1.8
         with:
           name: mac-sit
+      - name: Import certificates
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
+          p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
       - name: Build .dmg
+        env:
+          CONTENT_SIGNED: true
+          STAPLE: true
         shell: bash
         # language=bash
         run: /bin/bash ./build.sh

@@ -222,7 +222,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       urlSchemes = listOf("huly-code")
       associateIpr = true
       fileAssociations = FileAssociation.from("ts", "rs", "toml", "zig")
-      bundleIdentifier = "hulylabs.huly.code"
+      bundleIdentifier = "app.huly.HulyCode"
       dmgImagePath = "${communityHomeDir}/build/conf/hulycode/mac/images/dmg_background.tiff"
     }
 

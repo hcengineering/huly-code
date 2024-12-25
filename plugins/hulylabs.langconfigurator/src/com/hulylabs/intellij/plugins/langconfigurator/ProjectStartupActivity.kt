@@ -6,11 +6,13 @@ import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.util.registry.EarlyAccessRegistryManager
 
 class ProjectStartupActivity() : ProjectActivity {
   override suspend fun execute(project: Project) {
     val service: GitIgnoreSyncService = project.service()
     service.syncState()
     PropertiesComponent.getInstance().setValue("ide.try.ultimate.disabled", true)
+    EarlyAccessRegistryManager.setString("idea.plugins.compatible.build", "243.1")
   }
 }

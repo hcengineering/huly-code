@@ -82,7 +82,7 @@ jobs:
       - name: Download .sit
         uses: actions/download-artifact@v4.1.8
         with:
-          name: mac-sit-unsigned
+          name: mac-sit
       - name: Build .dmg
         shell: bash
         # language=bash

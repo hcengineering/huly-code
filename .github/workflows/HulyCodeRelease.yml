@@ -105,6 +105,10 @@ jobs:
           path: publish
           pattern: artifact-*
           merge-multiple: true
+      - run: |
+          rm publish/content-report.zip
+          rm publish/inspections-ic.zip
+          rm publish/keymap-ic.zip
       - run: ls -R publish
       - name: Publish artifacts to R2
         uses: ryand56/r2-upload-action@latest

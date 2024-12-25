@@ -18,7 +18,7 @@ runs:
     - name: Upload .${{inputs.extension}}
       uses: actions/upload-artifact@v4.4.3
       with:
-        name: ${{name-prefix}}${{inputs.os}}-${{inputs.extension}}
+        name: ${{inputs.name-prefix}}${{inputs.os}}-${{inputs.extension}}
         if-no-files-found: 'error'
         retention-days: 1
         path: |

@@ -2,7 +2,7 @@ id: rust-analyzer
 name: Rust Language Server
 
 programArgs:
-  default: "sh -c '$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer'"
+  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer'\""
   windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer.exe\""
 
 binaryUrls:

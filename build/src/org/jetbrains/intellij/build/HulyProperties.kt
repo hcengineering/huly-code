@@ -247,6 +247,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     override fun generateExecutableFilesPatterns(context: BuildContext, includeRuntime: Boolean, arch: JvmArchitecture): Sequence<String> {
       return super.generateExecutableFilesPatterns(context, includeRuntime, arch)
         .plus(KotlinBinaries.kotlinCompilerExecutables)
+        .plus("jbr/Contents/Home/lib/jspawnhelper")
         .filterNot { it == "plugins/**/*.sh" }
     }
   }

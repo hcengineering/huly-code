@@ -82,7 +82,7 @@ jobs:
         with:
           os: mac
           extension: dmg
-          artifacts_dir: .
+          artifacts_dir: ${{env.artifacts_dir}}
           name-prefix: artifact-
   publish:
     needs: [build-linux, build-windows, build-macos]

@@ -16,6 +16,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.util.io.NioFiles
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.util.io.createDirectories
@@ -33,7 +34,7 @@ import java.util.*
 import kotlin.io.path.exists
 
 object LanguageServerTemplateInstaller {
-  private final val LOG = Logger.getInstance(LanguageServerTemplateInstaller::class.java)
+  private val LOG = Logger.getInstance(LanguageServerTemplateInstaller::class.java)
 
   @JvmStatic
   fun install(
@@ -75,9 +76,10 @@ object LanguageServerTemplateInstaller {
     }
     else if (template.installNodeModules != null && !template.installNodeModules.isEmpty()) {
       val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
-      if (!directory.exists()) {
-        directory.createDirectories()
+      if (directory.exists()) {
+        NioFiles.deleteRecursively(directory)
       }
+      directory.createDirectories()
       NodeRuntime.instance().npmInstallPackages(directory, *template.installNodeModules.toTypedArray())
     }
     else if (template.binaryUrl != null) {
@@ -102,7 +104,7 @@ object LanguageServerTemplateInstaller {
     val file = DownloadUtils.downloadFile(template.binaryUrl!!, downloadName, directory.toFile())
     DecompressUtils.decompress(file.toPath(), directory, template.binaryExecutable)
     if (template.binaryExecutable != null) {
-      FileUtil.setExecutable(directory.resolve(template.binaryExecutable).toFile());
+      FileUtil.setExecutable(directory.resolve(template.binaryExecutable).toFile())
     }
   }
 

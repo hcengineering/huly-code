@@ -1241,9 +1241,9 @@ skip_ipr:
   WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_WITH_VER}" \
               "DisplayVersion" "${VER_BUILD}"
   WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_WITH_VER}" \
-              "Publisher" "JetBrains s.r.o."
+              "Publisher" "Huly Labs"
   WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_WITH_VER}" \
-              "URLInfoAbout" "https://www.jetbrains.com/products"
+              "URLInfoAbout" "https://hulylabs.com/"
   WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_WITH_VER}" \
               "InstallType" "$baseRegKey"
   WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_WITH_VER}" \

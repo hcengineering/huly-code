@@ -12,7 +12,6 @@ internal object HulyInstallersBuildTarget {
     val options = BuildOptions().apply {
       incrementalCompilation = true
       useCompiledClassesFromProjectOutput = false
-      buildStepsToSkip += BuildOptions.MAC_SIGN_STEP
     }
 
     runBlocking(Dispatchers.Default) {

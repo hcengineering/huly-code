@@ -47,55 +47,34 @@ jobs:
           artifacts_dir: ${{env.artifacts_dir}}
           name-prefix: artifact-
   build-macos:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4.2.2
-        with:
-          submodules: recursive
-      - uses: ./.github/actions/build_ide
-        with:
-          os: mac
-          arch: aarch64
-          extension: sit
-      - uses: ./.github/actions/upload_ide
-        with:
-          os: mac
-          extension: sit
-          artifacts_dir: ${{env.artifacts_dir}}
-      - name: Upload .dmg build scripts
-        uses: actions/upload-artifact@v4.4.3
-        with:
-          name: dmg-build-scripts
-          if-no-files-found: 'error'
-          retention-days: 1
-          path: ${{env.artifacts_dir}}/macos-dmg-build/
-  build-dmg:
     runs-on: macos-latest
-    needs: build-macos
     steps:
       - uses: actions/checkout@v4.2.2
         with:
           submodules: recursive
-      - name: Download .dmg build scripts
-        uses: actions/download-artifact@v4.1.8
+      - name: Checkout JetBrains/android
+        uses: actions/checkout@v4.2.2
         with:
-          name: dmg-build-scripts
-      - name: Download .sit
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: mac-sit
+          repository: JetBrains/android
+          path: android
+          ref: ${{env.android_commit}}
+      - name: Update submodule
+        shell: bash
+        # language=bash
+        run: git submodule update --init --remote --recursive
       - name: Import certificates
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-      - name: Build .dmg
+      - name: Build macos artifacts
         env:
-          CONTENT_SIGNED: false
-          STAPLE: false
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
         shell: bash
         # language=bash
-        run: /bin/bash ./build.sh
+        run: ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false
       - name: Upload .dmg
         uses: ./.github/actions/upload_ide
         with:

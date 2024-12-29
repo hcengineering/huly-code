@@ -81,6 +81,14 @@ internal suspend fun createHulyBuildContext(
   return BuildContextImpl.createContext(projectHome = projectHome,
                                         productProperties = HulyProperties(COMMUNITY_ROOT.communityRoot),
                                         setupTracer = true,
+                                        proprietaryBuildTools = ProprietaryBuildTools(
+                                          scrambleTool = null,
+                                          signTool = MacOsSignTool(),
+                                          macOsCodesignIdentity = MacOsCodesignIdentity(""),
+                                          featureUsageStatisticsProperties = null,
+                                          artifactsServer = null,
+                                          licenseServerHost = null,
+                                        ),
                                         options = options)
 }
 
@@ -125,6 +133,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       pluginAuto("redhat.lsp4ij") { spec ->
         spec.withModuleLibrary("eclipse.lsp4j", "redhat.lsp4ij", "org.eclipse.lsp4j-0.21.1.jar")
         spec.withModuleLibrary("vladsch.flexmark", "redhat.lsp4ij", "flexmark-0.64.8.jar")
+        spec.withModuleLibrary("nibor.autolink", "redhat.lsp4ij", "autolink-0.11.0.jar")
       },
       pluginAuto("hulylabs.langconfigurator") { spec ->
         spec.withModuleLibrary("tukaani.xz", "hulylabs.langconfigurator", "xz-1.10.jar")
@@ -193,7 +202,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     override fun getFullNameIncludingEditionAndVendor(appInfo: ApplicationInfoProperties) = "Huly Code"
 
     override fun getUninstallFeedbackPageUrl(appInfo: ApplicationInfoProperties): String {
-      return ""//"https://www.jetbrains.com/idea/uninstall/?edition=IC-${appInfo.majorVersion}.${appInfo.minorVersion}"
+      return "" //"https://www.jetbrains.com/idea/uninstall/?edition=IC-${appInfo.majorVersion}.${appInfo.minorVersion}"
     }
   }
 
@@ -223,7 +232,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       associateIpr = true
       fileAssociations = FileAssociation.from("ts", "rs", "toml", "zig")
       bundleIdentifier = "app.huly.HulyCode"
-      dmgImagePath = "${communityHomeDir}/build/conf/hulycode/mac/images/dmg_background.tiff"
+      dmgImagePath = "${communityHomeDir}/build/conf/hulycode/mac/images/dmg_background.png"
     }
 
     override fun getRootDirectoryName(appInfo: ApplicationInfoProperties, buildNumber: String): String {

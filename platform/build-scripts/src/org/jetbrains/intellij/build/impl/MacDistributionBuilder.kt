@@ -532,7 +532,47 @@ class MacDistributionBuilder(
 
     val baseName = context.productProperties.getBaseArtifactName(context) + suffix
     val sitFile = (if (publishSitArchive) context.paths.artifactDir else context.paths.tempDir).resolve("$baseName.sit")
-    Files.move(macZip, sitFile, StandardCopyOption.REPLACE_EXISTING)
+    if (context.isMacCodeSignEnabled) {
+      val zipFolder = context.paths.tempDir.resolve("tosign")
+      Decompressor.Zip(macZip).extract(zipFolder)
+      macZip.deleteIfExists()
+
+      val appDir = zipFolder.resolve(customizer.getRootDirectoryName(context.applicationInfo, context.buildNumber))
+      val contentDir = appDir.resolve("Contents")
+      val zipRoot = getMacZipRoot(customizer, context)
+      context.proprietaryBuildTools.signTool.signFiles(listOf(appDir.resolve("Contents/jbr/Contents/MacOS/libjli.dylib")), context, signingOptions("application/x-mac-app-zip", context))
+      context.proprietaryBuildTools.signTool.signFiles(listOf(appDir), context, signingOptions("application/x-mac-app-zip", context))
+
+      val builder = this@MacDistributionBuilder
+      val executableFileMatchers = builder.generateExecutableFilesMatchers(true, arch)
+      spanBuilder("build result signed zip archive for macOS")
+        .setAttribute("file", sitFile.toString())
+        .setAttribute("zipRoot", zipRoot.toString())
+        .setAttribute(AttributeKey.stringArrayKey("executableFilePatterns"), executableFileMatchers.values.toList())
+        .use(Dispatchers.IO) {
+          val entryCustomizer: (ZipArchiveEntry, Path, String) -> Unit = { entry, file, relativePathString ->
+            val relativePath = Path.of(relativePathString)
+            if (executableFileMatchers.any { it.key.matches(relativePath) } || (SystemInfoRt.isUnix && Files.isExecutable(file))) {
+              entry.unixMode = executableFileUnixMode
+            }
+          }
+
+          writeNewFile(sitFile) { targetFileChannel ->
+            NoDuplicateZipArchiveOutputStream(targetFileChannel, builder.context.options.compressZipFiles).use { zipOutStream ->
+              zipOutStream.setLevel(Deflater.DEFAULT_COMPRESSION)
+              try {
+                zipOutStream.dir(contentDir, prefix = "${zipRoot}/", entryCustomizer = entryCustomizer)
+              }
+              catch (e: Exception) {
+                // provide more context to error - dir
+                throw RuntimeException("Cannot pack $zipRoot to $sitFile", e)
+              }
+            }
+          }
+        }
+    } else {
+      Files.move(macZip, sitFile, StandardCopyOption.REPLACE_EXISTING)
+    }
 
     if (context.isMacCodeSignEnabled) {
       context.proprietaryBuildTools.signTool.signFiles(listOf(sitFile), context, signingOptions("application/x-mac-app-zip", context))
@@ -618,7 +658,7 @@ class MacDistributionBuilder(
     check(contains(reference)) { "No $reference is found in:\n'$this'" }
     return replace(reference, value)
   }
- 
+
   private fun publishDmgBuildScripts(entrypoint: Path, tempDir: Path) {
     val artifactDir = context.paths.artifactDir.resolve("macos-dmg-build")
     artifactDir.createDirectories()

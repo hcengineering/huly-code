@@ -213,7 +213,7 @@ private suspend fun unpackNativeLibraries(
     }
   }
 
-  if (signTool.signNativeFileMode == SignNativeFileMode.PREPARE) {
+  if (signTool.signNativeFileMode != SignNativeFileMode.DISABLED) {
     val versionOption = mapOf(SignTool.LIB_VERSION_OPTION_NAME to libVersion)
     coroutineScope {
       launch(CoroutineName("signing macOS binaries")) {

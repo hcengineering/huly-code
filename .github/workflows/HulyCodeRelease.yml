@@ -74,7 +74,9 @@ jobs:
           APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
         shell: bash
         # language=bash
-        run: ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false
+        run: |
+          chmod +x ./installers-huly.cmd
+          ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false
       - name: Upload .dmg
         uses: ./.github/actions/upload_ide
         with:

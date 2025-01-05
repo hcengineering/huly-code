@@ -20,6 +20,8 @@
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
     <workspaceModel.fileIndexContributor implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
+    <fileType name="Rust" extensions="rs" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.RustFileType"/>
+    <fileType name="TypeScript" extensions="ts" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.TypeScriptFileType"/>
   </extensions>
 
   <applicationListeners>

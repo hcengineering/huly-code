@@ -1,0 +1,1 @@
+Icons from https://github.com/PapirusDevelopmentTeam/papirus-icon-theme.git under GPL-3.0 license

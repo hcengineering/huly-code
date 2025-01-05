@@ -22,6 +22,8 @@ import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.util.io.createDirectories
 import com.redhat.devtools.lsp4ij.LanguageServersRegistry
 import com.redhat.devtools.lsp4ij.server.definition.launching.UserDefinedLanguageServerDefinition
+import com.redhat.devtools.lsp4ij.settings.ErrorReportingKind
+import com.redhat.devtools.lsp4ij.settings.UserDefinedLanguageServerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -166,5 +168,7 @@ object LanguageServerTemplateInstaller {
         template.clientSettingsJson
       )
     LanguageServersRegistry.getInstance().addServerDefinition(project, definition, template.serverMappingSettings)
+    val settings = UserDefinedLanguageServerSettings.LanguageServerDefinitionSettings().setErrorReportingKind(ErrorReportingKind.in_log)
+    UserDefinedLanguageServerSettings.getInstance(project).updateSettings(serverId, settings)
   }
 }

@@ -2,18 +2,10 @@ id: rust-analyzer
 name: Rust Language Server
 
 programArgs:
-  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer'\""
-  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/rust-analyzer/rust-analyzer.exe\""
+  default: "sh -c \"rustup component add rust-analyzer && rust-analyzer\""
+  windows: "cmd /C \"rustup component add rust-analyzer && rust-analyzer\""
 
-binaryUrls:
-  windows-x86_64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-x86_64-pc-windows-msvc.zip"
-  windows-aarch64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-aarch64-pc-windows-msvc.zip"
-  linux-x86_64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-x86_64-unknown-linux-gnu.gz"
-  linux-aarch64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-aarch64-unknown-linux-gnu.gz"
-  mac-x86_64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-x86_64-apple-darwin.gz"
-  mac-aarch64: "https://github.com/rust-lang/rust-analyzer/releases/download/2024-12-09/rust-analyzer-aarch64-apple-darwin.gz"
-
-binaryExecutable: "rust-analyzer"
+installCommand: "rustup -V"
 
 mappingSettings:
   - languageId: "rust"

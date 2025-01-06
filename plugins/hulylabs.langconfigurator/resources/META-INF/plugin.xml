@@ -19,10 +19,22 @@
       implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
-    <workspaceModel.fileIndexContributor implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
+    <workspaceModel.fileIndexContributor
+      implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
     <fileType name="Rust" extensions="rs" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.RustFileType"/>
-    <fileType name="TypeScript" extensions="ts" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.TypeScriptFileType"/>
+    <fileType name="TypeScript" extensions="ts"
+              implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.TypeScriptFileType"/>
+
+    <projectConfigurable id="hulylabs.langconfigurator.settings"
+                         key="settings.display.name"
+                         instance="com.hulylabs.intellij.plugins.langconfigurator.settings.Configuration"
+                         dynamic="true"/>
   </extensions>
+
+  <projectListeners>
+    <listener class="com.hulylabs.intellij.plugins.langconfigurator.settings.SaveActionsDocumentManagerListener"
+              topic="com.intellij.openapi.fileEditor.FileDocumentManagerListener"/>
+  </projectListeners>
 
   <applicationListeners>
     <listener class="com.hulylabs.intellij.plugins.langconfigurator.gitignore.GitIgnoreFileListener"

@@ -1,0 +1,7 @@
+{
+  "name": "HulyCode Light",
+  "dark": false,
+  "author": "Huly Labs",
+  "nameKey": "hulycode.light.theme.name",
+  "parentTheme": "ExperimentalLight"
+}

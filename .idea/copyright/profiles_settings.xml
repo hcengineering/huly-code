@@ -1,8 +1,7 @@
 <component name="CopyrightManager">
   <settings>
     <module2copyright>
-      <element module="All" copyright="apache 2 license" />
-      <element module="Open Files" copyright="hulylabs" />
+      <element module="All" copyright="hulycode" />
     </module2copyright>
     <LanguageOptions name="__TEMPLATE__">
       <option name="addBlankAfter" value="false" />

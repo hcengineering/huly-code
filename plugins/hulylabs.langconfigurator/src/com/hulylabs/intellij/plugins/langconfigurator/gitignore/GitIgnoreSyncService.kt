@@ -25,9 +25,11 @@ class GitIgnoreSyncService(val project: Project) {
   private fun reloadGitIgnore(file: VirtualFile) {
     LOG.info("Reloading .gitignore file")
     modificationStamp = file.timeStamp
-    file.readText().lines().forEach { line ->
-      var line = line.trim()
-      if (!line.startsWith("#") && !line.isBlank()) {
+    excludeFolders.clear()
+    excludePatterns.clear()
+    file.readText().lines().forEach { pLine ->
+      var line = pLine.trim()
+      if (!line.startsWith("#") && line.isNotBlank()) {
         if (!line.contains('/') && (line.contains('*') || line.contains('.'))) {
           excludePatterns.add(line)
         }
@@ -40,12 +42,9 @@ class GitIgnoreSyncService(val project: Project) {
             line = line.substring(2)
           }
           if (line.endsWith("/**")) {
-            line = line.substring(0, line.length - 3)
-          }
-          if (line.endsWith("/*")) {
             line = line.substring(0, line.length - 2)
           }
-          if (line.endsWith("/")) {
+          if (line.endsWith("/*")) {
             line = line.substring(0, line.length - 1)
           }
           if (line.contains("*")) {

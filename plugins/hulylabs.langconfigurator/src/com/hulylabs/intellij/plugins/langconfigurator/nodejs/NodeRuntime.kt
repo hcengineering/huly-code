@@ -13,7 +13,7 @@ abstract class NodeRuntime {
     }
   }
 
-  protected abstract fun binaryPath(): Path
+  abstract fun binaryPath(): Path
 
   @Throws(IOException::class)
   protected abstract suspend fun runNpmSubcommand(directory: Path?, subcommand: String, vararg args: String): String?

@@ -47,17 +47,18 @@ object LanguageServerTemplateInstaller {
   ) {
     (project as ComponentManagerEx).getCoroutineScope().launch {
       try {
+        var env = emptyMap<String, String>()
         withBackgroundProgress(project, "Install binary") {
-          installBinary(project, template)
+          env = installBinary(project, template)
         }
         withContext(Dispatchers.EDT) {
-          addTemplate(project, template)
+          addTemplate(project, template, env)
           onSuccess.run()
         }
       }
       catch (ex: IOException) {
         LOG.warn(ex.message, ex.cause)
-        var sb = StringBuilder()
+        val sb = StringBuilder()
         sb.append(ex.message ?: "Unknown error")
         if (ex.cause?.message != null) {
           sb.append("\n")
@@ -71,22 +72,27 @@ object LanguageServerTemplateInstaller {
   }
 
   @Throws(IOException::class)
-  private suspend fun installBinary(project: Project, template: HulyLanguageServerTemplate) {
+  private suspend fun installBinary(project: Project, template: HulyLanguageServerTemplate): Map<String, String> {
     LOG.info("Install binary for template ${template.id}")
+    val env = mutableMapOf<String, String>()
     if (template.installCommand != null) {
       executeCommand(project, template)
     }
-    else if (template.installNodeModules != null && !template.installNodeModules.isEmpty()) {
+    else if (template.installNodeModules != null && template.installNodeModules.isNotEmpty()) {
       val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
       if (directory.exists()) {
         NioFiles.deleteRecursively(directory)
       }
       directory.createDirectories()
-      NodeRuntime.instance().npmInstallPackages(directory, *template.installNodeModules.toTypedArray())
+      val nodeRuntime = NodeRuntime.instance()
+      nodeRuntime.npmInstallPackages(directory, *template.installNodeModules.toTypedArray())
+      env["PATH"] = nodeRuntime.binaryPath().parent.toString().replace('\\', '/')
+      env["LSP_ROOT"] = directory.toString().replace('\\', '/')
     }
     else if (template.binaryUrl != null) {
       downloadBinary(project, template)
     }
+    return env
   }
 
   @Throws(IOException::class)
@@ -150,25 +156,36 @@ object LanguageServerTemplateInstaller {
     }
   }
 
-  private fun addTemplate(project: Project, template: HulyLanguageServerTemplate) {
+  private fun addTemplate(project: Project, template: HulyLanguageServerTemplate, env: Map<String, String>) {
     LOG.info("Add template ${template.id}")
     val serverId = UUID.randomUUID().toString()
-
     val definition =
       UserDefinedLanguageServerDefinition(
         serverId,
         template.name,
         "",
         template.commandLine,
-        emptyMap(),
+        env,
         false,
-        template.settingsJson,
+        normalizeString(template.settingsJson, env),
         null,
-        template.initializationOptionsJson,
-        template.clientSettingsJson
+        normalizeString(template.initializationOptionsJson,env),
+        normalizeString(template.clientSettingsJson, env)
       )
     LanguageServersRegistry.getInstance().addServerDefinition(project, definition, template.serverMappingSettings)
     val settings = UserDefinedLanguageServerSettings.LanguageServerDefinitionSettings().setErrorReportingKind(ErrorReportingKind.in_log)
     UserDefinedLanguageServerSettings.getInstance(project).updateSettings(serverId, settings)
+  }
+
+  /**
+   * Replaces all occurrences of ${key} with the value of the corresponding key in the environment.
+   */
+  private fun normalizeString(str: String?, env: Map<String, String>): String? {
+    if (str == null) return null
+    var res = str
+    for ((key, value) in env) {
+      res = res!!.replace("\${$key}", value)
+    }
+    return res
   }
 }

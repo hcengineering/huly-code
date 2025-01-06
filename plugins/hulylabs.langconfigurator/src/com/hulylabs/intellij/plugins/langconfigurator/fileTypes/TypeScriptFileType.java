@@ -6,6 +6,7 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.LanguageFileType;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.IconManager;
+import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -25,6 +26,11 @@ public class TypeScriptFileType extends LanguageFileType implements FileType {
 
   @Override
   public @NotNull String getDescription() {
+    return "TypeScript";
+  }
+
+  @Override
+  public @Nls @NotNull String getDisplayName() {
     return "TypeScript";
   }
 

@@ -11,6 +11,7 @@
 
   <depends>com.intellij.modules.platform</depends>
   <depends>com.redhat.devtools.lsp4ij</depends>
+  <depends>com.hulylabs.TreeSitter</depends>
 
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
 

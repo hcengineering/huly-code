@@ -21,8 +21,9 @@
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
     <workspaceModel.fileIndexContributor
       implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
-    <fileType name="Rust" extensions="rs" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.RustFileType"/>
-    <fileType name="TypeScript" extensions="ts"
+    <fileType name="Rust" extensions="rs" fieldName="INSTANCE" language="TreeSitter"
+              implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.RustFileType"/>
+    <fileType name="TypeScript" extensions="ts" fieldName="INSTANCE" language="TreeSitter"
               implementationClass="com.hulylabs.intellij.plugins.langconfigurator.fileTypes.TypeScriptFileType"/>
 
     <projectConfigurable id="hulylabs.langconfigurator.settings"

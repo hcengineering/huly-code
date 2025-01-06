@@ -1,0 +1,5 @@
+{
+  "typescript": {
+    "tsdk": "${LSP_ROOT}/node_modules/typescript/lib"
+  }
+}

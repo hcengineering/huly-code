@@ -19,7 +19,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "intellij.properties",
   "intellij.terminal",
   "intellij.emojipicker",
-  //"intellij.textmate",
+  "intellij.textmate",
   "intellij.editorconfig",
   //"intellij.settingsSync",
   "intellij.configurationScript",

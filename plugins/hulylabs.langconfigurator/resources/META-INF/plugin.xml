@@ -11,6 +11,7 @@
 
   <depends>com.intellij.modules.platform</depends>
   <depends>com.redhat.devtools.lsp4ij</depends>
+  <depends>org.jetbrains.plugins.textmate</depends>
   <depends>com.hulylabs.TreeSitter</depends>
 
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
@@ -31,6 +32,11 @@
                          key="settings.display.name"
                          instance="com.hulylabs.intellij.plugins.langconfigurator.settings.Configuration"
                          dynamic="true"/>
+    <multiLangCommenter implementation="com.hulylabs.intellij.plugins.langconfigurator.commenter.TreeSitterCommentProvider"/>
+    <lang.commenter language="TreeSitter" implementationClass="com.hulylabs.intellij.plugins.langconfigurator.commenter.TreeSitterCommentProvider"/>
+    <themeProvider id="HulyCode Dark" path="themes/dark.theme.json" parentTheme="ExperimentalDark" targetUi="new"/>
+    <themeProvider id="HulyCode Light" path="themes/light.theme.json" parentTheme="ExperimentalLight" targetUi="new"/>
+
     <!-- LSP4IJ related extensions -->
 
     <!-- LSP file view provider to yield some PSI structure to otherwise flat files -->

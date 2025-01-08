@@ -76,12 +76,19 @@ jobs:
         # language=bash
         run: |
           chmod +x ./installers-huly.cmd
-          ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false
+          ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false -Dbuild.number=251.${{github.run_number}}
       - name: Upload .dmg
         uses: ./.github/actions/upload_ide
         with:
           os: mac
           extension: dmg
+          artifacts_dir: ${{env.artifacts_dir}}
+          name-prefix: artifact-
+      - name: Upload .sit
+        uses: ./.github/actions/upload_ide
+        with:
+          os: mac
+          extension: sit
           artifacts_dir: ${{env.artifacts_dir}}
           name-prefix: artifact-
   publish:

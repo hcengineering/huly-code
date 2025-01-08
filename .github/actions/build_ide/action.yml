@@ -28,4 +28,4 @@ runs:
     - name: Build .${{inputs.extension}}
       shell: bash
       # language=bash
-      run: docker run --rm --user "$(id -u)" --volume ${PWD}:/community build_env -Dintellij.build.target.os=${{inputs.os}} -Dintellij.build.target.arch=${{inputs.arch}}
+      run: docker run --rm --user "$(id -u)" --volume ${PWD}:/community build_env -Dintellij.build.target.os=${{inputs.os}} -Dintellij.build.target.arch=${{inputs.arch}} -Dbuild.number=251.${{github.run_number}}

@@ -17,6 +17,9 @@
   <resource-bundle>messages.HulyLangConfiguratorBundle</resource-bundle>
 
   <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceInterface="com.intellij.platform.ide.customization.ExternalProductResourceUrls"
+                        serviceImplementation="com.hulylabs.intellij.plugins.langconfigurator.HulyExternalResourceUrls"
+                        overrides="true"/>
     <editorNotificationProvider
       implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
@@ -53,28 +56,28 @@
     <!-- end of copied code -->
 
     <lang.psiStructureViewFactory
-        id="LSPDocumentSymbolStructureViewFactoryForTextMate"
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
+      id="LSPDocumentSymbolStructureViewFactoryForTextMate"
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
     <lang.foldingBuilder
-        id="LSPFoldingBuilderForTextMate"
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
-        order="first"/>
+      id="LSPFoldingBuilderForTextMate"
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
+      order="first"/>
     <codeBlockProvider
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPCodeBlockProvider"
-        order="first"/>
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPCodeBlockProvider"
+      order="first"/>
     <codeInsight.parameterInfo
-        id="LSPParameterInfoHandlerForTextMate"
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler"/>
+      id="LSPParameterInfoHandlerForTextMate"
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler"/>
     <typeHierarchyProvider
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyProvider"/>
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyProvider"/>
     <callHierarchyProvider
-        language="TreeSitter"
-        implementationClass="com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvider"/>
+      language="TreeSitter"
+      implementationClass="com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvider"/>
   </extensions>
 
   <projectListeners>

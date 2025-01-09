@@ -173,7 +173,7 @@ object LanguageServerTemplateInstaller {
         normalizeString(template.clientSettingsJson, env)
       )
     LanguageServersRegistry.getInstance().addServerDefinition(project, definition, template.serverMappingSettings)
-    val settings = UserDefinedLanguageServerSettings.LanguageServerDefinitionSettings().setErrorReportingKind(ErrorReportingKind.in_log)
+    val settings = UserDefinedLanguageServerSettings.LanguageServerDefinitionSettings().setErrorReportingKind(ErrorReportingKind.none)
     UserDefinedLanguageServerSettings.getInstance(project).updateSettings(serverId, settings)
   }
 

@@ -536,7 +536,7 @@ class MacDistributionBuilder(
     val sitFile = (if (publishSitArchive) context.paths.artifactDir else context.paths.tempDir).resolve("$baseName.sit")
     if (context.isMacCodeSignEnabled) {
       val zipFolder = context.paths.tempDir.resolve("tosign")
-      Decompressor.Zip(macZip).extract(zipFolder)
+      Decompressor.Zip(macZip).withZipExtensions().extract(zipFolder)
       macZip.deleteIfExists()
 
       val appDir = zipFolder.resolve(customizer.getRootDirectoryName(context.applicationInfo, context.buildNumber))

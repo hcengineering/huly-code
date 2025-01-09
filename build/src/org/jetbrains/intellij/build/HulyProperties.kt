@@ -140,13 +140,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
         spec.withModuleLibrary("esotericsoftware.yamlbeans", "hulylabs.langconfigurator", "yamlbeans-1.17.jar")
       },
       pluginAuto("hulylabs.treesitter") { spec ->
-        spec.withModuleLibrary("tree-sitter", "hulylabs.treesitter", "tree-sitter-0.24.5.jar")
-        spec.withModuleLibrary("tree-sitter-astro", "hulylabs.treesitter", "tree-sitter-astro-master.jar")
-        spec.withModuleLibrary("tree-sitter-javascript", "hulylabs.treesitter", "tree-sitter-javascript-0.23.1.jar")
-        spec.withModuleLibrary("tree-sitter-rust", "hulylabs.treesitter", "tree-sitter-rust-0.23.2.jar")
-        spec.withModuleLibrary("tree-sitter-svelte", "hulylabs.treesitter", "tree-sitter-svelte-1.0.2.jar")
-        spec.withModuleLibrary("tree-sitter-typescript", "hulylabs.treesitter", "tree-sitter-typescript-0.23.2.jar")
-        spec.withModuleLibrary("tree-sitter-zig", "hulylabs.treesitter", "tree-sitter-zig-1.1.2.jar")
+        spec.withModuleLibrary("tree-sitter-libs", "hulylabs.treesitter", "tree-sitter-libs.jar")
       },
     ))
 

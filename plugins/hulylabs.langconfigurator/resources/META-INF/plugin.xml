@@ -32,6 +32,8 @@
                          dynamic="true"/>
     <themeProvider id="HulyCode Dark" path="themes/dark.theme.json" parentTheme="ExperimentalDark" targetUi="new"/>
     <themeProvider id="HulyCode Light" path="themes/light.theme.json" parentTheme="ExperimentalLight" targetUi="new"/>
+    <bundledColorScheme id="GitHubDarkDimmed" path="themes/GitHub_Dark_Dimmed.xml"/>
+    <bundledColorScheme id="GitHubLight" path="themes/GitHub_Light.xml"/>
 
     <!-- LSP4IJ related extensions -->
 

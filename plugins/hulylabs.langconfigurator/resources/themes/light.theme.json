@@ -3,5 +3,6 @@
   "dark": false,
   "author": "Huly Labs",
   "nameKey": "hulycode.light.theme.name",
-  "parentTheme": "ExperimentalLight"
+  "parentTheme": "ExperimentalLight",
+  "editorScheme": "GitHub Light"
 }

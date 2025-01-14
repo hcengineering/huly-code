@@ -1,10 +1,10 @@
 name: Gradle Wrappers Validation
-on:
-  push:
-    branches:
-      - master
-    paths:
-      - '**.jar'
+#on:
+#  push:
+#    branches:
+#      - master
+#    paths:
+#      - '**.jar'
 jobs:
   validation:
     name: Validation

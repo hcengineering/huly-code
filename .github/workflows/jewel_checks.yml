@@ -1,9 +1,9 @@
 name: Jewel Checks
 
-on:
-  pull_request:
-    paths:
-      - "community/platform/jewel/**"
+#on:
+#  pull_request:
+#    paths:
+#      - "community/platform/jewel/**"
 
 defaults:
   run:

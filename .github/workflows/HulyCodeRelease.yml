@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 env:
   artifacts_dir: 'out/huly-code/artifacts'
-  android_commit: 'c6262f02dcd4f1f813e4820e995861251c8fff54'
+  android_commit: '86674383de7132c6aba3f5e1c20610a970cd36da'
 jobs:
   # a single job for all OSes cannot be used due to free disk space lack on runners
   build-linux:

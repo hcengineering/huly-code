@@ -36,6 +36,7 @@
     <bundledColorScheme id="GitHubLight" path="themes/GitHub_Light.xml"/>
     <bundledKeymap file="VSCode.xml" />
     <bundledKeymap file="VSCode OSX.xml" />
+    <consoleFilterProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.terminal.FileLinkTerminalFilterProvider"/>
 
     <!-- LSP4IJ related extensions -->
 

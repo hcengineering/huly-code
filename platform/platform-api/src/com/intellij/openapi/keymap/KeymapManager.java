@@ -14,6 +14,8 @@ public abstract class KeymapManager {
   public static final String X_WINDOW_KEYMAP = "Default for XWin";
   public static final String KDE_KEYMAP = "Default for KDE";
   public static final String GNOME_KEYMAP = "Default for GNOME";
+  public static final String VSCODE_KEYMAP = "VSCode";
+  public static final String MAC_OS_X_VSCODE_KEYMAP = "VSCode OSX";
 
   public abstract @NotNull Keymap getActiveKeymap();
 

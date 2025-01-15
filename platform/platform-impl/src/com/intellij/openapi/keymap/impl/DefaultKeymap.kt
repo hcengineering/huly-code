@@ -106,11 +106,11 @@ open class DefaultKeymap {
 
   open val defaultKeymapName: String
     get() = when {
-      SystemInfoRt.isMac -> KeymapManager.MAC_OS_X_10_5_PLUS_KEYMAP
+      SystemInfoRt.isMac -> KeymapManager.MAC_OS_X_VSCODE_KEYMAP
       SystemInfo.isGNOME -> KeymapManager.GNOME_KEYMAP
       SystemInfo.isKDE -> KeymapManager.KDE_KEYMAP
       SystemInfo.isUnix -> KeymapManager.X_WINDOW_KEYMAP
-      else -> KeymapManager.DEFAULT_IDEA_KEYMAP
+      else -> KeymapManager.VSCODE_KEYMAP
     }
 
   open fun getKeymapPresentableName(keymap: KeymapImpl): String {

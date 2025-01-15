@@ -34,6 +34,8 @@
     <themeProvider id="HulyCode Light" path="themes/light.theme.json" parentTheme="ExperimentalLight" targetUi="new"/>
     <bundledColorScheme id="GitHubDarkDimmed" path="themes/GitHub_Dark_Dimmed.xml"/>
     <bundledColorScheme id="GitHubLight" path="themes/GitHub_Light.xml"/>
+    <bundledKeymap file="VSCode.xml" />
+    <bundledKeymap file="VSCode OSX.xml" />
 
     <!-- LSP4IJ related extensions -->
 

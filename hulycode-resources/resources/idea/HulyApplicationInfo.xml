@@ -6,9 +6,9 @@
   <icon svg="/huly-code.svg" svg-small="/huly-code_16.svg"/>
   <icon-eap svg="/huly-code.svg" svg-small="/huly-code_16.svg"/>
   <names product="HulyCode" fullname="Huly Code" edition="" script="huly-code" motto="Huly Code"/>
-  <default-laf dark="HulyCode Dark" light="HulyCode Light"/>
 
-  <!--<essential-plugin>com.intellij.java</essential-plugin>-->
-  <!--<essential-plugin>com.intellij.java.ide</essential-plugin>-->
-  <!--<essential-plugin>com.intellij.modules.json</essential-plugin>-->
+  <essential-plugin>hulylabs.hulycode.plugins.hulylangconfigurator</essential-plugin>
+  <essential-plugin>com.hulylabs.TreeSitter</essential-plugin>
+
+  <default-laf dark="HulyCode Dark" light="HulyCode Light"/>
 </component>

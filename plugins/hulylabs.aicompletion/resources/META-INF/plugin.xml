@@ -1,0 +1,23 @@
+<idea-plugin>
+  <id>com.hulylabs.aicompletion</id>
+
+  <name>Huly Code AI Completion</name>
+
+  <vendor url="https://hulylabs.com/">Huly Labs</vendor>
+
+  <description>Code completion based on AI providers(Supermaven, GitHub Copilot)</description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.lang</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <editorFactoryListener implementation="com.hulylabs.intellij.plugins.completion.listeners.InlineCompletionEditorFactoryListener"/>
+    <postStartupActivity implementation="com.hulylabs.intellij.plugins.completion.services.ProjectStartupActivity"/>
+    <statusBarWidgetFactory id="AIInlineCompletion" implementation="com.hulylabs.intellij.plugins.completion.ui.WidgetFactory" />
+  </extensions>
+
+  <extensions defaultExtensionNs="com.intellij.inline.completion">
+    <provider id="AIInlineCompletionProvider" implementation="com.hulylabs.intellij.plugins.completion.EditorInlineCompletionProvider"/>
+  </extensions>
+
+</idea-plugin>

@@ -4,9 +4,9 @@ package com.hulylabs.intellij.plugins.completion.ui
 import com.intellij.openapi.wm.StatusBarWidget
 
 object WidgetRegistry {
-   private val widgets = ArrayList<StatusBarWidget>()
+  private val widgets = ArrayList<Widget>()
 
-  fun registerWidget(widget: StatusBarWidget): StatusBarWidget {
+  fun registerWidget(widget: Widget): Widget {
     widgets.add(widget)
     return widget
   }
@@ -15,4 +15,7 @@ object WidgetRegistry {
     widgets.remove(widget)
   }
 
+  fun getWidgets(): List<Widget> {
+    return widgets
+  }
 }

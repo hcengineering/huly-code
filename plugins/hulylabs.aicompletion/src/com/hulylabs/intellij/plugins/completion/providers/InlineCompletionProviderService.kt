@@ -11,6 +11,7 @@ interface InlineCompletionProviderService {
   /** uses for switching between inline completion providers */
   fun stop()
 
+  fun getStatus(): String
   fun getActions(): List<AnAction>
   fun isUpdating(): Boolean
   fun update(path: String, content: String, entryId: Int, cursorOffset: Int)

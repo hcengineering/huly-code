@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
@@ -46,11 +47,12 @@ class SupermavenAgent(agentPath: Path) {
   internal val states: TreeMap<Long, SupermavenCompletionState> = TreeMap()
   internal var accountStatus: SupermavenAccountStatus = SupermavenAccountStatus.UNKNOWN
   internal var serviceTier: String? = null
+  internal var activationUrl: String? = null
   internal var newStateId = 0L
 
   init {
     val processBuilder = ProcessBuilder(agentPath.toString(), "stdio")
-    //processBuilder.environment()["SM_LOG_PATH"] = agentPath.parent.resolve("sm-agent.log").toString()
+    processBuilder.environment()["SM_LOG_PATH"] = agentPath.parent.resolve("sm-agent.log").toString()
     process = processBuilder.start()
     stdout = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
     stderr = BufferedReader(InputStreamReader(process.errorStream, Charsets.UTF_8))
@@ -134,7 +136,17 @@ class SupermavenAgent(agentPath: Path) {
         }
       }
       is SupermavenActivationRequestMessage -> {
-        accountStatus = SupermavenAccountStatus.NEEDS_ACTIVATION // TODO: send activation request
+        accountStatus = SupermavenAccountStatus.NEEDS_ACTIVATION
+        activationUrl = message.activateUrl
+        val settings: SupermavenSettings = ApplicationManager.getApplication().service()
+        // on first run use free version activation automatically
+        if (!settings.state.firstActivation) {
+          settings.state.firstActivation = true
+          LOG.info("sending free activation request")
+          ApplicationManager.getApplication().invokeLater {
+            send(SupermavenFreeActivationMessage())
+          }
+        }
       }
       is SupermavenActivationSuccessMessage -> {
         accountStatus = SupermavenAccountStatus.READY

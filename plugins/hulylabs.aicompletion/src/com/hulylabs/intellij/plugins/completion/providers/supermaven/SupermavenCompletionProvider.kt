@@ -2,7 +2,10 @@
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.InlineCompletionProviderService
+import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.FreeActivationAction
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.LogoutAction
+import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.ProActivationAction
+import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.UpgradeProAction
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.project.Project
 
@@ -19,9 +22,40 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     supermaven.stop()
   }
 
+  override fun getStatus(): String {
+    return when (supermaven.state) {
+      SupermavenService.AgentState.STARTING -> {
+        when (supermaven.getAccountStatus()) {
+          SupermavenAccountStatus.NEEDS_ACTIVATION -> "Needs activation"
+          else -> "Starting"
+        }
+      }
+      SupermavenService.AgentState.FAILED_DOWNLOAD -> "Failed to download agent"
+      SupermavenService.AgentState.STARTED -> {
+        when (supermaven.getAccountStatus()) {
+          SupermavenAccountStatus.NEEDS_ACTIVATION -> "Needs activation"
+          SupermavenAccountStatus.READY -> {
+            supermaven.getServiceTier() ?: "Unknown"
+          }
+          else -> "Unknown"
+        }
+      }
+      SupermavenService.AgentState.ERROR -> "Error"
+      SupermavenService.AgentState.STOPPED -> "Stopped"
+    }
+  }
+
   override fun getActions(): List<AnAction> {
     val actions: MutableList<AnAction> = mutableListOf()
-    actions.add(LogoutAction(supermaven))
+    if (supermaven.getAccountStatus() == SupermavenAccountStatus.NEEDS_ACTIVATION) {
+      actions.add(FreeActivationAction(supermaven))
+      actions.add(ProActivationAction(supermaven))
+    } else if (supermaven.state == SupermavenService.AgentState.STARTED) {
+      if (supermaven.getServiceTier() == "FreeNoLicense") {
+        actions.add(UpgradeProAction(supermaven))
+      }
+      actions.add(LogoutAction(supermaven))
+    }
     return actions
   }
 

@@ -56,7 +56,7 @@ data class SupermavenApologyMessage(
 @Serializable
 @SerialName("activation_request")
 data class SupermavenActivationRequestMessage(
-  val activateUrl: String,
+  val activateUrl: String? = null,
 ) : SupermavenMessage()
 
 @Serializable

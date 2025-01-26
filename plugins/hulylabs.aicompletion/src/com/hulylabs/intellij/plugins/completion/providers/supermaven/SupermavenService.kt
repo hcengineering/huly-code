@@ -1,10 +1,8 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.CursorPositionUpdateMessage
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.FileUpdateMessage
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.SupermavenLogoutMessage
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.SupermavenStateUpdateMessage
+import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
@@ -21,7 +19,8 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
   }
 
   private var agent: SupermavenAgent? = null
-  private var state: AgentState = AgentState.STOPPED
+  var state: AgentState = AgentState.STOPPED
+    private set
 
   companion object {
     @JvmStatic
@@ -68,7 +67,10 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
       state = AgentState.STARTED
       return true
     }
-
+    if (agent!!.accountStatus == SupermavenAccountStatus.NEEDS_ACTIVATION) {
+      // on activation state we send update command for communication
+      return true
+    }
     LOG.warn("Supermaven agent account status is ${agent!!.accountStatus}")
     return false
   }
@@ -128,10 +130,30 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     return bestCompletion
   }
 
+  fun getAccountStatus(): SupermavenAccountStatus? {
+    return agent?.accountStatus
+  }
+
+  fun getServiceTier(): String? {
+    return agent?.serviceTier
+  }
+
+  fun signIn(free: Boolean) {
+    if (agent?.accountStatus == SupermavenAccountStatus.NEEDS_ACTIVATION) {
+      if (free) {
+        agent!!.send(SupermavenFreeActivationMessage())
+      }
+      else if (agent!!.activationUrl != null) {
+        BrowserUtil.open(agent!!.activationUrl!!)
+      }
+    }
+  }
+
   fun logout() {
     if (!checkStarted()) {
       return
     }
+    agent!!.serviceTier = null
     agent!!.send(SupermavenLogoutMessage())
   }
 }

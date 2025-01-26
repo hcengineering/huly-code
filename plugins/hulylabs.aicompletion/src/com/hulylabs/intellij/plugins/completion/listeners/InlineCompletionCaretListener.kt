@@ -2,6 +2,7 @@
 package com.hulylabs.intellij.plugins.completion.listeners
 
 import com.hulylabs.intellij.plugins.completion.InlineCompletionProviderRegistry
+import com.hulylabs.intellij.plugins.completion.ui.WidgetRegistry
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 
@@ -15,6 +16,9 @@ class InlineCompletionCaretListener : CaretListener {
         val provider = InlineCompletionProviderRegistry.getInstance(event.editor.project!!).provider
         provider.update(path, content, entryId, event.caret!!.offset)
       }
+    }
+    WidgetRegistry.getWidgets().forEach {
+      it.update()
     }
   }
 }

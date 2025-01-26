@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PopupAction
 
-class LogoutAction(private val supermaven: SupermavenService) : AnAction(), PopupAction {
+class UpgradeProAction(private val supermaven: SupermavenService) : AnAction(), PopupAction {
   override fun getActionUpdateThread(): ActionUpdateThread {
     return ActionUpdateThread.BGT
   }
@@ -17,6 +17,6 @@ class LogoutAction(private val supermaven: SupermavenService) : AnAction(), Popu
   }
 
   override fun update(e: AnActionEvent) {
-    e.presentation.text = "Logout"
+    e.presentation.text = "Upgrade to Pro"
   }
 }

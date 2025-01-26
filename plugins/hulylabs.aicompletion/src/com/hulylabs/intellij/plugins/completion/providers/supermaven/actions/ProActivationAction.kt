@@ -7,16 +7,16 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PopupAction
 
-class LogoutAction(private val supermaven: SupermavenService) : AnAction(), PopupAction {
+class ProActivationAction(private val supermaven: SupermavenService) : AnAction(), PopupAction {
   override fun getActionUpdateThread(): ActionUpdateThread {
     return ActionUpdateThread.BGT
   }
 
   override fun actionPerformed(e: AnActionEvent) {
-    supermaven.logout()
+    supermaven.signIn(false)
   }
 
   override fun update(e: AnActionEvent) {
-    e.presentation.text = "Logout"
+    e.presentation.text = "Activate"
   }
 }

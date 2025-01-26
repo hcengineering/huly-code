@@ -35,3 +35,9 @@ class SupermavenLogoutMessage : SupermavenOutboundMessage() {
     return """{"kind":"logout"}"""
   }
 }
+
+class SupermavenFreeActivationMessage : SupermavenOutboundMessage() {
+  override fun toJson(): String {
+    return """{"kind":"use_free_version", "userEmail": null}"""
+  }
+}

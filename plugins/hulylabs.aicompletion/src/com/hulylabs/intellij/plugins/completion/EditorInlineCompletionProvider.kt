@@ -44,7 +44,6 @@ class EditorInlineCompletionProvider : InlineCompletionProvider {
   }
 
   override fun isEnabled(event: InlineCompletionEvent): Boolean {
-    println("event: ${event.javaClass.simpleName}")
-    return true
+    return event is InlineCompletionEvent.DocumentChange || event is InlineCompletionEvent.Backspace
   }
 }

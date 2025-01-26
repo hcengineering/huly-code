@@ -16,7 +16,7 @@ import com.intellij.openapi.wm.impl.status.EditorBasedStatusBarPopup
 class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
   override fun getWidgetState(file: VirtualFile?): WidgetState {
     val provider = InlineCompletionProviderRegistry.getInstance(project).provider
-    val title = "Completion: " + provider.name
+    val title = "${provider.name}: ${provider.getStatus()}"
     return WidgetState(title, title, true)
   }
 

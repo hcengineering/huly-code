@@ -45,7 +45,6 @@ class SupermavenAgent(agentPath: Path) {
   private val json = Json {
     ignoreUnknownKeys = true
   }
-  private var lastMessageTime: Long = 0
 
   internal val states: TreeMap<Long, SupermavenCompletionState> = TreeMap()
   internal var accountStatus: SupermavenAccountStatus = SupermavenAccountStatus.UNKNOWN
@@ -81,11 +80,6 @@ class SupermavenAgent(agentPath: Path) {
         catch (e: IOException) {
           break
         }
-        if (System.currentTimeMillis() - lastMessageTime > 100) {
-          ApplicationManager.getApplication().invokeLater {
-            drainOutput()
-          }
-        }
         var line = str ?: continue
         if (!line.startsWith(SM_MESSAGE_PREFIX)) {
           LOG.warn("stdout: $line")
@@ -98,7 +92,6 @@ class SupermavenAgent(agentPath: Path) {
         catch (e: Exception) {
           LOG.error("error in process message (line=$line): ", e)
         }
-        lastMessageTime = System.currentTimeMillis()
       }
     }
     thread {
@@ -112,11 +105,22 @@ class SupermavenAgent(agentPath: Path) {
         LOG.warn("stderr: ${str ?: continue}")
       }
     }
+
+    // drain message thread
+    thread {
+      while (process.isAlive) {
+        if (incomingMessages.isNotEmpty()) {
+          ApplicationManager.getApplication().invokeLater {
+            drainOutput()
+          }
+        }
+        Thread.sleep(50)
+      }
+    }
     accountStatus = SupermavenAccountStatus.READY
   }
 
   fun drainOutput() {
-    LOG.info("draining output")
     while (process.isAlive) {
       val message = incomingMessages.poll() ?: break
       handleMessage(message)

@@ -14,8 +14,4 @@ object WidgetRegistry {
   fun unregisterWidget(widget: StatusBarWidget) {
     widgets.remove(widget)
   }
-
-  fun getWidgets(): List<Widget> {
-    return widgets
-  }
 }

@@ -35,7 +35,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
         when (supermaven.getAccountStatus()) {
           SupermavenAccountStatus.NEEDS_ACTIVATION -> "Needs activation"
           SupermavenAccountStatus.READY -> {
-            supermaven.getServiceTier() ?: "Unknown"
+            supermaven.getServiceTier() ?: "Starting"
           }
           else -> "Unknown"
         }
@@ -66,7 +66,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     return actions
   }
 
-  fun isFileSupported(file: VirtualFile): Boolean {
+  private fun isFileSupported(file: VirtualFile): Boolean {
     return file.extension != null && !ApplicationManager.getApplication().service<SupermavenSettings>().state.disabledExtensions.contains(file.extension)
   }
 

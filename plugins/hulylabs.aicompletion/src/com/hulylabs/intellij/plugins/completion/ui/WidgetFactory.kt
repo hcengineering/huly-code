@@ -11,7 +11,7 @@ class WidgetFactory : StatusBarEditorBasedWidgetFactory() {
   }
 
   override fun getDisplayName(): String {
-      return "AI Inline Completion Widget"
+    return "AI Inline Completion Widget"
   }
 
   override fun createWidget(project: Project): StatusBarWidget {

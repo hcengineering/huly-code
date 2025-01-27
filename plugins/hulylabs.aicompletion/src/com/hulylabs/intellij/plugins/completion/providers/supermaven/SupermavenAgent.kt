@@ -1,16 +1,19 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
+import com.hulylabs.intellij.plugins.completion.CompletionProviderStateChangedListener
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.IOException
 import java.io.InputStreamReader
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
@@ -32,7 +35,7 @@ enum class SupermavenAccountStatus {
 
 private const val SM_MESSAGE_PREFIX = "SM-MESSAGE"
 
-class SupermavenAgent(agentPath: Path) {
+class SupermavenAgent(val project: Project, agentPath: Path) {
   private val process: Process
 
   private val stdout: BufferedReader
@@ -50,11 +53,13 @@ class SupermavenAgent(agentPath: Path) {
   internal var accountStatus: SupermavenAccountStatus = SupermavenAccountStatus.UNKNOWN
   internal var serviceTier: String? = null
   internal var activationUrl: String? = null
-  internal var newStateId = 0L
+  internal var newStateId = 1L
 
   init {
+    val logPath = agentPath.parent.resolve("sm-agent.log")
+    Files.deleteIfExists(logPath)
     val processBuilder = ProcessBuilder(agentPath.toString(), "stdio")
-    //processBuilder.environment()["SM_LOG_PATH"] = agentPath.parent.resolve("sm-agent.log").toString()
+    processBuilder.environment()["SM_LOG_PATH"] = logPath.toString()
     process = processBuilder.start()
     stdout = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
     stderr = BufferedReader(InputStreamReader(process.errorStream, Charsets.UTF_8))
@@ -160,18 +165,27 @@ class SupermavenAgent(agentPath: Path) {
       is SupermavenServiceTierMessage -> {
         serviceTier = message.serviceTier
         accountStatus = SupermavenAccountStatus.READY
-        ApplicationManager.getApplication().invokeLater {
-          val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
-          send(SupermavenGreetingsMessage(settings.state.gitignoreAllowed))
-        }
       }
       is SupermavenPassthroughMessage -> {
         handleMessage(message.passthrough)
+      }
+      is SupermavenMetadataMessage -> {
+        // begin communication with agent
+        ApplicationManager.getApplication().invokeLater {
+          val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
+          send(SupermavenGreetingsMessage(settings.state.gitignoreAllowed))
+          // send dummy update to start communication
+          send(SupermavenStateUpdateMessage(newId = "0", updates = listOf(FileUpdateMessage(path = "/dummy", content = "dummy"),
+                                                                          CursorPositionUpdateMessage(path = "/dummy", offset = 0))))
+        }
+      }
+      is SupermavenSetMessage -> {
       }
       else -> {
         LOG.warn("unhandled message: $message")
       }
     }
+    project.messageBus.syncPublisher(CompletionProviderStateChangedListener.COMPLETION_PROVIDER_STATE_CHANGED).stateChanged()
   }
 
   fun newCompletionState(entryId: Int, cursorOffset: Int) {

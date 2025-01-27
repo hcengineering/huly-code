@@ -41,7 +41,8 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
             state = AgentState.FAILED_DOWNLOAD
             return@launch
           }
-        agent = SupermavenAgent(agentPath)
+        agent = SupermavenAgent(project, agentPath)
+        state = AgentState.STARTED
       }
     }
   }

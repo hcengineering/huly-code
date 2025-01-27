@@ -1,43 +1,54 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.supermaven.messages
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonClassDiscriminator
 
-abstract class SupermavenOutboundMessage {
-  abstract fun toJson(): String
-}
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed class SupermavenOutboundMessage
 
-interface StateUpdateMessage {
-  fun toJson(): String
-}
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed class StateUpdateMessage
 
-class SupermavenStateUpdateMessage(val newId: String, val updates: List<StateUpdateMessage>) : SupermavenOutboundMessage() {
-  override fun toJson(): String {
-    return """{"kind":"state_update","newId":"$newId","updates":[${updates.joinToString(",") { it.toJson() }}]}"""
-  }
-}
+@Serializable
+@SerialName("state_update")
+data class SupermavenStateUpdateMessage(
+  val newId: String,
+  val updates: List<StateUpdateMessage>,
+) : SupermavenOutboundMessage()
 
-class FileUpdateMessage(val path: String, val content: String) : StateUpdateMessage {
-  override fun toJson(): String {
-    return """{"kind":"file_update","path":"$path","content":${Json.encodeToString(content)}}"""
-  }
-}
+@Serializable
+@SerialName("file_update")
+data class FileUpdateMessage(
+  val path: String,
+  val content: String,
+) : StateUpdateMessage()
 
-class CursorPositionUpdateMessage(val path: String, val offset: Int) : StateUpdateMessage {
-  override fun toJson(): String {
-    return """{"kind":"cursor_update","path":"$path","offset":$offset}"""
-  }
-}
+@Serializable
+@SerialName("cursor_update")
+data class CursorPositionUpdateMessage(
+  val path: String,
+  val offset: Int,
+) : StateUpdateMessage()
 
-class SupermavenLogoutMessage : SupermavenOutboundMessage() {
-  override fun toJson(): String {
-    return """{"kind":"logout"}"""
-  }
-}
+@Serializable
+@SerialName("logout")
+data object SupermavenLogoutMessage : SupermavenOutboundMessage()
 
-class SupermavenFreeActivationMessage : SupermavenOutboundMessage() {
-  override fun toJson(): String {
-    return """{"kind":"use_free_version", "userEmail": null}"""
-  }
-}
+@Serializable
+@SerialName("use_free_version")
+data class SupermavenFreeActivationMessage(
+  val userEmail: String? = null,
+) : SupermavenOutboundMessage()
+
+@Serializable
+@SerialName("greeting")
+data class SupermavenGreetingsMessage(
+  val allowGitignore: Boolean,
+) : SupermavenOutboundMessage()

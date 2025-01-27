@@ -35,7 +35,7 @@ class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
   private fun getActionGroup(): ActionGroup {
     val actionGroup = DefaultActionGroup()
     val provider = InlineCompletionProviderRegistry.getInstance(project).provider
-    actionGroup.addAll(provider.getActions())
+    actionGroup.addAll(provider.getActions(this.statusBar?.currentEditor?.invoke()?.file))
     return actionGroup
   }
 

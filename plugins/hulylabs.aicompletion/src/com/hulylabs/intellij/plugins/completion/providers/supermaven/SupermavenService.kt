@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
@@ -79,7 +80,6 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     if (!checkStarted()) {
       return
     }
-
     agent!!.newCompletionState(entryId, cursorOffset)
     val msg = SupermavenStateUpdateMessage(agent!!.newStateId.toString(), listOf(
       FileUpdateMessage(path, content),
@@ -138,6 +138,15 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     return agent?.serviceTier
   }
 
+  fun setGitignoreAllowed(allowed: Boolean) {
+    val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
+    settings.state.gitignoreAllowed = allowed
+    if (!checkStarted()) {
+      return
+    }
+    agent!!.send(SupermavenGreetingsMessage(allowed))
+  }
+
   fun signIn(free: Boolean) {
     if (agent?.accountStatus == SupermavenAccountStatus.NEEDS_ACTIVATION) {
       if (free) {
@@ -154,6 +163,6 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
       return
     }
     agent!!.serviceTier = null
-    agent!!.send(SupermavenLogoutMessage())
+    agent!!.send(SupermavenLogoutMessage)
   }
 }

@@ -5,6 +5,7 @@ import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.BufferedWriter
@@ -52,16 +53,16 @@ class SupermavenAgent(agentPath: Path) {
 
   init {
     val processBuilder = ProcessBuilder(agentPath.toString(), "stdio")
-    processBuilder.environment()["SM_LOG_PATH"] = agentPath.parent.resolve("sm-agent.log").toString()
+    //processBuilder.environment()["SM_LOG_PATH"] = agentPath.parent.resolve("sm-agent.log").toString()
     process = processBuilder.start()
     stdout = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
     stderr = BufferedReader(InputStreamReader(process.errorStream, Charsets.UTF_8))
     stdin = process.outputWriter(Charsets.UTF_8)
     thread {
       while (true) {
-        val line = outputMessages.take()
+        val msg = outputMessages.take()
         try {
-          stdin.write(line.toJson() + '\n')
+          stdin.write(json.encodeToString(msg) + '\n')
           stdin.flush()
         }
         catch (e: IOException) {
@@ -114,7 +115,6 @@ class SupermavenAgent(agentPath: Path) {
   }
 
   fun drainOutput() {
-    LOG.info("draining output")
     while (process.isAlive) {
       val message = incomingMessages.poll() ?: break
       handleMessage(message)
@@ -154,6 +154,10 @@ class SupermavenAgent(agentPath: Path) {
       is SupermavenServiceTierMessage -> {
         serviceTier = message.serviceTier
         accountStatus = SupermavenAccountStatus.READY
+        ApplicationManager.getApplication().invokeLater {
+          val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
+          send(SupermavenGreetingsMessage(settings.state.gitignoreAllowed))
+        }
       }
       is SupermavenPassthroughMessage -> {
         handleMessage(message.passthrough)

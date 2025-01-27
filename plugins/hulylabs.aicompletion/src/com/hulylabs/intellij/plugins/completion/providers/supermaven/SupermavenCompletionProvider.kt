@@ -2,12 +2,12 @@
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.InlineCompletionProviderService
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.FreeActivationAction
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.LogoutAction
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.ProActivationAction
-import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.UpgradeProAction
+import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.*
 import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 
 class SupermavenCompletionProvider(val project: Project) : InlineCompletionProviderService {
   private val supermaven: SupermavenService = SupermavenService.getInstance(project)
@@ -45,29 +45,42 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     }
   }
 
-  override fun getActions(): List<AnAction> {
+  override fun getActions(file: VirtualFile?): List<AnAction> {
     val actions: MutableList<AnAction> = mutableListOf()
     if (supermaven.getAccountStatus() == SupermavenAccountStatus.NEEDS_ACTIVATION) {
       actions.add(FreeActivationAction(supermaven))
       actions.add(ProActivationAction(supermaven))
-    } else if (supermaven.state == SupermavenService.AgentState.STARTED) {
+    }
+    else if (supermaven.state == SupermavenService.AgentState.STARTED) {
       if (supermaven.getServiceTier() == "FreeNoLicense") {
         actions.add(UpgradeProAction(supermaven))
       }
+      val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
+      if (file != null && file.extension != null) {
+        val extension = file.extension!!
+        actions.add(EnableAction(extension))
+      }
+      actions.add(ToggleGitignoreAction(supermaven, settings.state.gitignoreAllowed))
       actions.add(LogoutAction(supermaven))
     }
     return actions
   }
 
-  override fun isUpdating(): Boolean {
-    TODO("Not yet implemented")
+  fun isFileSupported(file: VirtualFile): Boolean {
+    return file.extension != null && !ApplicationManager.getApplication().service<SupermavenSettings>().state.disabledExtensions.contains(file.extension)
   }
 
-  override fun update(path: String, content: String, entryId: Int, cursorOffset: Int) {
-    supermaven.update(path, content, entryId, cursorOffset)
+  override fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int) {
+    if (!isFileSupported(file)) {
+      return
+    }
+    supermaven.update(file.path, content, entryId, cursorOffset)
   }
 
-  override fun suggest(content: String, entryId: Int, cursorOffset: Int): String? {
+  override fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): String? {
+    if (!isFileSupported(file)) {
+      return null
+    }
     return supermaven.completion(content, entryId, cursorOffset)
   }
 }

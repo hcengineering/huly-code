@@ -11,10 +11,9 @@ class InlineCompletionCaretListener : CaretListener {
     if (event.editor.virtualFile != null && event.caret != null && event.editor.project != null) {
       if (event.editor.document.textLength < 1_000_000) {
         val content = event.editor.document.text
-        val path = event.editor.virtualFile.path
         val entryId = event.editor.document.hashCode()
         val provider = InlineCompletionProviderRegistry.getInstance(event.editor.project!!).provider
-        provider.update(path, content, entryId, event.caret!!.offset)
+        provider.update(event.editor.virtualFile!!, content, entryId, event.caret!!.offset)
       }
     }
     WidgetRegistry.getWidgets().forEach {

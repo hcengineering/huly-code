@@ -2,6 +2,7 @@
 package com.hulylabs.intellij.plugins.completion.providers
 
 import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.vfs.VirtualFile
 
 interface InlineCompletionProviderService {
   val name: String
@@ -12,8 +13,7 @@ interface InlineCompletionProviderService {
   fun stop()
 
   fun getStatus(): String
-  fun getActions(): List<AnAction>
-  fun isUpdating(): Boolean
-  fun update(path: String, content: String, entryId: Int, cursorOffset: Int)
-  fun suggest(content: String, entryId: Int, cursorOffset: Int): String?
+  fun getActions(file: VirtualFile?): List<AnAction>
+  fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int)
+  fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): String?
 }

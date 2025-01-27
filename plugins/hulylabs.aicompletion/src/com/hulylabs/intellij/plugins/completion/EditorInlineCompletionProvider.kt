@@ -37,7 +37,7 @@ class EditorInlineCompletionProvider : InlineCompletionProvider {
 
   private fun getCompletionElement(editor: Editor): InlineCompletionElement? {
     val provider = InlineCompletionProviderRegistry.getInstance(editor.project!!).provider
-    val completion = provider.suggest(editor.document.text, editor.document.hashCode(), editor.caretModel.offset)
+    val completion = provider.suggest(editor.virtualFile, editor.document.text, editor.document.hashCode(), editor.caretModel.offset)
     return completion?.let {
       InlineCompletionGrayTextElement(completion)
     }

@@ -5,8 +5,10 @@ import com.intellij.openapi.components.*
 
 @Service(Service.Level.APP)
 @State(name = "HulyCodeSupermaven", storages = [Storage("HulyCodeSupermaven.xml")])
-class SupermavenSettings: SimplePersistentStateComponent<SettingsState>(SettingsState())
+class SupermavenSettings : SimplePersistentStateComponent<SettingsState>(SettingsState())
 
 class SettingsState : BaseState() {
   var firstActivation by property(false)
+  var gitignoreAllowed by property(false)
+  var disabledExtensions by stringSet()
 }

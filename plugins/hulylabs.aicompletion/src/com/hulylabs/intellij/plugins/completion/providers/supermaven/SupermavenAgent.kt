@@ -115,7 +115,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
     thread {
       while (process.isAlive) {
         if (incomingMessages.isNotEmpty()) {
-          ApplicationManager.getApplication().invokeLater {
+          ApplicationManager.getApplication()?.invokeLater {
             drainOutput()
           }
         }
@@ -154,7 +154,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         if (!settings.state.firstActivation) {
           settings.state.firstActivation = true
           LOG.info("sending free activation request")
-          ApplicationManager.getApplication().invokeLater {
+          ApplicationManager.getApplication()?.invokeLater {
             send(SupermavenFreeActivationMessage())
           }
         }
@@ -171,7 +171,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
       }
       is SupermavenMetadataMessage -> {
         // begin communication with agent
-        ApplicationManager.getApplication().invokeLater {
+        ApplicationManager.getApplication()?.invokeLater {
           val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
           send(SupermavenGreetingsMessage(settings.state.gitignoreAllowed))
           // send dummy update to start communication

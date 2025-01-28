@@ -24,7 +24,7 @@ private val LOG = Logger.getInstance(SupermavenAgent::class.java)
 data class SupermavenCompletionState(
   val entryId: Int,
   val prefixOffset: Int,
-  var text: String = "",
+  var chunks: List<String> = listOf(),
   var dedent: String = "",
   var end: Boolean = false,
 )
@@ -138,7 +138,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         states[message.stateId.toLong()]?.apply {
           message.items?.forEach { item ->
             when (item.kind) {
-              ResponseItemKind.TEXT -> text += item.text
+              ResponseItemKind.TEXT -> chunks += item.text
               ResponseItemKind.DEDENT -> dedent += item.text
               ResponseItemKind.END -> end = true
               else -> {}

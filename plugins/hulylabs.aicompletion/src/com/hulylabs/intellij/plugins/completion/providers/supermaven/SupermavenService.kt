@@ -89,46 +89,24 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     agent!!.send(msg)
   }
 
-  fun completion(content: String, entryId: Int, cursorOffset: Int): String? {
+  fun completion(content: String, entryId: Int, cursorOffset: Int): Long? {
     if (!checkStarted()) {
       return null
     }
-    var bestCompletion: String? = null
     agent?.drainOutput()
-    for (state in agent!!.states.values) {
-      // ignore state if content was modified
-      if (entryId != state.entryId) {
-        continue
+    var stateId = agent!!.newStateId
+    while (agent!!.states.containsKey(stateId)) {
+      val state = agent!!.states[stateId]!!
+      if (entryId == state.entryId && state.prefixOffset == cursorOffset) {
+        return stateId
       }
-      if (!state.text.startsWith(state.dedent)) {
-        //LOG.warn("state text does not start with dedent, '${state.text}', '${state.dedent}'")
-        continue
-      }
-      var stateCompletion = if (state.dedent.isNotEmpty()) state.text.substring(state.dedent.length) else state.text
-      if (state.prefixOffset < cursorOffset) {
-        val textInsertedSinceCompletionRequest = content.substring(state.prefixOffset..<cursorOffset)
-        //LOG.info("stateCompletion: $textInsertedSinceCompletionRequest")
-        if (textInsertedSinceCompletionRequest.isNotEmpty()) {
-          if (state.text.startsWith(textInsertedSinceCompletionRequest)) {
-            stateCompletion = state.text.substring(textInsertedSinceCompletionRequest.length)
-          }
-          else {
-            continue
-          }
-        }
-      }
-      else if (state.prefixOffset == cursorOffset) {
-        stateCompletion = state.text
-      }
-      else {
-        continue
-      }
-      if (bestCompletion != null && bestCompletion.length > stateCompletion.length) {
-        continue
-      }
-      bestCompletion = stateCompletion
+      stateId--
     }
-    return bestCompletion
+    return null
+  }
+
+  fun completionState(stateId: Long): SupermavenCompletionState? {
+    return agent?.states?.get(stateId)
   }
 
   fun getAccountStatus(): SupermavenAccountStatus? {

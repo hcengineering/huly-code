@@ -2,12 +2,10 @@
 package com.hulylabs.intellij.plugins.completion
 
 import com.intellij.codeInsight.inline.completion.*
-import com.intellij.codeInsight.inline.completion.elements.InlineCompletionElement
 import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayTextElement
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSingleSuggestion
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSuggestion
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,19 +25,15 @@ class EditorInlineCompletionProvider : InlineCompletionProvider {
 
   override suspend fun getSuggestion(request: InlineCompletionRequest): InlineCompletionSuggestion {
     return InlineCompletionSingleSuggestion.build {
-      withContext(Dispatchers.EDT) {
-        getCompletionElement(request.editor)
-      }?.let {
-        emit(it)
+      val editor = request.editor
+      val provider = InlineCompletionProviderRegistry.getInstance(editor.project!!).provider
+      val caretOffset = withContext(Dispatchers.EDT) {
+        editor.caretModel.offset
       }
-    }
-  }
-
-  private fun getCompletionElement(editor: Editor): InlineCompletionElement? {
-    val provider = InlineCompletionProviderRegistry.getInstance(editor.project!!).provider
-    val completion = provider.suggest(editor.virtualFile, editor.document.text, editor.document.hashCode(), editor.caretModel.offset)
-    return completion?.let {
-      InlineCompletionGrayTextElement(completion)
+      val flow = provider.suggest(editor.virtualFile, editor.document.text, editor.document.hashCode(), caretOffset)
+      flow?.collect {
+        emit(InlineCompletionGrayTextElement(it))
+      } ?: InlineCompletionSuggestion.Empty
     }
   }
 

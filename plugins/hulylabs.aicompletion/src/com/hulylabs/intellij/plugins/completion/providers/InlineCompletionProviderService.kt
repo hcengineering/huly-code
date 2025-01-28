@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.coroutines.flow.Flow
 
 interface InlineCompletionProviderService {
   val name: String
@@ -15,5 +16,5 @@ interface InlineCompletionProviderService {
   fun getStatus(): String
   fun getActions(file: VirtualFile?): List<AnAction>
   fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int)
-  fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): String?
+  suspend fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): Flow<String>?
 }

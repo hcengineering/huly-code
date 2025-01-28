@@ -8,6 +8,9 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 class SupermavenCompletionProvider(val project: Project) : InlineCompletionProviderService {
   private val supermaven: SupermavenService = SupermavenService.getInstance(project)
@@ -77,10 +80,28 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     supermaven.update(file.path, content, entryId, cursorOffset)
   }
 
-  override fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): String? {
+  override suspend fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): Flow<String>? {
     if (!isFileSupported(file)) {
       return null
     }
-    return supermaven.completion(content, entryId, cursorOffset)
+    return flow {
+      delay(20)
+      val stateId = supermaven.completion(content, entryId, cursorOffset) ?: return@flow
+      val now = System.currentTimeMillis()
+      var i = 0
+      while (System.currentTimeMillis() - now < 10000) {
+        val state = supermaven.completionState(stateId) ?: break
+        while (i < state.chunks.size) {
+          if (i == 0 && state.chunks[i][0] == content[cursorOffset - 1]) {
+            emit(state.chunks[i].substring(1))
+          } else {
+            emit(state.chunks[i])
+          }
+          i++
+        }
+        if (state.end) break
+        delay(50)
+      }
+    }
   }
 }

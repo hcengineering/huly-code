@@ -11,6 +11,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlin.math.max
 
 class SupermavenCompletionProvider(val project: Project) : InlineCompletionProviderService {
   private val supermaven: SupermavenService = SupermavenService.getInstance(project)
@@ -92,9 +93,27 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
       while (System.currentTimeMillis() - now < 10000) {
         val state = supermaven.completionState(stateId) ?: break
         while (i < state.chunks.size) {
-          if (i == 0 && state.chunks[i][0] == content[cursorOffset - 1]) {
-            emit(state.chunks[i].substring(1))
-          } else {
+          if (i == 0) {
+            var idxOffset = max(0, cursorOffset - 20)
+            var pattern = content.substring(idxOffset, cursorOffset)
+            while (idxOffset < cursorOffset && pattern.isNotEmpty()) {
+              if (state.chunks[i].startsWith(pattern)) {
+                break
+              }
+              pattern = pattern.substring(1)
+              idxOffset++
+            }
+            if (pattern.isNotEmpty()) {
+              emit(state.chunks[i].substring(pattern.length))
+            }
+            else {
+              emit(state.chunks[i])
+            }
+          }
+          else if (state.end && i == state.chunks.size - 1) {
+            emit(state.chunks[i].trimEnd())
+          }
+          else {
             emit(state.chunks[i])
           }
           i++

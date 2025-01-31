@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 private val LOG = logger<SupermavenService>()
 
 @Service(Service.Level.PROJECT)
-class SupermavenService(val project: Project, val scope: CoroutineScope) {
+class SupermavenService(val project: Project, val scope: CoroutineScope) : Disposable {
   enum class AgentState {
     STARTING, FAILED_DOWNLOAD, STARTED, ERROR, STOPPED
   }
@@ -143,5 +144,9 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     }
     agent!!.serviceTier = null
     agent!!.send(SupermavenLogoutMessage)
+  }
+
+  override fun dispose() {
+    stop()
   }
 }

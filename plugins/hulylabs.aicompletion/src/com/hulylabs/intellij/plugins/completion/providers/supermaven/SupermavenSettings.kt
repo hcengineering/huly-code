@@ -10,5 +10,4 @@ class SupermavenSettings : SimplePersistentStateComponent<SettingsState>(Setting
 class SettingsState : BaseState() {
   var firstActivation by property(false)
   var gitignoreAllowed by property(false)
-  var disabledExtensions by stringSet()
 }

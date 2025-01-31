@@ -82,7 +82,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         val str = try {
           stdout.readLine()
         }
-        catch (e: IOException) {
+        catch (_: IOException) {
           break
         }
         var line = str ?: continue
@@ -104,7 +104,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         val str = try {
           stderr.readLine()
         }
-        catch (e: IOException) {
+        catch (_: IOException) {
           break
         }
         LOG.warn("stderr: ${str ?: continue}")
@@ -185,7 +185,9 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         LOG.warn("unhandled message: $message")
       }
     }
-    project.messageBus.syncPublisher(CompletionProviderStateChangedListener.COMPLETION_PROVIDER_STATE_CHANGED).stateChanged()
+    ApplicationManager.getApplication()?.invokeLater {
+      project.messageBus.syncPublisher(CompletionProviderStateChangedListener.TOPIC).stateChanged()
+    }
   }
 
   fun newCompletionState(entryId: Int, cursorOffset: Int) {

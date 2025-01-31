@@ -123,7 +123,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       "intellij.platform.starter",
       "hulylabs.intellij.customization",
     )
-    productLayout.bundledPluginModules = HULY_BUNDLED_PLUGINS// + sequenceOf("intellij.vcs.github.community")
+    productLayout.bundledPluginModules = HULY_BUNDLED_PLUGINS // + sequenceOf("intellij.vcs.github.community")
 
     productLayout.prepareCustomPluginRepositoryForPublishedPlugins = false
     productLayout.buildAllCompatiblePlugins = false
@@ -143,6 +143,9 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       pluginAuto("hulylabs.treesitter") { spec ->
         spec.withModuleLibrary("tree-sitter-libs", "hulylabs.treesitter", "tree-sitter-libs.jar")
       },
+      pluginAuto("hulylabs.aicompletion") { spec ->
+        spec.withModuleLibrary("eclipse.lsp4j.jsonrpc", "hulylabs.aicompletion", "eclipse.lsp4j.jsonrpc-0.23.1.jar")
+      }
     ))
 
     productLayout.addPlatformSpec { layout, _ ->

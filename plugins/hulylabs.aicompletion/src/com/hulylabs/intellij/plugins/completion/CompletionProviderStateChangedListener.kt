@@ -3,13 +3,15 @@ package com.hulylabs.intellij.plugins.completion
 
 import com.intellij.util.messages.Topic
 import com.intellij.util.messages.Topic.ProjectLevel
+import java.util.*
 
 
-interface CompletionProviderStateChangedListener {
+interface CompletionProviderStateChangedListener : EventListener {
   fun stateChanged()
 
   companion object {
     @ProjectLevel
-    val COMPLETION_PROVIDER_STATE_CHANGED: Topic<CompletionProviderStateChangedListener> = Topic.create("CompletionProviderStateChanged", CompletionProviderStateChangedListener::class.java)
+    @JvmField
+    val TOPIC: Topic<CompletionProviderStateChangedListener> = Topic(CompletionProviderStateChangedListener::class.java, Topic.BroadcastDirection.NONE)
   }
 }

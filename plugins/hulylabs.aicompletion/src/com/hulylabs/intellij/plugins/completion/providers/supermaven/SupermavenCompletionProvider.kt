@@ -1,11 +1,13 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
+import com.hulylabs.intellij.plugins.completion.CompletionSettings
 import com.hulylabs.intellij.plugins.completion.providers.InlineCompletionProviderService
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.*
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.delay
@@ -60,10 +62,6 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
         actions.add(UpgradeProAction(supermaven))
       }
       val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
-      if (file != null && file.extension != null) {
-        val extension = file.extension!!
-        actions.add(EnableAction(extension))
-      }
       actions.add(ToggleGitignoreAction(supermaven, settings.state.gitignoreAllowed))
       actions.add(LogoutAction(supermaven))
     }
@@ -71,7 +69,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
   }
 
   private fun isFileSupported(file: VirtualFile): Boolean {
-    return file.extension != null && !ApplicationManager.getApplication().service<SupermavenSettings>().state.disabledExtensions.contains(file.extension)
+    return file.extension != null && !ApplicationManager.getApplication().service<CompletionSettings>().state.disabledExtensions.contains(file.extension)
   }
 
   override fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int) {
@@ -81,10 +79,12 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     supermaven.update(file.path, content, entryId, cursorOffset)
   }
 
-  override suspend fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): Flow<String>? {
+  override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>? {
     if (!isFileSupported(file)) {
       return null
     }
+    val entryId = document.hashCode()
+    val content = document.text
     return flow {
       delay(20)
       val stateId = supermaven.completion(content, entryId, cursorOffset) ?: return@flow

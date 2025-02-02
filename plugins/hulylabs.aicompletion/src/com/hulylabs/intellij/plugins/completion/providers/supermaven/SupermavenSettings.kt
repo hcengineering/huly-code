@@ -8,6 +8,9 @@ import com.intellij.openapi.components.*
 class SupermavenSettings : SimplePersistentStateComponent<SettingsState>(SettingsState())
 
 class SettingsState : BaseState() {
+  var agentVersion by property(26L)
+  var agentDownloadUrl by string("")
+  var agentVersionLastCheckTime by property(0L)
   var firstActivation by property(false)
   var gitignoreAllowed by property(false)
 }

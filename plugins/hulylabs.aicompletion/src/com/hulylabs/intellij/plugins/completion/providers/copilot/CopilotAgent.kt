@@ -8,11 +8,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import kotlinx.coroutines.future.await
 import org.eclipse.lsp4j.jsonrpc.Launcher
-import org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
-import java.io.PrintWriter
 import java.nio.file.Path
 import java.util.concurrent.Future
 import java.util.logging.LogRecord
@@ -21,6 +19,7 @@ import kotlin.concurrent.thread
 
 private val LOG = Logger.getInstance("#copilot")
 
+@Suppress("unused")
 class LogMessageHandler : java.util.logging.Handler() {
   override fun publish(record: LogRecord) {
     println(record.message)
@@ -68,11 +67,11 @@ class CopilotAgent(
         .setInput(process.inputStream)
         .setOutput(process.outputStream)
         .validateMessages(false)
-        .traceMessages(PrintWriter(System.out))
+        //.traceMessages(PrintWriter(System.out))
         .create()
     launcherResult = launcher.startListening()
-    val h = LogMessageHandler()
-    h.registerTo(GenericEndpoint::class.java.name)
+    //val h = LogMessageHandler()
+    //h.registerTo(GenericEndpoint::class.java.name)
     server = launcher.remoteProxy
     val workspaceFolders = project.guessProjectDir()?.let { listOf(WorkspaceFolder(fromFile(it))) } ?: emptyList()
     val res = server.initialize(

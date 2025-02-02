@@ -16,6 +16,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.DialogWrapper
@@ -84,7 +85,7 @@ class CopilotService(private val project: Project, private val scope: CoroutineS
       agentStatus = AgentStatus.Started
       EditorFactory.getInstance().allEditors.forEach { editor ->
         if (editor.virtualFile != null && editor.project == project) {
-          documentOpened(editor.virtualFile, editor.document.text, editor.document.hashCode())
+          documentOpened(editor.virtualFile, editor.document.text)
         }
       }
       notifyStateChanged()
@@ -98,8 +99,14 @@ class CopilotService(private val project: Project, private val scope: CoroutineS
     agent = null
   }
 
-  fun documentOpened(file: VirtualFile, content: String, entryId: Int) {
-    val langId = LangIdentifier.langExtensionMap[file.extension ?: "txt"] ?: "txt"
+  fun documentOpened(file: VirtualFile, content: String) {
+    var langId = ""
+    if (file.fileType is LanguageFileType) {
+      langId = (file.fileType as LanguageFileType).language.id.lowercase()
+    }
+    if (langId.isEmpty() || langId == "treesitter" && LangIdentifier.langExtensionMap.contains(file.extension)) {
+      langId = LangIdentifier.langExtensionMap[file.extension] ?: ""
+    }
     val item = TextDocumentItem(fromFile(file), langId, 0, content)
     agent?.server?.didOpenTextDocument(DidOpenTextDocumentParams(item))
   }

@@ -32,7 +32,7 @@ class InlineCompletionEditorFactoryListener : EditorFactoryListener {
     }
     if (ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(event.editor.virtualFile)) {
       val provider = InlineCompletionProviderRegistry.getProvider(editor.project!!)
-      provider.documentOpened(editor.virtualFile!!, editor.document.text, editor.document.hashCode())
+      provider.documentOpened(editor.virtualFile!!, editor.document.text)
     }
   }
 

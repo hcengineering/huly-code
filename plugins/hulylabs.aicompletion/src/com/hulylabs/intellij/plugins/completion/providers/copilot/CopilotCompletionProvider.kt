@@ -48,11 +48,19 @@ class CopilotCompletionProvider(project: Project) : InlineCompletionProviderServ
   }
 
   override fun getActions(file: VirtualFile?): List<AnAction> {
-    return listOf(SignInAction(copilot), LogoutAction(copilot))
+    if (copilot.getAgentStatus() == AgentStatus.Started) {
+      if (copilot.getAuthStatus() == AuthStatusKind.OK) {
+        return listOf(LogoutAction(copilot))
+      }
+      else if (copilot.getAuthStatus() == AuthStatusKind.NotSignedIn) {
+        return listOf(SignInAction(copilot))
+      }
+    }
+    return listOf()
   }
 
-  override fun documentOpened(file: VirtualFile, content: String, entryId: Int) {
-    copilot.documentOpened(file, content, entryId)
+  override fun documentOpened(file: VirtualFile, content: String) {
+    copilot.documentOpened(file, content)
   }
 
   override fun documentClosed(file: VirtualFile) {

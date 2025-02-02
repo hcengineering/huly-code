@@ -20,7 +20,7 @@ interface InlineCompletionProviderService {
   /** popup actions of the provider in status bar */
   fun getActions(file: VirtualFile?): List<AnAction>
 
-  fun documentOpened(file: VirtualFile, content: String, entryId: Int) {}
+  fun documentOpened(file: VirtualFile, content: String) {}
   fun documentClosed(file: VirtualFile) {}
   fun documentChanged(file: VirtualFile, event: DocumentEvent) {}
   fun completionAccepted() {}

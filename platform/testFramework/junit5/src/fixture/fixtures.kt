@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.testFramework.junit5.fixture
 
 import com.intellij.ide.impl.OpenProjectTask
@@ -17,10 +17,11 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ex.ProjectManagerEx
-import com.intellij.openapi.project.rootManager
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.toCanonicalPath
+import com.intellij.openapi.util.registry.RegistryValue
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDirectory
@@ -74,11 +75,11 @@ fun projectFixture(
 @TestOnly
 fun TestFixture<Project>.moduleFixture(
   name: String? = null,
-): TestFixture<Module> = testFixture(name ?: "unnamed module") { id ->
+): TestFixture<Module> = testFixture(name ?: "unnamed module") { context ->
   val project = this@moduleFixture.init()
   val manager = ModuleManager.getInstance(project)
   val module = writeAction {
-    manager.newNonPersistentModule(name ?: id, "")
+    manager.newNonPersistentModule(name ?: context.uniqueId, "")
   }
   initialized(module) {
     writeAction {
@@ -109,7 +110,7 @@ fun TestFixture<Project>.moduleFixture(
     }
 
     writeAction {
-      module.rootManager.modifiableModel.apply {
+      ModuleRootManager.getInstance(module).modifiableModel.apply {
         addContentEntry(pathVfs).addSourceFolder(pathVfs, false)
         commit()
       }
@@ -123,8 +124,8 @@ fun TestFixture<Project>.moduleFixture(
 }
 
 @TestOnly
-fun disposableFixture(): TestFixture<Disposable> = testFixture { debugString ->
-  val disposable = Disposer.newCheckedDisposable(debugString)
+fun disposableFixture(): TestFixture<Disposable> = testFixture { context ->
+  val disposable = Disposer.newCheckedDisposable(context.uniqueId)
   initialized(disposable) {
     Disposer.dispose(disposable)
   }
@@ -199,5 +200,18 @@ fun <T : Any> extensionPointFixture(epName: ExtensionPointName<T>, extension: T)
   epName.point.registerExtension(extension, disposable)
   initialized(extension) {
     Disposer.dispose(disposable)
+  }
+}
+
+/**
+ * Ensures [registryValue] has [value] state during the lifetime of the fixture.
+ * After the fixture is disposed, the previous value is restored.
+ */
+@TestOnly
+fun registryValueFixture(registryValue: RegistryValue, value: Boolean): TestFixture<Unit> = testFixture {
+  val prevValue = registryValue.asBoolean()
+  registryValue.setValue(value)
+  initialized(Unit) {
+    registryValue.setValue(prevValue)
   }
 }

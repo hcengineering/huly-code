@@ -1,6 +1,7 @@
 // Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.yaml.meta.impl;
 
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.LocalQuickFixAndIntentionActionOnPsiElement;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
@@ -24,8 +25,7 @@ import org.jetbrains.yaml.psi.YAMLKeyValue;
 import org.jetbrains.yaml.psi.YAMLMapping;
 import org.jetbrains.yaml.psi.YAMLSequenceItem;
 
-import java.util.Collection;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @ApiStatus.Internal
@@ -62,9 +62,15 @@ public abstract class YamlMissingKeysInspectionBase extends YamlMetaTypeInspecti
       if (!missingKeys.isEmpty()) {
         String msg = YAMLBundle.message("YamlMissingKeysInspectionBase.missing.keys", composeKeyList(missingKeys));
         PsiElement element = getElementToHighlight(mapping);
-        myProblemsHolder.registerProblem(element, msg, ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
-                                         new AddMissingKeysQuickFix(missingKeys, element));
+        List<LocalQuickFix> quickFixes = getQuickFixes(missingKeys, element);
+        myProblemsHolder.registerProblem(
+          element, msg, ProblemHighlightType.GENERIC_ERROR_OR_WARNING, quickFixes.toArray(LocalQuickFix.EMPTY_ARRAY)
+        );
       }
+    }
+
+    protected @NotNull List<LocalQuickFix> getQuickFixes(@NotNull Collection<String> missingKeys, @NotNull PsiElement element) {
+      return List.of(new AddMissingKeysQuickFix(missingKeys, element));
     }
   }
 

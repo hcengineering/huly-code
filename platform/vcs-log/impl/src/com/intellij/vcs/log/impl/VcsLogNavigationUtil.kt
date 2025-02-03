@@ -91,9 +91,7 @@ object VcsLogNavigationUtil {
                                          root: VirtualFile,
                                          requestFocus: Boolean,
                                          predicate: (MainVcsLogUi) -> Boolean): MainVcsLogUi? {
-    VcsProjectLog.waitWhenLogIsReady(project)
-
-    val manager = VcsProjectLog.getInstance(project).logManager ?: return null
+    val manager = VcsProjectLog.awaitLogIsReady(project) ?: return null
     val isLogUpToDate = manager.isLogUpToDate
     if (!manager.containsCommit(hash, root)) {
       if (isLogUpToDate) return null
@@ -216,13 +214,13 @@ object VcsLogNavigationUtil {
   }
 
   /**
-   * Asynchronously selects the commit node at the given [row].
+   * Asynchronously selects the commit node at the given [row] in commit graph.
    * @param row      target row
    * @param silently skip showing notification when the target is not found
    * @param focus    focus the table
    */
   @JvmStatic
-  fun VcsLogUiEx.jumpToRow(row: Int, silently: Boolean, focus: Boolean) {
+  fun VcsLogUiEx.jumpToGraphRow(row: Int, silently: Boolean, focus: Boolean) {
     jumpTo(row, { visiblePack, r ->
       if (visiblePack.visibleGraph.visibleCommitCount <= r) return@jumpTo -1
       r

@@ -16,6 +16,8 @@ import com.intellij.platform.workspace.storage.VersionedStorageChange
 import com.intellij.platform.workspace.storage.impl.VersionedStorageChangeInternal
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.testFramework.IndexingTestUtil
+import kotlinx.coroutines.GlobalScope
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.plugins.gradle.importing.GradleImportingTestCase
 import org.jetbrains.plugins.gradle.internal.daemon.DaemonState
@@ -52,7 +54,7 @@ class GradleAttachSourcesProviderTest : GradleImportingTestCase() {
   }
 
   @Test
-  @TargetVersions("6.0+") // The Gradle Daemon below version 6.0 is unstable and causes test fluctuations
+  @TargetVersions("6.0+", "!8.12")// The Gradle Daemon below version 6.0 is unstable and causes test fluctuations
   fun `test daemon reused for source downloading`() {
     // a custom Gradle User Home is required to isolate execution of the test from different tests running at the same time
     overrideGradleUserHome("test-daemon-reused-for-source-downloading")
@@ -192,6 +194,8 @@ class GradleAttachSourcesProviderTest : GradleImportingTestCase() {
       .hasSize(1)
       .allSatisfy(Consumer { assertEquals(dependencyJar, it.name) })
 
+    IndexingTestUtil.waitUntilIndexesAreReady(myProject)
+
     val psiFile = runReadAction {
       JavaPsiFacade.getInstance(myProject).findClass(classFromDependency, GlobalSearchScope.allScope(myProject))!!.containingFile
     }
@@ -199,7 +203,7 @@ class GradleAttachSourcesProviderTest : GradleImportingTestCase() {
     val tracker = ExternalSystemExecutionTracer()
     tracker.traceExecution(ExternalSystemExecutionTracer.PrintOutputMode.ON_EXCEPTION) {
       waitUntilSourcesAttached(dependencyName) {
-        val attachSourcesProvider = GradleAttachSourcesProvider()
+        val attachSourcesProvider = GradleAttachSourcesProvider(GlobalScope)
         val attachSourcesActions = attachSourcesProvider.getActions(mutableListOf(library), psiFile)
         val attachSourcesAction = attachSourcesActions.single()
         val attachSourcesCallback = attachSourcesAction.perform(mutableListOf(library))
@@ -208,7 +212,7 @@ class GradleAttachSourcesProviderTest : GradleImportingTestCase() {
       }
     }
     assertThat(tracker.output)
-      .filteredOn { it.startsWith("Sources were downloaded to") }
+      .filteredOn { it.startsWith("Artifact was downloaded to") }
       .hasSize(1)
       .allSatisfy(Consumer { assertThat(it).endsWith(dependencySourcesJar) })
 

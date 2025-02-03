@@ -3,7 +3,6 @@
 package com.intellij.debugger.actions;
 
 import com.intellij.debugger.DebuggerManagerEx;
-import com.intellij.debugger.JavaDebuggerBundle;
 import com.intellij.debugger.engine.DebugProcessImpl;
 import com.intellij.debugger.engine.DebuggerUtils;
 import com.intellij.debugger.engine.events.DebuggerCommandImpl;
@@ -16,19 +15,25 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.diagnostic.ControlFlowException;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.threadDumpParser.ThreadDumpParser;
 import com.intellij.threadDumpParser.ThreadState;
 import com.intellij.util.SmartList;
 import com.intellij.xdebugger.XDebugSession;
+import com.jetbrains.jdi.ThreadReferenceImpl;
 import com.sun.jdi.*;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 
 public final class ThreadDumpAction extends DumbAwareAction {
   @Override
@@ -41,27 +46,71 @@ public final class ThreadDumpAction extends DumbAwareAction {
 
     final DebuggerSession session = context.getDebuggerSession();
     if (session != null && session.isAttached()) {
-      final DebugProcessImpl process = context.getDebugProcess();
-      Objects.requireNonNull(context.getManagerThread()).invoke(new DebuggerCommandImpl() {
-        @Override
-        protected void action() {
-          final VirtualMachineProxyImpl vm = process.getVirtualMachineProxy();
-          vm.suspend();
-          try {
-            final List<ThreadState> threads = buildThreadStates(vm);
-            ApplicationManager.getApplication().invokeLater(() -> {
-              XDebugSession xSession = session.getXDebugSession();
-              if (xSession != null) {
-                DebuggerUtilsEx.addThreadDump(project, threads, xSession.getUI(), session.getSearchScope());
-              }
-            }, ModalityState.nonModal());
-          }
-          finally {
-            vm.resume();
-          }
-        }
-      });
+      buildThreadStatesAsync(context)
+        .thenAccept(threads -> {
+          ApplicationManager.getApplication().invokeLater(() -> {
+            XDebugSession xSession = session.getXDebugSession();
+            if (xSession != null) {
+              DebuggerUtilsEx.addThreadDump(project, threads, xSession.getUI(), session.getSearchScope());
+            }
+          }, ModalityState.nonModal());
+        }).exceptionally(ex -> {
+          if (ex instanceof ControlFlowException || ex instanceof CancellationException) return null;
+          Logger.getInstance(ThreadDumpAction.class).error(ex);
+          return null;
+        });
     }
+  }
+
+  public static CompletableFuture<List<ThreadState>> buildThreadStatesAsync(@NotNull DebuggerContextImpl context) {
+    CompletableFuture<List<ThreadState>> future = new CompletableFuture<>();
+    final DebugProcessImpl process = context.getDebugProcess();
+    Objects.requireNonNull(context.getManagerThread()).schedule(new DebuggerCommandImpl() {
+      @Override
+      protected void commandCancelled() {
+        future.cancel(false);
+      }
+
+      @Override
+      protected void action() {
+        final VirtualMachineProxyImpl vm = process.getVirtualMachineProxy();
+        vm.suspend();
+        try {
+          final List<ThreadState> threads = buildThreadStates(vm);
+          future.complete(threads);
+        }
+        catch (Exception e) {
+          future.completeExceptionally(e);
+          throw e;
+        }
+        finally {
+          vm.resume();
+        }
+      }
+    });
+    return future;
+  }
+
+  private static @Nullable Value getThreadField(@NotNull String fieldName,
+                                                @NotNull ReferenceType threadType,
+                                                @NotNull ThreadReference threadObj,
+                                                @Nullable ReferenceType holderType,
+                                                @Nullable ObjectReference holderObj) {
+
+    var threadField = DebuggerUtils.findField(threadType, fieldName);
+    if (threadField != null) {
+      return threadObj.getValue(threadField);
+    }
+
+    if (holderType != null) {
+      assert holderObj != null;
+      var holderField = DebuggerUtils.findField(holderType, fieldName);
+      if (holderField != null) {
+        return holderObj.getValue(holderField);
+      }
+    }
+
+    return null;
   }
 
   public static List<ThreadState> buildThreadStates(VirtualMachineProxyImpl vmProxy) {
@@ -83,34 +132,43 @@ public final class ThreadDumpAction extends DumbAwareAction {
       threadState.setJavaThreadState(threadStatusToJavaThreadState(threadStatus));
 
       buffer.append("\"").append(threadName).append("\"");
-      ReferenceType referenceType = threadReference.referenceType();
-      if (referenceType != null) {
-        Field daemon = DebuggerUtils.findField(referenceType, "daemon");
-        if (daemon != null) {
-          Value value = threadReference.getValue(daemon);
-          if (value instanceof BooleanValue && ((BooleanValue)value).booleanValue()) {
-            buffer.append(" ").append(JavaDebuggerBundle.message("threads.export.attribute.label.daemon"));
+      ReferenceType threadType = threadReference.referenceType();
+      if (threadType != null) {
+        // Since Project Loom some of Thread's fields are encapsulated into FieldHolder,
+        // so we try to look up fields in the thread itself and in its holder.
+        ReferenceType holderType;
+        ObjectReference holderObj;
+        if (getThreadField("holder", threadType, threadReference, null, null) instanceof ObjectReference value) {
+          holderObj = value;
+          holderType = holderObj.referenceType();
+        } else {
+          holderObj = null;
+          holderType = null;
+        }
+
+        if (getThreadField("daemon", threadType, threadReference, holderType, holderObj) instanceof BooleanValue value) {
+          if (value.booleanValue()) {
+            buffer.append(" daemon");
             threadState.setDaemon(true);
           }
         }
 
-        Field priority = DebuggerUtils.findField(referenceType, "priority");
-        if (priority != null) {
-          Value value = threadReference.getValue(priority);
-          if (value instanceof IntegerValue) {
-            buffer.append(" ").append(JavaDebuggerBundle.message("threads.export.attribute.label.priority", ((IntegerValue)value).intValue()));
-          }
+        if (getThreadField("priority", threadType, threadReference, holderType, holderObj) instanceof IntegerValue value) {
+          buffer.append(" prio=").append(value.intValue());
         }
 
-        Field tid = DebuggerUtils.findField(referenceType, "tid");
-        if (tid != null) {
-          Value value = threadReference.getValue(tid);
-          if (value instanceof LongValue) {
-            buffer.append(" ").append(JavaDebuggerBundle.message("threads.export.attribute.label.tid", Long.toHexString(((LongValue)value).longValue())));
-            buffer.append(" nid=NA");
-          }
+        if (getThreadField("tid", threadType, threadReference, holderType, holderObj) instanceof LongValue value) {
+          buffer.append(" tid=0x").append(Long.toHexString(value.longValue()));
+          buffer.append(" nid=NA");
         }
       }
+
+      // Virtual threads might be included in the list of all threads (i.e., see JDWP's option includevirtualthreads).
+      if (threadReference instanceof ThreadReferenceImpl impl && impl.isVirtual()) {
+        buffer.append(" virtual");
+        threadState.setVirtual(true);
+      }
+
       //ThreadGroupReference groupReference = threadReference.threadGroup();
       //if (groupReference != null) {
       //  buffer.append(", ").append(JavaDebuggerBundle.message("threads.export.attribute.label.group", groupReference.name()));
@@ -133,7 +191,7 @@ public final class ThreadDumpAction extends DumbAwareAction {
             for (ThreadReference thread : waiting) {
               final String waitingThreadName = threadName(thread);
               waitingMap.put(waitingThreadName, threadName);
-              buffer.append("\n\t ").append(JavaDebuggerBundle.message("threads.export.attribute.label.blocks.thread", waitingThreadName));
+              buffer.append("\n\t blocks ").append(waitingThreadName);
             }
           }
         }
@@ -145,9 +203,8 @@ public final class ThreadDumpAction extends DumbAwareAction {
             if (waitedMonitorOwner != null) {
               final String monitorOwningThreadName = threadName(waitedMonitorOwner);
               waitingMap.put(threadName, monitorOwningThreadName);
-              buffer.append("\n\t ")
-                .append(JavaDebuggerBundle
-                          .message("threads.export.attribute.label.waiting.for.thread", monitorOwningThreadName, renderObject(waitedMonitor)));
+              buffer.append("\n\t waiting for ").append(monitorOwningThreadName)
+                .append(" to release lock on ").append(waitedMonitor);
             }
           }
         }
@@ -188,7 +245,7 @@ public final class ThreadDumpAction extends DumbAwareAction {
         }
       }
       catch (IncompatibleThreadStateException e) {
-        buffer.append("\n\t ").append(JavaDebuggerBundle.message("threads.export.attribute.error.incompatible.state"));
+        buffer.append("\n\t Incompatible thread state: thread not suspended");
       }
       threadState.setStackTrace(buffer.toString(), hasEmptyStack);
       ThreadDumpParser.inferThreadStateDetail(threadState);
@@ -217,7 +274,7 @@ public final class ThreadDumpAction extends DumbAwareAction {
   }
 
   private static String renderLockedObject(ObjectReference monitor) {
-    return JavaDebuggerBundle.message("threads.export.attribute.label.locked", renderObject(monitor));
+    return "locked " + renderObject(monitor);
   }
 
   public static String renderObject(ObjectReference monitor) {
@@ -228,7 +285,7 @@ public final class ThreadDumpAction extends DumbAwareAction {
     catch (Throwable e) {
       monitorTypeName = "Error getting object type: '" + e.getMessage() + "'";
     }
-    return JavaDebuggerBundle.message("threads.export.attribute.label.object-id", Long.toHexString(monitor.uniqueID()), monitorTypeName);
+    return "<0x" + Long.toHexString(monitor.uniqueID()) + "> (a " + monitorTypeName + ")";
   }
 
   private static String threadStatusToJavaThreadState(int status) {

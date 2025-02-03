@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 package org.jetbrains.kotlin.idea.debugger.evaluate
 
@@ -10,7 +10,6 @@ import com.intellij.debugger.engine.evaluation.EvaluationContextImpl
 import com.intellij.debugger.engine.evaluation.expression.*
 import com.intellij.debugger.impl.DebuggerUtilsEx
 import com.intellij.internal.statistic.utils.hasStandardExceptionPrefix
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.diagnostic.Attachment
 import com.intellij.openapi.diagnostic.ControlFlowException
@@ -106,7 +105,7 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
 
         try {
             val executionContext = ExecutionContext(context, frameProxy)
-            return evaluateSafe(executionContext, codeFragment)
+            return evaluateSafe(executionContext)
         } catch (e: CodeFragmentCodegenException) {
             evaluationException(e.reason)
         } catch (e: EvaluateException) {
@@ -114,7 +113,7 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
         } catch (e: IndexNotReadyException) {
             evaluationException(KotlinDebuggerEvaluationBundle.message("error.dumb.mode"))
         } catch (e: ProcessCanceledException) {
-            evaluationException(e)
+            throw e
         } catch (e: Eval4JInterpretingException) {
             evaluationException(e.cause)
         } catch (e: Exception) {
@@ -130,7 +129,7 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
         }
     }
 
-    private fun evaluateSafe(context: ExecutionContext, codeFragment: KtCodeFragment): Any? {
+    private fun evaluateSafe(context: ExecutionContext): Any? {
         val hasCast = hasCastOperator(codeFragment)
         val compiledData = try {
             getCompiledCodeFragment(context)
@@ -141,7 +140,12 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
                     is EvaluateException -> StatisticsEvaluationResult.COMPILER_INTERNAL_ERROR
                     else -> StatisticsEvaluationResult.UNCLASSIFIED_COMPILATION_PROBLEM
                 }
-                KotlinDebuggerEvaluatorStatisticsCollector.logEvaluationResult(codeFragment.project, evaluationResultValue, CompilerType.K2, context.evaluationContext.origin)
+                KotlinDebuggerEvaluatorStatisticsCollector.logEvaluationResult(
+                    codeFragment.project,
+                    evaluationResultValue,
+                    KotlinCodeFragmentCompiler.getInstance().compilerType,
+                    context.evaluationContext.origin
+                )
             }
             throw e
         }
@@ -264,13 +268,10 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
                 }
                 try {
                     evaluateWithEval4J(context, compiledData, classLoaderRef).also {
-                        LOG.error("Eval4J success, but compiling evaluator failed with: " + original.message, original)
+                        reportErrorWithAttachments(context, codeFragment, original, headerMessage = "Eval4J success, but compiling evaluator failed with: ")
                     }
                 } catch (e: Throwable) {
-                    if (!ApplicationManager.getApplication().isUnitTestMode()) {
-                        LOG.error("Eval4J also failed: " + e.message, e)
-                    }
-                    throw original
+                    throw original.also { it.addSuppressed(e) }
                 }
             }
         } else {
@@ -487,8 +488,6 @@ class KotlinEvaluator(val codeFragment: KtCodeFragment, private val sourcePositi
             result.value
         }
     }
-
-    override fun getModifier() = null
 
     companion object {
         @get:TestOnly

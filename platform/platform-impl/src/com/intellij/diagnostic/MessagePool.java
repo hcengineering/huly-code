@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.diagnostic;
 
 import com.intellij.openapi.application.ApplicationManager;
@@ -37,18 +37,19 @@ public final class MessagePool {
 
   private MessagePool() { }
 
+  /** @deprecated use {@link #addIdeFatalMessage(AbstractMessage)} instead */
+  @Deprecated(forRemoval = true)
   public void addIdeFatalMessage(@NotNull IdeaLoggingEvent event) {
-    AbstractMessage message;
+    addIdeFatalMessage(event.getData() instanceof AbstractMessage am ? am : new LogMessage(event.getThrowable(), event.getMessage(), List.of()));
+  }
+
+  public void addIdeFatalMessage(@NotNull AbstractMessage message) {
     if (myErrors.size() < MAX_POOL_SIZE) {
-      message = event.getData() instanceof AbstractMessage am ? am : new LogMessage(event.getThrowable(), event.getMessage(), List.of());
+      doAddMessage(message);
     }
     else if (myErrors.size() == MAX_POOL_SIZE) {
-      message = new LogMessage(new TooManyErrorsException(), null, List.of());
+      doAddMessage(new LogMessage(new TooManyErrorsException(), null, List.of()));
     }
-    else {
-      return;
-    }
-    doAddMessage(message);
   }
 
   public @NotNull State getState() {

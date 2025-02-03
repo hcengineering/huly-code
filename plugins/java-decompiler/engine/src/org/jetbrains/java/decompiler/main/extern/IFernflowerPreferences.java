@@ -63,6 +63,9 @@ public interface IFernflowerPreferences {
 
   String SKIP_EXTRA_FILES = "sef";
 
+  String MAX_DIRECT_NODES_COUNT = "mdnc";
+  String MAX_DIRECT_VARIABLE_NODE_COUNT = "mdvnc";
+
   Map<String, String> DEFAULTS = getDefaults();
 
   static Map<String, String> getDefaults() {

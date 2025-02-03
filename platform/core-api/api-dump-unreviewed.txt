@@ -888,9 +888,6 @@ com.intellij.lexer.MergeFunction
 com.intellij.lexer.RestartableLexer
 - a:getStartState():I
 com.intellij.model.search.SearchRequest
-- getInjectionSearchScope():com.intellij.psi.search.SearchScope
-- getSearchScope():com.intellij.psi.search.SearchScope
-- a:getSearchString():java.lang.String
 - s:of(java.lang.String):com.intellij.model.search.SearchRequest
 - s:of(java.lang.String,com.intellij.psi.search.SearchScope):com.intellij.model.search.SearchRequest
 - s:of(java.lang.String,com.intellij.psi.search.SearchScope,com.intellij.psi.search.SearchScope):com.intellij.model.search.SearchRequest
@@ -1093,10 +1090,11 @@ f:com.intellij.openapi.application.ModalityKt
 a:com.intellij.openapi.application.ModalityState
 - sf:NON_MODAL:com.intellij.openapi.application.ModalityState
 - <init>():V
+- a:accepts(com.intellij.openapi.application.ModalityState):Z
 - s:any():com.intellij.openapi.application.ModalityState
 - s:current():com.intellij.openapi.application.ModalityState
 - s:defaultModalityState():com.intellij.openapi.application.ModalityState
-- a:dominates(com.intellij.openapi.application.ModalityState):Z
+- f:dominates(com.intellij.openapi.application.ModalityState):Z
 - s:nonModal():com.intellij.openapi.application.ModalityState
 - s:stateForComponent(java.awt.Component):com.intellij.openapi.application.ModalityState
 - a:toString():java.lang.String
@@ -2939,10 +2937,8 @@ a:com.intellij.openapi.vfs.impl.ArchiveHandler
 - clearCaches():V
 - a:contentsToByteArray(java.lang.String):B[]
 - pa:createEntriesMap():java.util.Map
-- p:createRootEntry():com.intellij.openapi.vfs.impl.ArchiveHandler$EntryInfo
 - getAttributes(java.lang.String):com.intellij.openapi.util.io.FileAttributes
 - p:getEntriesMap():java.util.Map
-- p:getEntryInfo(java.lang.String):com.intellij.openapi.vfs.impl.ArchiveHandler$EntryInfo
 - getFile():java.io.File
 - getInputStream(java.lang.String):java.io.InputStream
 - getPath():java.nio.file.Path
@@ -2950,13 +2946,6 @@ a:com.intellij.openapi.vfs.impl.ArchiveHandler
 - p:normalizeName(java.lang.String):java.lang.String
 - pf:processEntry(java.util.Map,com.intellij.openapi.diagnostic.Logger,java.lang.String,java.util.function.BiFunction):V
 - pf:processEntry(java.util.Map,java.lang.String,java.util.function.BiFunction):V
-pc:com.intellij.openapi.vfs.impl.ArchiveHandler$EntryInfo
-- f:isDirectory:Z
-- f:length:J
-- f:parent:com.intellij.openapi.vfs.impl.ArchiveHandler$EntryInfo
-- f:shortName:java.lang.CharSequence
-- f:timestamp:J
-- <init>(java.lang.CharSequence,Z,J,J,com.intellij.openapi.vfs.impl.ArchiveHandler$EntryInfo):V
 c:com.intellij.openapi.vfs.impl.BulkVirtualFileListenerAdapter
 - com.intellij.openapi.vfs.newvfs.BulkFileListener
 - <init>(com.intellij.openapi.vfs.VirtualFileListener):V
@@ -4243,6 +4232,7 @@ f:com.intellij.psi.SmartPointersKt
 - sf:createSmartPointer(com.intellij.psi.PsiElement):com.intellij.psi.SmartPsiElementPointer
 com.intellij.psi.SmartPsiElementPointer
 - com.intellij.model.Pointer
+- dereference():com.intellij.psi.PsiElement
 - a:getContainingFile():com.intellij.psi.PsiFile
 - a:getElement():com.intellij.psi.PsiElement
 - a:getProject():com.intellij.openapi.project.Project
@@ -5454,6 +5444,8 @@ f:com.intellij.util.AstLoadingFilter
 - s:forceAllowTreeLoading(com.intellij.openapi.vfs.VirtualFile,com.intellij.util.ThrowableRunnable):V
 - s:forceAllowTreeLoading(com.intellij.psi.PsiFile,com.intellij.openapi.util.ThrowableComputable):java.lang.Object
 - s:forceAllowTreeLoading(com.intellij.psi.PsiFile,com.intellij.util.ThrowableRunnable):V
+@:com.intellij.util.AwaitCancellationAndInvoke
+- java.lang.annotation.Annotation
 com.intellij.util.CharTable
 - sf:CHAR_TABLE_KEY:com.intellij.openapi.util.Key
 - a:intern(java.lang.CharSequence):java.lang.CharSequence

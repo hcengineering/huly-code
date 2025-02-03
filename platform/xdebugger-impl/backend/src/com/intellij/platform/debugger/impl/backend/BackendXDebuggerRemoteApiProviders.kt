@@ -7,8 +7,13 @@ import com.intellij.xdebugger.impl.rpc.XDebuggerEvaluatorApi
 import com.intellij.xdebugger.impl.rpc.XDebuggerManagerApi
 import com.intellij.xdebugger.impl.rpc.XDebugSessionApi
 import com.intellij.xdebugger.impl.rpc.XDebuggerHotSwapApi
+import com.intellij.xdebugger.impl.rpc.XDebuggerLuxApi
+import com.intellij.xdebugger.impl.rpc.XDebuggerNavigationApi
 import com.intellij.xdebugger.impl.rpc.XDebuggerValueLookupHintsRemoteApi
+import com.intellij.xdebugger.impl.rpc.XDebuggerValueMarkupApi
 import com.intellij.xdebugger.impl.rpc.XDebuggerValueModifierApi
+import com.intellij.xdebugger.impl.rpc.XDebuggerWatchesApi
+import com.intellij.xdebugger.impl.rpc.XValueApi
 import fleet.rpc.remoteApiDescriptor
 
 private class BackendXDebuggerRemoteApiProviders : RemoteApiProvider {
@@ -30,6 +35,21 @@ private class BackendXDebuggerRemoteApiProviders : RemoteApiProvider {
     }
     remoteApi(remoteApiDescriptor<XDebuggerValueModifierApi>()) {
       BackendXDebuggerValueModifierApi()
+    }
+    remoteApi(remoteApiDescriptor<XDebuggerValueMarkupApi>()) {
+      BackendXDebuggerValueMarkupApi()
+    }
+    remoteApi(remoteApiDescriptor<XDebuggerNavigationApi>()) {
+      BackendXDebuggerNavigationApi()
+    }
+    remoteApi(remoteApiDescriptor<XValueApi>()) {
+      BackendXValueApi()
+    }
+    remoteApi(remoteApiDescriptor<XDebuggerWatchesApi>()) {
+      BackendXDebuggerWatchesApi()
+    }
+    remoteApi(remoteApiDescriptor<XDebuggerLuxApi>()) {
+      BackendXDebuggerLuxApi()
     }
   }
 }

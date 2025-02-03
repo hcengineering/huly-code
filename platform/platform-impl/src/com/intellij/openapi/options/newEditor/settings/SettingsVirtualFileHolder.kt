@@ -4,7 +4,9 @@ package com.intellij.openapi.options.newEditor.settings
 import com.intellij.CommonBundle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.Service.Level
@@ -12,21 +14,22 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerKeys
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager.OptionallyIncluded
-import com.intellij.openapi.fileTypes.ex.FakeFileType
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.newEditor.SettingsDialog
+import com.intellij.openapi.options.newEditor.SettingsEditor
 import com.intellij.openapi.options.newEditor.settings.SettingsVirtualFileHolder.SettingsVirtualFile
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.NlsContexts
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.concurrency.SynchronizedClearableLazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.NonNls
 import java.util.concurrent.atomic.AtomicReference
-import javax.swing.Icon
 
 @ApiStatus.Internal
 @Service(Level.PROJECT)
@@ -40,20 +43,18 @@ internal class SettingsVirtualFileHolder private constructor(private val project
 
   private val settingsFileRef = AtomicReference<SettingsVirtualFile?>(null)
 
-  suspend fun getOrCreate(initializer: () -> SettingsDialog): SettingsVirtualFile {
+  suspend fun getOrCreate(toSelect: Configurable?, initializer: () -> SettingsDialog): SettingsVirtualFile {
     return withContext(Dispatchers.EDT) {
       val settingsVirtualFile = settingsFileRef.get()
 
       if (settingsVirtualFile != null) {
+        val editor = settingsVirtualFile.getOrCreateDialog().editor as? SettingsEditor
+        if (editor != null &&toSelect != null) {
+          editor.select(toSelect)
+        }
         return@withContext settingsVirtualFile
       }
-      val settingsDialog = initializer.invoke()
-      val newVirtualFile = SettingsVirtualFile(settingsDialog, project)
-      Disposer.register(settingsDialog.disposable, Disposable {
-        val fileEditorManager = FileEditorManager.getInstance(newVirtualFile.project) as FileEditorManagerEx;
-        fileEditorManager.closeFile(newVirtualFile)
-        settingsFileRef.set(null)
-      })
+      val newVirtualFile = SettingsVirtualFile(project, initializer )
       settingsFileRef.compareAndSet(null, newVirtualFile)
       return@withContext newVirtualFile
     }
@@ -65,26 +66,47 @@ internal class SettingsVirtualFileHolder private constructor(private val project
     return settingsFileRef.getAndSet(null)
   }
 
-  class SettingsVirtualFile(val dialog: SettingsDialog, val project: Project) :
-    LightVirtualFile(CommonBundle.settingsTitle(), SettingFileType(), ""), OptionallyIncluded {
+  class SettingsVirtualFile(val project: Project, private val initializer: () -> SettingsDialog) :
+    LightVirtualFile(CommonBundle.settingsTitle(), SettingsFileType, ""), OptionallyIncluded {
+
+    private val dialogLazy = SynchronizedClearableLazy {
+      val dialog = initializer()
+      Disposer.register(dialog.disposable, Disposable {
+        val fileEditorManager = FileEditorManager.getInstance(project) as FileEditorManagerEx;
+        fileEditorManager.closeFile(this)
+      })
+      dialog
+    }
 
     init {
       putUserData(FileEditorManagerKeys.FORBID_TAB_SPLIT, true)
     }
 
+    fun getOrCreateDialog(): SettingsDialog = dialogLazy.value
+
+
     override fun isIncludedInEditorHistory(project: Project): Boolean = false
+    override fun isPersistedInEditorHistory() = false
+
+    override fun shouldSkipEventSystem() = true
+
+    fun disposeDialog() {
+      dialogLazy.valueIfInitialized?.apply {
+        Disposer.dispose( this.disposable )
+      }
+      dialogLazy.drop()
+    }
   }
 
-  private class SettingFileType : FakeFileType() {
+  private object SettingsFileType : FileType {
     override fun getName(): @NonNls String = CommonBundle.settingsTitle()
 
     override fun getDescription(): @NlsContexts.Label String = CommonBundle.settingsTitle()
+    override fun getDefaultExtension() = ""
 
-    override fun getIcon(): Icon? = AllIcons.General.Settings
-
-    override fun isMyFileType(file: VirtualFile): Boolean {
-      return file is SettingsVirtualFile
-    }
+    override fun getIcon() = AllIcons.General.Settings
+    override fun isBinary(): Boolean = true
+    override fun isReadOnly(): Boolean = true
   }
 }
 
@@ -92,8 +114,8 @@ private class CloseSettingsAction : DumbAwareAction() {
   override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
   override fun update(e: AnActionEvent) {
-    val project = e.project
-    if (project == null) {
+    val project = e.project ?: run {
+      e.presentation.isEnabled = false
       return
     }
     e.presentation.isEnabled = SettingsVirtualFileHolder.getInstance(project).virtualFileExists()
@@ -103,6 +125,6 @@ private class CloseSettingsAction : DumbAwareAction() {
     val fileEditor = (PlatformDataKeys.FILE_EDITOR.getData(e.dataContext)
                       ?: PlatformDataKeys.LAST_ACTIVE_FILE_EDITOR.getData(e.dataContext)) as? SettingsFileEditor ?: return
     val settingsVirtualFile = fileEditor.file as? SettingsVirtualFile ?: return
-    settingsVirtualFile.dialog.doCancelAction(e.inputEvent)
+    settingsVirtualFile.getOrCreateDialog().doCancelAction(e.inputEvent)
   }
 }

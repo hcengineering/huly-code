@@ -12,8 +12,8 @@ label_flag(
 
 label_flag(
     name = "worker-impl",
-    # build_setting_default = "//src/misc:worker-jvm",
-    build_setting_default = "//src/misc:worker-native",
+    build_setting_default = "//src/misc:worker-jvm",
+    # build_setting_default = "//src/misc:worker-native",
     visibility = ["//visibility:public"],
 )
 
@@ -125,6 +125,76 @@ jvm_import(
     name = "kotlinx-coroutines-core",
     jar = "@kotlinx-coroutines-core-jvm//file",
     source_jar = "@kotlinx-coroutines-core-jvm-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "flatbuffers-java",
+    jar = "@flatbuffers-java//file",
+    source_jar = "@flatbuffers-java-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "arrow-format",
+    jar = "@arrow-format//file",
+    source_jar = "@arrow-format-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "arrow-algorithm",
+    jar = "@arrow-algorithm//file",
+    source_jar = "@arrow-algorithm-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "arrow-vector",
+    jar = "@arrow-vector//file",
+    source_jar = "@arrow-vector-sources//file",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":flatbuffers-java",
+        ":arrow-format"
+    ],
+)
+
+jvm_import(
+    name = "arrow-memory-core",
+    jar = "@arrow-memory-core//file",
+    source_jar = "@arrow-memory-core-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "arrow-memory-netty",
+    jar = "@arrow-memory-netty//file",
+    source_jar = "@arrow-memory-netty-sources//file",
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":arrow-memory-netty-buffer-patch"
+    ],
+)
+
+jvm_import(
+    name = "arrow-memory-netty-buffer-patch",
+    jar = "@arrow-memory-netty-buffer-patch//file",
+    source_jar = "@arrow-memory-netty-buffer-patch-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "opentelemetry-exporter-logging-otlp",
+    jar = "@opentelemetry-exporter-logging-otlp//file",
+    source_jar = "@opentelemetry-exporter-logging-otlp-sources//file",
+    visibility = ["//visibility:public"],
+)
+
+jvm_import(
+    name = "proguard-core",
+    jar = "@proguard-core//file",
+    source_jar = "@proguard-core-sources//file",
     visibility = ["//visibility:public"],
 )
 

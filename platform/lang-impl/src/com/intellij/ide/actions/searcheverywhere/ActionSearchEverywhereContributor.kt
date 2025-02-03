@@ -36,6 +36,7 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.util.Processor
 import kotlinx.coroutines.CoroutineScope
+import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.Nls
 import java.awt.Component
 import java.awt.KeyboardFocusManager
@@ -96,12 +97,19 @@ open class ActionSearchEverywhereContributor : WeightedSearchEverywhereContribut
                                      consumer: Processor<in FoundItemDescriptor<MatchedValue>>) {
     ProgressManager.getInstance().runProcess({
       runBlockingCancellable {
-        model.buildGroupMappings()
-        runUpdateSessionForActionSearch(model.getUpdateSession()) { presentationProvider ->
-          doFetchItems(this, presentationProvider, pattern) { consumer.process(it) }
-        }
+        fetchWeightedElements(this, pattern, consumer)
       }
     }, progressIndicator)
+  }
+
+  @Internal
+  fun fetchWeightedElements(scope: CoroutineScope,
+                            pattern: String,
+                            consumer: Processor<in FoundItemDescriptor<MatchedValue>>) {
+    model.buildGroupMappings()
+    scope.runUpdateSessionForActionSearch(model.getUpdateSession()) { presentationProvider ->
+      doFetchItems(this, presentationProvider, pattern) { consumer.process(it) }
+    }
   }
 
   override fun getActions(onChanged: Runnable): List<AnAction> {
@@ -221,7 +229,9 @@ open class ActionSearchEverywhereContributor : WeightedSearchEverywhereContribut
                                      pattern: String,
                                      consumer: suspend (FoundItemDescriptor<MatchedValue>) -> Boolean) {
     if (!isRecentEnabled) return
-    if (SearchEverywhereManagerImpl.ALL_CONTRIBUTORS_GROUP_ID == SearchEverywhereManager.getInstance(myProject).selectedTabID) return
+
+    val manager = SearchEverywhereManager.getInstance(myProject)
+    if (!manager.isShown || SearchEverywhereManagerImpl.ALL_CONTRIBUTORS_GROUP_ID == manager.selectedTabID) return
 
     val actionIDs: Set<String> = ActionHistoryManager.getInstance().state.ids
     provider.processActions(scope, presentationProvider, pattern, actionIDs) { element: MatchedValue ->

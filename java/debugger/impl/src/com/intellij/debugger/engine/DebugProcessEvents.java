@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.debugger.engine;
 
 import com.intellij.ReviseWhenPortedToJDK;
@@ -68,6 +68,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static com.intellij.debugger.impl.DebuggerUtilsImpl.forEachSafe;
 
 public class DebugProcessEvents extends DebugProcessImpl {
   private static final Logger LOG = Logger.getInstance(DebugProcessEvents.class);
@@ -405,14 +407,14 @@ public class DebugProcessEvents extends DebugProcessImpl {
                                    event -> {
                                      ThreadReference thread = ((ThreadStartEvent)event).thread();
                                      machineProxy.threadStarted(thread);
-                                     myDebugProcessListeners.forEach(it -> it.threadStarted(this, thread));
+                                     forEachSafe(myDebugProcessListeners, it -> it.threadStarted(this, thread));
                                    });
 
         enableNonSuspendingRequest(platformThreadsOnly(requestManager.createThreadDeathRequest()),
                                    event -> {
                                      ThreadReference thread = ((ThreadDeathEvent)event).thread();
                                      machineProxy.threadStopped(thread);
-                                     myDebugProcessListeners.forEach(it -> it.threadStopped(this, thread));
+                                     forEachSafe(myDebugProcessListeners, it -> it.threadStopped(this, thread));
                                    });
       }
 
@@ -425,6 +427,8 @@ public class DebugProcessEvents extends DebugProcessImpl {
 
         @Override
         public void extensionAdded(@NotNull PositionManagerFactory extension, @NotNull PluginDescriptor pluginDescriptor) {
+          // Called on DMT for the first time, but on unspecified thread for the next calls
+          //noinspection deprecation
           getManagerThread().invoke(PrioritizedTask.Priority.NORMAL, () ->
           {
             PositionManager manager = extension.createPositionManager(DebugProcessEvents.this);
@@ -438,7 +442,7 @@ public class DebugProcessEvents extends DebugProcessImpl {
         @Override
         public void extensionRemoved(@NotNull PositionManagerFactory extension,
                                      @NotNull PluginDescriptor pluginDescriptor) {
-          getManagerThread().invoke(PrioritizedTask.Priority.NORMAL, () -> {
+          getManagerThread().schedule(PrioritizedTask.Priority.NORMAL, () -> {
             PositionManager manager = mapping.remove(extension);
             if (manager != null) {
               myPositionManager.removePositionManager(manager);
@@ -447,7 +451,7 @@ public class DebugProcessEvents extends DebugProcessImpl {
         }
       }, true, disposable);
 
-      myDebugProcessListeners.forEach(it -> it.processAttached(this));
+      forEachSafe(myDebugProcessListeners, it -> it.processAttached(this));
 
       if (canBeModified) {
         createStackCapturingBreakpoints();
@@ -478,7 +482,7 @@ public class DebugProcessEvents extends DebugProcessImpl {
 
       if (!canBeModified) {
         SuspendContextImpl suspendContext = getSuspendManager().pushSuspendContext(EventRequest.SUSPEND_ALL, 0);
-        myDebugProcessListeners.forEach(it -> it.paused(suspendContext));
+        forEachSafe(myDebugProcessListeners, it -> it.paused(suspendContext));
         UIUtil.invokeLaterIfNeeded(() -> XDebugSessionTab.showFramesView(session));
       }
     }
@@ -490,7 +494,7 @@ public class DebugProcessEvents extends DebugProcessImpl {
   }
 
   private void createStackCapturingBreakpoints() {
-    getManagerThread().invoke(PrioritizedTask.Priority.HIGH, () -> {
+    getManagerThread().schedule(PrioritizedTask.Priority.HIGH, () -> {
       StackCapturingLineBreakpoint.deleteAll(this);
       StackCapturingLineBreakpoint.createAll(this);
     });

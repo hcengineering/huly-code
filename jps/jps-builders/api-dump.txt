@@ -1686,6 +1686,7 @@ a:org.jetbrains.jps.builders.BuildTargetType
 - hashCode():I
 - f:isFileBased():Z
 org.jetbrains.jps.builders.DirtyFilesHolder
+- a:getRemoved(org.jetbrains.jps.builders.BuildTarget):java.util.Collection
 - a:getRemovedFiles(org.jetbrains.jps.builders.BuildTarget):java.util.Collection
 - a:hasDirtyFiles():Z
 - a:hasRemovedFiles():Z
@@ -1839,10 +1840,10 @@ org.jetbrains.jps.builders.storage.SourceToOutputMapping
 - a:getOutputs(java.lang.String):java.util.Collection
 - getSources():java.util.Collection
 - a:getSourcesIterator():java.util.Iterator
-- a:remove(java.lang.String):V
+- remove(java.lang.String):V
+- a:remove(java.nio.file.Path):V
 - a:removeOutput(java.lang.String,java.lang.String):V
-- a:setOutput(java.lang.String,java.lang.String):V
-- a:setOutputs(java.lang.String,java.util.List):V
+- a:setOutputs(java.nio.file.Path,java.util.List):V
 a:org.jetbrains.jps.builders.storage.StorageProvider
 - <init>():V
 - createStorage(java.io.File):org.jetbrains.jps.incremental.storage.StorageOwner
@@ -2072,7 +2073,7 @@ f:org.jetbrains.jps.incremental.BuildOperations
 - s:deleteRecursively(java.lang.String,java.util.Collection,java.util.Set):Z
 - s:deleteRecursivelyAndCollectDeleted(java.nio.file.Path,java.util.Collection,java.util.Set):Z
 - s:ensureFSStateInitialized(org.jetbrains.jps.incremental.CompileContext,org.jetbrains.jps.builders.BuildTarget,Z):V
-- s:markTargetsUpToDate(org.jetbrains.jps.incremental.CompileContext,org.jetbrains.jps.builders.impl.BuildTargetChunk):V
+- s:markTargetsUpToDate(org.jetbrains.jps.incremental.CompileContext,java.util.Collection):V
 a:org.jetbrains.jps.incremental.BuildTask
 - <init>():V
 - a:build(org.jetbrains.jps.incremental.CompileContext):V
@@ -2552,7 +2553,7 @@ c:org.jetbrains.jps.incremental.messages.CustomBuilderMessage
 - getMessageType():java.lang.String
 f:org.jetbrains.jps.incremental.messages.DoneSomethingNotification
 - org.jetbrains.jps.incremental.messages.BuildMessage
-- s:INSTANCE:org.jetbrains.jps.incremental.messages.DoneSomethingNotification
+- sf:INSTANCE:org.jetbrains.jps.incremental.messages.DoneSomethingNotification
 f:org.jetbrains.jps.incremental.messages.FileDeletedEvent
 - org.jetbrains.jps.incremental.messages.BuildMessage
 - <init>(java.util.Collection):V
@@ -2585,6 +2586,7 @@ f:org.jetbrains.jps.incremental.relativizer.PathRelativizerService
 - <init>(org.jetbrains.jps.model.JpsProject):V
 - <init>(org.jetbrains.jps.model.JpsProject,java.lang.Boolean):V
 - reportUnhandledPaths():V
+- toAbsoluteFile(java.lang.String):java.nio.file.Path
 - toFull(java.lang.String):java.lang.String
 - toRelative(java.lang.String):java.lang.String
 - toRelative(java.nio.file.Path):java.lang.String
@@ -2660,9 +2662,9 @@ f:org.jetbrains.jps.incremental.storage.OneToManyPathsMapping
 - getOutputs(java.lang.String):java.util.List
 - getOutputs(java.nio.file.Path):java.util.Collection
 - getState(java.lang.String):java.util.Collection
-- remove(java.lang.String):V
+- remove(java.nio.file.Path):V
 - removeData(java.lang.String,java.lang.String):V
-- setOutputs(java.lang.String,java.util.List):V
+- setOutputs(java.nio.file.Path,java.util.List):V
 f:org.jetbrains.jps.incremental.storage.ProjectStamps
 - org.jetbrains.jps.incremental.storage.StorageOwner
 - sf:PORTABLE_CACHES:Z
@@ -2675,7 +2677,6 @@ f:org.jetbrains.jps.incremental.storage.ProjectStamps
 - getStampStorage():org.jetbrains.jps.incremental.storage.StampsStorage
 org.jetbrains.jps.incremental.storage.StampsStorage
 - a:getCurrentStampIfUpToDate(java.nio.file.Path,org.jetbrains.jps.builders.BuildTarget,java.nio.file.attribute.BasicFileAttributes):java.lang.Object
-- a:getStorageRoot():java.nio.file.Path
 - a:removeStamp(java.nio.file.Path,org.jetbrains.jps.builders.BuildTarget):V
 - a:updateStamp(java.nio.file.Path,org.jetbrains.jps.builders.BuildTarget,J):V
 org.jetbrains.jps.incremental.storage.StorageOwner

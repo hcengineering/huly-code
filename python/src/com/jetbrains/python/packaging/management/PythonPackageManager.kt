@@ -7,6 +7,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.OrderRootType
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.SystemInfoRt
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.util.messages.Topic
@@ -14,6 +15,8 @@ import com.jetbrains.python.PyBundle
 import com.jetbrains.python.packaging.PyPackageManager
 import com.jetbrains.python.packaging.common.*
 import com.jetbrains.python.sdk.PythonSdkUpdater
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.jetbrains.annotations.ApiStatus
 
 @ApiStatus.Experimental
@@ -70,9 +73,9 @@ abstract class PythonPackageManager(val project: Project, val sdk: Sdk) {
     return Result.success(packages)
   }
 
-  protected abstract suspend fun installPackageCommand(specification: PythonPackageSpecification, options: List<String>): Result<String>
-  protected abstract suspend fun updatePackageCommand(specification: PythonPackageSpecification): Result<String>
-  protected abstract suspend fun uninstallPackageCommand(pkg: PythonPackage): Result<String>
+  protected abstract suspend fun installPackageCommand(specification: PythonPackageSpecification, options: List<String>): Result<Unit>
+  protected abstract suspend fun updatePackageCommand(specification: PythonPackageSpecification): Result<Unit>
+  protected abstract suspend fun uninstallPackageCommand(pkg: PythonPackage): Result<Unit>
   protected abstract suspend fun reloadPackagesCommand(): Result<List<PythonPackage>>
 
   internal suspend fun refreshPaths() {
@@ -90,10 +93,16 @@ abstract class PythonPackageManager(val project: Project, val sdk: Sdk) {
 
   companion object {
     fun forSdk(project: Project, sdk: Sdk): PythonPackageManager {
-      return project.service<PackageManagerHolder>().forSdk(project, sdk)
+      val pythonPackageManagerService = project.service<PythonPackageManagerService>()
+      val manager = pythonPackageManagerService.forSdk(project, sdk)
+      pythonPackageManagerService.getServiceScope().launch(Dispatchers.IO) {
+        manager.repositoryManager.initCaches()
+      }
+      return manager
     }
 
     @Topic.AppLevel
-    val PACKAGE_MANAGEMENT_TOPIC = Topic(PythonPackageManagementListener::class.java, Topic.BroadcastDirection.TO_DIRECT_CHILDREN)
+    val PACKAGE_MANAGEMENT_TOPIC: Topic<PythonPackageManagementListener> = Topic(PythonPackageManagementListener::class.java, Topic.BroadcastDirection.TO_DIRECT_CHILDREN)
+    val RUNNING_PACKAGING_TASKS: Key<Boolean> = Key.create("PyPackageRequirementsInspection.RunningPackagingTasks")
   }
 }

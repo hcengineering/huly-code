@@ -25,10 +25,13 @@ import kotlin.test.assertTrue
 
 
 object DirectiveBasedActionUtils {
-    const val DISABLE_ERRORS_DIRECTIVE: String = "// DISABLE-ERRORS"
-    const val DISABLE_WARNINGS_DIRECTIVE: String = "// DISABLE-WARNINGS"
-    const val ENABLE_WARNINGS_DIRECTIVE: String = "// ENABLE-WARNINGS"
+    const val DISABLE_ERRORS_DIRECTIVE: String = "// DISABLE_ERRORS"
+    const val DISABLE_WARNINGS_DIRECTIVE: String = "// DISABLE_WARNINGS"
+    const val ENABLE_WARNINGS_DIRECTIVE: String = "// ENABLE_WARNINGS"
     const val PRIORITY_DIRECTIVE = "PRIORITY"
+
+    const val ERROR_DIRECTIVE: String = "// ERROR:"
+    const val AFTER_ERROR_DIRECTIVE: String = "// AFTER_ERROR:"
 
     /**
      * If present in the test data file, checks that
@@ -38,12 +41,16 @@ object DirectiveBasedActionUtils {
      */
     const val ACTION_DIRECTIVE: String = "// ACTION:"
 
-    fun checkForUnexpectedErrors(file: KtFile, diagnosticsProvider: (KtFile) -> Diagnostics = { it.analyzeWithContent().diagnostics }) {
+    fun checkForUnexpectedErrors(
+        file: KtFile,
+        directive: String = ERROR_DIRECTIVE,
+        diagnosticsProvider: (KtFile) -> Diagnostics = { it.analyzeWithContent().diagnostics }
+    ) {
         if (InTextDirectivesUtils.findLinesWithPrefixesRemoved(file.text, DISABLE_ERRORS_DIRECTIVE).isNotEmpty()) {
             return
         }
 
-        checkForUnexpected(file, diagnosticsProvider, "// ERROR:", "errors", Severity.ERROR)
+        checkForUnexpected(file, diagnosticsProvider, directive, "errors", Severity.ERROR)
     }
 
     fun checkForUnexpectedWarnings(

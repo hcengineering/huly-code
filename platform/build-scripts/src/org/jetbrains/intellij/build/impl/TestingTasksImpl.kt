@@ -569,6 +569,7 @@ internal class TestingTasksImpl(context: CompilationContext, private val options
       "io.netty.leakDetectionLevel" to "PARANOID",
       "kotlinx.coroutines.debug" to "on",
       "sun.io.useCanonCaches" to "false",
+      "user.home" to System.getProperty("user.home"),
     )) {
       if (v != null) {
         systemProperties.putIfAbsent(k, v)
@@ -584,11 +585,6 @@ internal class TestingTasksImpl(context: CompilationContext, private val options
       if (key.startsWith("pass.")) {
         systemProperties[key.substring("pass.".length)] = value as String
       }
-
-      /**
-       * Make test inherit Maven dependency resolver settings
-       * See [org.jetbrains.jps.incremental.dependencies.DependencyResolvingBuilder]
-       */
 
       /**
        * Make test inherit Maven dependency resolver settings

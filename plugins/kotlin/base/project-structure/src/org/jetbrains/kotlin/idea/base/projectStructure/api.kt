@@ -140,7 +140,7 @@ val KaSourceModule.symbolicId: ModuleId
 val KaLibraryModule.symbolicId: LibraryId
     get() = project.ideProjectStructureProvider.getKaLibraryModuleSymbolicId(this)
 
-val KaSourceModule.sourceModuleKind: KaSourceModuleKind?
+val KaSourceModule.sourceModuleKind: KaSourceModuleKind
     get() = project.ideProjectStructureProvider.getKaSourceModuleKind(this)
 
 
@@ -225,8 +225,8 @@ inline fun <reified M : KaModule> PsiElement.getKaModuleOfType(project: Project,
  * If a virtual file is not part of a project, an empty list is returned.
  * Thus, it never returns [org.jetbrains.kotlin.analysis.api.projectStructure.KaNotUnderContentRootModule] as a result.
 */
-fun VirtualFile.getContainingKaModules(project: Project): List<KaModule> =
-    project.ideProjectStructureProvider.getContainingKaModules(this)
+fun VirtualFile.getAssociatedKaModules(project: Project): List<KaModule> =
+    project.ideProjectStructureProvider.getAssociatedKaModules(this)
 
 fun KaLibraryModule.getKotlinLibraries(project: Project): List<KotlinLibrary> =
     project.ideProjectStructureProvider.getKotlinLibraries(this)

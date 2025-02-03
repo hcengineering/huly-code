@@ -10,8 +10,8 @@ import fleet.util.async.catching
 import fleet.util.async.use
 import fleet.util.logging.KLogger
 import fleet.util.logging.logger
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import fleet.fastutil.ints.Int2ObjectOpenHashMap
+import fleet.fastutil.ints.IntOpenHashSet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
 
-object Storage {
+private object Storage {
   val logger = logger<Storage>()
 }
 
@@ -67,7 +67,7 @@ suspend fun <T> withStorage(
             is SubscriptionEvent.First, is SubscriptionEvent.Reset -> {
               asOf(event.db) {
                 queryIndex(IndexQuery.LookupMany(Durable.StorageKeyAttr.attr as Attribute<StorageKey>, storageKey))
-                  .mapTo(storedEntitiesCache, Datom::eid)
+                  .forEach { storedEntitiesCache.add(it.eid) }
               }
               event.db
             }
@@ -128,14 +128,14 @@ data class DurableSnapshotWithPartitions(
   val partitions: Map<UID, Int>,
 ) {
   companion object {
-    val Empty = DurableSnapshotWithPartitions(DurableSnapshot.Empty, emptyMap())
+    val Empty: DurableSnapshotWithPartitions = DurableSnapshotWithPartitions(DurableSnapshot.Empty, emptyMap())
   }
 }
 
 private fun DbContext<Mut>.applyDurableSnapshotWithPartitions(snapshotWithPartitions: DurableSnapshotWithPartitions, isFailFast: Boolean) {
   span("applyDurableSnapshotWithPartitions") {
     val memoizedEIDs = HashMap<UID, EID>()
-    applySnapshot(snapshotWithPartitions.snapshot) { uid ->
+    applySnapshotNew(snapshotWithPartitions.snapshot) { uid ->
       val partition = snapshotWithPartitions.partitions[uid]!!
       memoizedEIDs.computeIfAbsent(uid) { EidGen.freshEID(partition) }
     }
@@ -213,7 +213,7 @@ private fun durableSnapshotWithPartitions(
       }
 
     queryIndex(IndexQuery.LookupMany(storageKeyAttr, storageKey)).forEach { datom -> dfs(datom.eid) }
-    val datoms = datomsToStore.values.flatten()
+    val datoms = datomsToStore.values.asSequence().toList().flatten()
     val snapshot = buildDurableSnapshot(datoms.asSequence(), serializationRestrictions)
     DurableSnapshotWithPartitions(snapshot = snapshot,
                                   partitions = datoms.mapNotNull { (e, a, v) ->
@@ -245,4 +245,3 @@ fun DbContext<Q>.reportSchemaProblems(problems: List<MissingRequiredAttribute>, 
     }
   }
 }
-

@@ -5,6 +5,7 @@ package com.intellij.ide.actions;
 import com.intellij.ide.IdeBundle;
 import com.intellij.ide.ui.customization.CustomActionsSchema;
 import com.intellij.ide.ui.customization.CustomisedActionGroup;
+import com.intellij.idea.ActionsBundle;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.impl.ActionButton;
 import com.intellij.openapi.project.DumbAwareAction;
@@ -20,12 +21,14 @@ import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.popup.AbstractPopup;
 import com.intellij.ui.popup.PopupFactoryImpl;
+import com.intellij.ui.popup.list.ListPopupImpl;
 import com.intellij.util.ArrayUtil;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 
 /**
@@ -78,6 +81,9 @@ public class NewElementAction extends DumbAwareAction implements PopupAction {
   public void update(@NotNull AnActionEvent e) {
     Presentation presentation = e.getPresentation();
     Project project = e.getProject();
+    if (isProjectView(e)) {
+      presentation.setText(ActionsBundle.message("action.NewElement.ProjectView.text"));
+    }
     if (project == null) {
       presentation.setEnabled(false);
       return;
@@ -213,26 +219,27 @@ public class NewElementAction extends DumbAwareAction implements PopupAction {
         abstractPopup.setSpeedSearchAlwaysShown();
         abstractPopup.setSpeedSearchEmptyText(IdeBundle.message("new.file.popup.search.hint"));
       }
+      if (popup instanceof ListPopupImpl listPopup) {
+        listPopup.setRepackWhenEmptyStateChanges(true);
+      }
       if (popup instanceof PopupFactoryImpl.ActionGroupPopup listPopup && listPopup.getList() instanceof JBList<?> list) {
         var emptyText = list.getEmptyText();
         emptyText.clear();
-        emptyText.appendLine(IdeBundle.message("popup.new.element.empty.text.1"));
-        emptyText.appendLine(
-          IdeBundle.message("popup.new.element.empty.text.2"),
-          SimpleTextAttributes.LINK_ATTRIBUTES,
-          linkActionEvent -> {
-            Disposer.dispose(popup);
-            var component = event.getData(PlatformCoreDataKeys.CONTEXT_COMPONENT);
-            if (component != null) {
-              var inputEvent = linkActionEvent.getSource() instanceof InputEvent linkInputEvent ? linkInputEvent : null;
-              var actionManager = ActionManager.getInstance();
-              actionManager.tryToExecute(actionManager.getAction("NewFile"), inputEvent, component, EMPTY_TEXT_LINK_PLACE, true);
-            }
+        emptyText.withUnscaledGapAfter(5).appendLine(IdeBundle.message("popup.new.element.empty.text.1"));
+        ActionListener emptyTextAction = linkActionEvent -> {
+          Disposer.dispose(popup);
+          var component = event.getData(PlatformCoreDataKeys.CONTEXT_COMPONENT);
+          if (component != null) {
+            var inputEvent = linkActionEvent.getSource() instanceof InputEvent linkInputEvent ? linkInputEvent : null;
+            var actionManager = ActionManager.getInstance();
+            actionManager.tryToExecute(actionManager.getAction("NewFile"), inputEvent, component, EMPTY_TEXT_LINK_PLACE, true);
           }
-        );
+        };
+        emptyText.withUnscaledGapAfter(0)
+          .appendLine(IdeBundle.message("popup.new.element.empty.text.2"), SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES, emptyTextAction);
         // The capitalization is wrong here because this line continues the previous one.
         //noinspection DialogTitleCapitalization
-        emptyText.appendLine(IdeBundle.message("popup.new.element.empty.text.3"));
+        emptyText.appendLine(IdeBundle.message("popup.new.element.empty.text.3"), SimpleTextAttributes.LINK_PLAIN_ATTRIBUTES, emptyTextAction);
       }
     }
 

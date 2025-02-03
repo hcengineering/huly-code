@@ -29,9 +29,6 @@ object CommunityRepositoryModules {
     pluginAuto("intellij.json") { spec ->
       spec.withModule("intellij.json.split", "json-split.jar")
     },
-    pluginAuto("intellij.yaml") { spec ->
-      spec.withModule("intellij.yaml.editing", "yaml-editing.jar")
-    },
     plugin("intellij.ant") { spec ->
       spec.mainJarName = "antIntegration.jar"
       spec.withModule("intellij.ant.jps", "ant-jps.jar")
@@ -634,21 +631,6 @@ object CommunityRepositoryModules {
       spec.withModule("intellij.javaFX.jps")
       spec.withModule("intellij.javaFX.common", "javaFX-common.jar")
       spec.withModule("intellij.javaFX.sceneBuilder", "rt/sceneBuilderBridge.jar")
-    }
-  }
-
-  fun aeDatabasePlugin(mainModuleName: String, extraModules: List<String> = emptyList()): PluginLayout {
-    return plugin(mainModuleName) { spec ->
-      spec.directoryName = "ae-database"
-      spec.mainJarName = "ae-database.jar"
-      spec.withModules(listOf(
-        "intellij.ae.database.core",
-        "intellij.ae.database.counters.community"
-      ))
-      spec.bundlingRestrictions.includeInDistribution = PluginDistribution.ALL
-      if (extraModules.isNotEmpty()) {
-        spec.withModules(extraModules)
-      }
     }
   }
 

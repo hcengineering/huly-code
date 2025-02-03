@@ -40,8 +40,10 @@ jvm_library(
     "//plugins/properties/properties-psi-api:psi",
     "//platform/lang-impl",
     "//xml/dom-impl",
+    "//xml/xml-structure-view-api:structureView",
     "//uast/uast-common:uast",
     "//java/idea-ui:ui",
+    "//platform/usageView",
     "//jvm/jvm-analysis-api:analysis",
     "@lib//:protobuf",
     "//aether-dependency-resolver:java-aetherDependencyResolver",
@@ -75,7 +77,6 @@ jvm_library(
     "//platform/ijent/buildConstants:community-buildConstants",
     "//platform/markdown-utils",
     "@lib//:snakeyaml",
-    "//platform/eel",
     "//platform/eel-provider",
   ],
   runtime_deps = [":core_resources"]

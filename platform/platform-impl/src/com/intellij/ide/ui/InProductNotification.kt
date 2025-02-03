@@ -13,6 +13,7 @@ import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.ui.*
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
@@ -48,6 +49,10 @@ class InProductNotificationActionProvider : ActionProvider, IconCustomizer {
   }
 
   private fun getExpiresInDays(): Int {
+    if (!InProductNotificationDialog.enabled()) {
+      return -1
+    }
+
     val metadata = LicensingFacade.getInstance()?.metadata ?: return -1
 
     if (metadata.length > 10 && metadata[10] == 'E') {
@@ -204,16 +209,21 @@ private class InProductNotificationAction(val days: Int) : LastAction(), CustomC
 }
 
 private fun renewLicense() {
-  BrowserUtil.browse("https://account.jetbrains.com")
+  BrowserUtil.browse("https://www.jetbrains.com/shop/eform/students/prolong")
 }
 
 private fun getDiscount() {
-  BrowserUtil.browse("https://www.jetbrains.com/community/education/#students/renewal/")
+  BrowserUtil.browse("https://www.jetbrains.com/community/education/#students/renewal")
 }
 
 @Internal
 class InProductNotificationDialog(project: Project?, val days: Int) :
   DialogWrapper(project, null, false, IdeModalityType.IDE, false) {
+
+  companion object {
+    @JvmStatic
+    fun enabled(): Boolean = Registry.`is`("edu.pack.in.product.notification.enabled", true)
+  }
 
   init {
     setInitialLocationCallback {

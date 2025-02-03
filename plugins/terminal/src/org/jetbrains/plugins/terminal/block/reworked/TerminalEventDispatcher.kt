@@ -13,16 +13,20 @@ import com.intellij.openapi.editor.event.EditorMouseListener
 import com.intellij.openapi.editor.event.EditorMouseMotionListener
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.ex.FocusChangeListener
-import com.intellij.openapi.observable.util.addKeyListener
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.terminal.JBTerminalSystemSettingsProviderBase
 import com.intellij.util.concurrency.ThreadingAssertions
 import com.jediterm.terminal.emulator.mouse.MouseMode
+import org.intellij.lang.annotations.Language
 import org.jetbrains.annotations.NonNls
+import org.jetbrains.plugins.terminal.action.SendShortcutToTerminalAction
 import org.jetbrains.plugins.terminal.block.output.TerminalEventsHandler
 import java.awt.AWTEvent
-import java.awt.event.*
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelListener
 import javax.swing.KeyStroke
 
 /**
@@ -33,14 +37,20 @@ import javax.swing.KeyStroke
  * 2. If the key event corresponds to one of the AnActions from our list, we do not process it,
  * allowing the platform to execute the corresponding AnAction.
  * 3. All other key events are handled directly by [handleKeyEvent], and sent to the Terminal process.
- * 4. If the platform failed to find the enabled action for the event from step 2,
- * we catch it again using [MyKeyEventsListener] and process it using [handleKeyEvent] (by sending to the Terminal process)
+ *
+ * For the key event sent to the platform at step 2, there are two possibilities:
+ *
+ * 1. One of the actions from our list corresponding to the current shortcut is enabled.
+ * In this case, this action is performed by the platform as usual.
+ * 2. Otherwise, the special [SendShortcutToTerminalAction] is performed.
+ * This action only enables itself if all the actions from our list corresponding to the same shortcut are disabled.
+ * It then sends the received shortcut to the terminal using the same [handleKeyEvent] mentioned above.
  */
 internal abstract class TerminalEventDispatcher(
   private val editor: EditorEx,
   private val parentDisposable: Disposable,
 ) : IdeEventQueue.EventDispatcher {
-  private val keyListener: KeyListener = MyKeyEventsListener()
+  private val sendShortcutAction = SendShortcutToTerminalAction(this)
   private var myRegistered = false
   private var actionsToSkip: List<AnAction> = emptyList()
 
@@ -66,14 +76,14 @@ internal abstract class TerminalEventDispatcher(
     }
   }
 
-  protected abstract fun handleKeyEvent(e: KeyEvent)
+  internal abstract fun handleKeyEvent(e: KeyEvent)
 
   fun register(actionsToSkip: List<AnAction>) {
     ThreadingAssertions.assertEventDispatchThread()
     this.actionsToSkip = actionsToSkip
     if (!myRegistered) {
       IdeEventQueue.getInstance().addDispatcher(this, parentDisposable)
-      editor.contentComponent.addKeyListener(parentDisposable, keyListener)
+      sendShortcutAction.register(editor.contentComponent)
       myRegistered = true
     }
   }
@@ -82,7 +92,7 @@ internal abstract class TerminalEventDispatcher(
     ThreadingAssertions.assertEventDispatchThread()
     if (myRegistered) {
       IdeEventQueue.getInstance().removeDispatcher(this)
-      editor.contentComponent.removeKeyListener(keyListener)
+      sendShortcutAction.unregister(editor.contentComponent)
       actionsToSkip = emptyList()
       myRegistered = false
     }
@@ -104,19 +114,8 @@ internal abstract class TerminalEventDispatcher(
     return false
   }
 
-  private inner class MyKeyEventsListener : KeyAdapter() {
-    override fun keyTyped(e: KeyEvent) {
-      handleKeyEvent(e)
-    }
-
-    override fun keyPressed(e: KeyEvent) {
-      // Action system has not consumed this KeyPressed event, so, next KeyTyped should be handled.
-      ignoreNextKeyTypedEvent = false
-      handleKeyEvent(e)
-    }
-  }
-
   companion object {
+    @Language("devkit-action-id")
     @NonNls
     private val ACTIONS_TO_SKIP = listOf(
       "ActivateTerminalToolWindow",
@@ -137,6 +136,9 @@ internal abstract class TerminalEventDispatcher(
       "HideAllWindows",
       "NextWindow",
       "PreviousWindow",
+      "NextTab",
+      "PreviousTab",
+      "ShowContent",
       "NextProjectWindow",
       "PreviousProjectWindow",
       "ShowBookmarks",
@@ -169,6 +171,24 @@ internal abstract class TerminalEventDispatcher(
       "TerminalIncreaseFontSize",
       "TerminalDecreaseFontSize",
       "TerminalResetFontSize",
+      "Terminal.Escape",
+      "Terminal.CopySelectedText",
+      "Terminal.Paste",
+      "Terminal.LineUp",
+      "Terminal.LineDown",
+      "Terminal.PageUp",
+      "Terminal.PageDown",
+      "Terminal.RenameSession",
+      "Terminal.NewTab",
+      "Terminal.CloseTab",
+      "Terminal.SplitVertically",
+      "Terminal.SplitHorizontally",
+      "Terminal.NextSplitter",
+      "Terminal.PrevSplitter",
+      "Terminal.MoveToolWindowTabLeft",
+      "Terminal.MoveToolWindowTabRight",
+      "Terminal.ClearBuffer",
+      "Terminal.Find",
     )
 
     fun getActionsToSkip(): List<AnAction> {

@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.analysis.api.symbols.KaValueParameterSymbol
 import org.jetbrains.kotlin.analysis.api.types.KaDefinitelyNotNullType
 import org.jetbrains.kotlin.analysis.api.types.KaType
 import org.jetbrains.kotlin.analysis.api.types.KaTypeNullability
+import org.jetbrains.kotlin.idea.base.psi.safeDeparenthesize
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
 import org.jetbrains.kotlin.idea.codeinsight.api.applicators.fixes.KotlinQuickFixFactory
 import org.jetbrains.kotlin.idea.codeinsight.api.classic.quickfixes.KotlinQuickFixAction
@@ -35,6 +36,7 @@ object ChangeParameterTypeFixFactory {
 
     val typeMismatchFactory = KotlinQuickFixFactory.IntentionBased { diagnostic: KaFirDiagnostic.ArgumentTypeMismatch ->
         val psi = diagnostic.psi
+        if (psi !is KtExpression) return@IntentionBased emptyList()
         val targetType = diagnostic.expectedType
         buildList {
             if (targetType is KaDefinitelyNotNullType) {
@@ -46,26 +48,23 @@ object ChangeParameterTypeFixFactory {
     }
 
     val nullForNotNullTypeFactory = KotlinQuickFixFactory.IntentionBased { diagnostic: KaFirDiagnostic.NullForNonnullType ->
-        createTypeMismatchFixes(diagnostic.psi, diagnostic.expectedType.withNullability(KaTypeNullability.NULLABLE))
+        val psi = diagnostic.psi
+        if (psi !is KtExpression) return@IntentionBased emptyList()
+        createTypeMismatchFixes(psi, diagnostic.expectedType.withNullability(KaTypeNullability.NULLABLE))
     }
 
     context(KaSession)
     @OptIn(KaExperimentalApi::class)
-    private fun createTypeMismatchFixes(psi: PsiElement, targetType: KaType): List<KotlinQuickFixAction<*>> {
-        val psiParent = psi.parent ?: return emptyList()
+    private fun createTypeMismatchFixes(psi: KtExpression, targetType: KaType): List<KotlinQuickFixAction<*>> {
+        val outermostExpression = psi.getOutermostParenthesizedExpressionOrThis()
+        val psiParent = outermostExpression.parent ?: return emptyList()
         // Support of overloaded operators and anonymous objects infix calls
         val (argumentKey, callElement) = if (psiParent is KtOperationExpression) {
-            Pair(psi, psiParent)
+            psi to psiParent
         } else {
-            val valueArgument = getValueArgument(psi) ?: return emptyList()
-            val valueArgumentExpression = valueArgument.getArgumentExpression() ?: return emptyList()
-            val argumentKey = if (valueArgumentExpression is KtParenthesizedExpression) {
-                psi
-            } else {
-                valueArgumentExpression
-            }
+            val (valueArgument, argumentKey) = psiParent.getValueArgumentAndArgumentExpression() ?: return emptyList()
             val callElement = valueArgument.parentOfType<KtCallElement>() ?: return emptyList()
-            Pair(argumentKey, callElement)
+            argumentKey to callElement
         }
         val memberCall = (callElement.resolveToCall() as? KaErrorCallInfo)?.candidateCalls?.firstOrNull() as? KaFunctionCall<*>
         val functionLikeSymbol = memberCall?.symbol ?: return emptyList()
@@ -73,21 +72,18 @@ object ChangeParameterTypeFixFactory {
         val paramSymbol = memberCall.argumentMapping[argumentKey]
         val parameter = paramSymbol?.symbol?.psi as? KtParameter ?: return emptyList()
 
-        createChangeParameterTypeFix(parameter, targetType, functionLikeSymbol)?.let { fix -> return listOf(fix) } ?: return emptyList()
+        return listOfNotNull(createChangeParameterTypeFix(parameter, targetType, functionLikeSymbol))
     }
 
     context(KaSession)
     private fun createTypeMismatchFixesForDefinitelyNonNullable(
-        psi: PsiElement,
+        psi: KtExpression,
         targetType: KaDefinitelyNotNullType
     ): List<KotlinQuickFixAction<*>> {
-        val valueArgument = getValueArgument(psi) ?: return emptyList()
-
-        val argumentExpression = valueArgument.getArgumentExpression()?.let { KtPsiUtil.deparenthesize(it) } ?: return emptyList()
-        val argumentOrSelectorExpression = if (argumentExpression is KtDotQualifiedExpression) {
-            argumentExpression.selectorExpression
+        val argumentOrSelectorExpression = if (psi is KtDotQualifiedExpression) {
+            psi.selectorExpression
         } else {
-            argumentExpression
+            psi
         }
         val referencedSymbol = argumentOrSelectorExpression?.mainReference?.resolveToSymbol()?.let { symbol ->
             if (symbol is KaPropertySymbol) {
@@ -101,18 +97,13 @@ object ChangeParameterTypeFixFactory {
         val containingFunctionSymbol = referencedSymbol.containingDeclaration as? KaFunctionSymbol ?: return emptyList()
         val parameter = referencedSymbol.psi as? KtParameter ?: return emptyList()
 
-        createChangeParameterTypeFix(parameter, targetType, containingFunctionSymbol)?.let { fix -> return listOf(fix) }
-            ?: return emptyList()
+        return listOfNotNull(createChangeParameterTypeFix(parameter, targetType, containingFunctionSymbol))
     }
 
-    private fun getValueArgument(psi: PsiElement): KtValueArgument? {
-        val psiParent = psi.parent
-        val neededParent = if (psiParent is KtParenthesizedExpression) {
-            psiParent.parent
-        } else {
-            psiParent
-        }
-        return neededParent as? KtValueArgument
+    private fun PsiElement.getValueArgumentAndArgumentExpression(): Pair<KtValueArgument, KtExpression?>? {
+        val valueArgument = this as? KtValueArgument ?: return null
+        val argumentExpression = valueArgument.getArgumentExpression()?.safeDeparenthesize() ?: return null
+        return valueArgument to argumentExpression
     }
 
     context(KaSession)
@@ -143,6 +134,11 @@ object ChangeParameterTypeFixFactory {
             functionName
         )
     }
+}
+
+private fun KtExpression.getOutermostParenthesizedExpressionOrThis(): KtExpression {
+    val psiParent = this.parent
+    return (psiParent as? KtParenthesizedExpression)?.getOutermostParenthesizedExpressionOrThis() ?: this
 }
 
 internal class ChangeParameterTypeFix(

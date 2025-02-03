@@ -201,7 +201,7 @@ abstract class MavenTestCase : UsefulTestCase() {
 
   protected fun waitForMavenUtilRunnablesComplete() {
     PlatformTestUtil.waitWithEventsDispatching(
-      { "Waiting for MavenUtils runnables completed" + MavenUtil.getUncompletedRunnables() },
+      { "Waiting for MavenUtils runnables completed" + MavenUtil.uncompletedRunnables },
       { MavenUtil.noUncompletedRunnables() }, 15)
   }
 
@@ -549,11 +549,6 @@ abstract class MavenTestCase : UsefulTestCase() {
     val relativePaths = files.map { dir.relativize(it.path.toNioPathOrNull()!!) }
     MavenLog.LOG.warn("Refreshing files: $relativePaths")
     LocalFileSystem.getInstance().refreshFiles(files)
-  }
-
-  protected fun ignore(): Boolean {
-    //printIgnoredMessage(null);
-    return false
   }
 
   protected fun hasMavenInstallation(): Boolean {

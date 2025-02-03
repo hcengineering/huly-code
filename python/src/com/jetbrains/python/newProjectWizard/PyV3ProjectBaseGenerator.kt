@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.newProjectWizard
 
 import com.intellij.facet.ui.ValidationResult
@@ -20,6 +20,7 @@ import com.jetbrains.python.newProjectWizard.collector.PythonNewProjectWizardCol
 import com.jetbrains.python.newProjectWizard.impl.PyV3GeneratorPeer
 import com.jetbrains.python.newProjectWizard.impl.PyV3UIServicesProd
 import com.jetbrains.python.newProjectWizard.projectPath.ProjectPathFlows.Companion.validatePath
+import com.jetbrains.python.onFailure
 import com.jetbrains.python.sdk.add.v2.PythonInterpreterSelectionMode
 import com.jetbrains.python.statistics.version
 import kotlinx.coroutines.CoroutineScope
@@ -63,9 +64,10 @@ abstract class PyV3ProjectBaseGenerator<TYPE_SPECIFIC_SETTINGS : PyV3ProjectType
   override fun generateProject(project: Project, baseDir: VirtualFile, settings: PyV3BaseProjectSettings, module: Module) {
     val coroutineScope = project.service<MyService>().coroutineScope
     coroutineScope.launch {
-      val (sdk, interpreterStatistics) = settings.generateAndGetSdk(module, baseDir).getOrElse {
+      val (sdk, interpreterStatistics) = settings.generateAndGetSdk(module, baseDir).getOr {
         withContext(Dispatchers.EDT) {
-          uiServices.errorSink.emit(it.localizedMessage) // Show error generation to user
+          // TODO: Migrate to python Result using PyError as exception not to make this dynamic check
+          uiServices.errorSink.emit(it.error)
         }
         return@launch // Since we failed to generate project, we do not need to go any further
       }
@@ -86,7 +88,9 @@ abstract class PyV3ProjectBaseGenerator<TYPE_SPECIFIC_SETTINGS : PyV3ProjectType
       // Either base settings (which create venv) might generate some or type specific settings (like Django) may.
       // So we expand it right after SDK generation, but if there are no files yet, we do it again after project generation
       uiServices.expandProjectTreeView(project)
-      typeSpecificSettings.generateProject(module, baseDir, sdk).onFailure { uiServices.errorSink.emit(it.localizedMessage) }
+      typeSpecificSettings.generateProject(module, baseDir, sdk).onFailure {
+        uiServices.errorSink.emit(it)
+      }
       uiServices.expandProjectTreeView(project)
     }
   }

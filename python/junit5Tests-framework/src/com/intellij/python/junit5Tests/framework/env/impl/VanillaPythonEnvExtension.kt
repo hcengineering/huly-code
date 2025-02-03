@@ -1,13 +1,14 @@
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.python.junit5Tests.framework.env.impl
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.util.SystemInfoRt
+import com.intellij.python.community.impl.poetry.poetryPath
+import com.intellij.python.community.testFramework.testEnv.TypeVanillaPython3
 import com.intellij.python.junit5Tests.framework.env.PythonBinaryPath
 import com.jetbrains.python.PythonBinary
-import com.jetbrains.python.sdk.poetry.poetryPath
-import com.jetbrains.python.tools.PythonType
 import java.nio.file.Path
 
 /**
@@ -15,7 +16,13 @@ import java.nio.file.Path
  *
  * It also searches for poetry and stores it in [PropertiesComponent]
  */
-internal class VanillaPythonEnvExtension : PythonEnvExtensionBase<PythonBinary, PythonType.VanillaPython3>(PythonBinaryPath::class, PythonType.VanillaPython3, PythonBinary::class, lazy = false, "poetry") {
+internal class VanillaPythonEnvExtension : PythonEnvExtensionBase<PythonBinary, TypeVanillaPython3>(
+  annotation = PythonBinaryPath::class,
+  pythonType = TypeVanillaPython3,
+  envType = PythonBinary::class,
+  lazy = false,
+  additionalTags = arrayOf("poetry")
+) {
   private companion object {
     val checkedPoetries = mutableMapOf<Path, Unit>()
   }

@@ -86,6 +86,9 @@ public final class TerminalSettingsPanel {
   private JBLabel myBetaLabel;
   private JPanel myNewUiChildSettingsPanel;
 
+  private JBCheckBox myShowSeparatorsBetweenBlocksCheckbox;
+
+  private JPanel myPromptStylePanel;
   private JPanel myPromptStyleButtonsPanel;
   private JBRadioButton mySingleLineButton;
   private JBRadioButton myDoubleLineButton;
@@ -118,6 +121,9 @@ public final class TerminalSettingsPanel {
     myNewUiCheckbox.setSelected(Registry.is(LocalBlockTerminalRunner.BLOCK_TERMINAL_REGISTRY));
     myNewUiCheckbox.addChangeListener(__ -> updateNewUiPanelState());
 
+    myShowSeparatorsBetweenBlocksCheckbox.setVisible(Registry.is(LocalBlockTerminalRunner.REWORKED_BLOCK_TERMINAL_REGISTRY));
+
+    myPromptStylePanel.setVisible(!Registry.is(LocalBlockTerminalRunner.REWORKED_BLOCK_TERMINAL_REGISTRY));
     myPromptStyleButtonsPanel.setBorder(JBUI.Borders.empty(4, 20, 0, 0));
     // UI Designer is unable to create a ContextHelpLabel, because it doesn't have a default constructor.
     // So, I have to create and add it manually.
@@ -193,6 +199,7 @@ public final class TerminalSettingsPanel {
 
   public boolean isModified() {
     return myNewUiCheckbox.isSelected() != Registry.is(LocalBlockTerminalRunner.BLOCK_TERMINAL_REGISTRY)
+           || (myBlockTerminalOptions.getShowSeparatorsBetweenBlocks() != myShowSeparatorsBetweenBlocksCheckbox.isSelected())
            || (myBlockTerminalOptions.getPromptStyle() != getSelectedPromptStyle())
            || !Objects.equals(myShellPathField.getText(), myProjectOptionsProvider.getShellPath())
            || !Objects.equals(myStartDirectoryField.getText(), StringUtil.notNullize(myProjectOptionsProvider.getStartingDirectory()))
@@ -225,6 +232,7 @@ public final class TerminalSettingsPanel {
         }, ModalityState.nonModal());
       }
     }
+    myBlockTerminalOptions.setShowSeparatorsBetweenBlocks(myShowSeparatorsBetweenBlocksCheckbox.isSelected());
     myBlockTerminalOptions.setPromptStyle(getSelectedPromptStyle());
     myProjectOptionsProvider.setStartingDirectory(myStartDirectoryField.getText());
     myProjectOptionsProvider.setShellPath(myShellPathField.getText());
@@ -255,6 +263,7 @@ public final class TerminalSettingsPanel {
 
   public void reset() {
     myNewUiCheckbox.setSelected(Registry.is(LocalBlockTerminalRunner.BLOCK_TERMINAL_REGISTRY));
+    myShowSeparatorsBetweenBlocksCheckbox.setSelected(myBlockTerminalOptions.getShowSeparatorsBetweenBlocks());
     var promptStyle = myBlockTerminalOptions.getPromptStyle();
     mySingleLineButton.setSelected(promptStyle == TerminalPromptStyle.SINGLE_LINE);
     myDoubleLineButton.setSelected(promptStyle == TerminalPromptStyle.DOUBLE_LINE);

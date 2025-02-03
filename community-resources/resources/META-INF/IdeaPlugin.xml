@@ -14,6 +14,7 @@
     <module name="intellij.platform.ide.newUiOnboarding"/>
     <module name="intellij.platform.ide.newUsersOnboarding"/>
     <module name="intellij.ide.startup.importSettings"/>
+    <module name="intellij.settingsSync.core"/>
     <module name="intellij.kotlin.onboarding-promoter"/>
     <module name="intellij.idea.customization.base"/>
     <module name="intellij.platform.tips"/>
@@ -27,6 +28,7 @@
   </xi:include>
 
   <extensions defaultExtensionNs="com.intellij">
+    <!--suppress PluginXmlRegistrationCheck -->
     <applicationService serviceInterface="com.intellij.openapi.updateSettings.UpdateStrategyCustomization"
                         serviceImplementation="com.intellij.openapi.updateSettings.base.ShowWhatIsNewPageAfterUpdateCustomization"
                         overrides="true"/>

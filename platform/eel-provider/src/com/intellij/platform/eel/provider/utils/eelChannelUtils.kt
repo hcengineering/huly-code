@@ -9,7 +9,9 @@ import com.intellij.platform.eel.channels.EelSendChannel
 import com.intellij.platform.eel.provider.ResultErrImpl
 import com.intellij.platform.eel.provider.ResultOkImpl
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.CheckReturnValue
 import java.io.IOException
@@ -43,6 +45,13 @@ fun EelReceiveChannel<IOException>.consumeAsInputStream(blockingContext: Corouti
 fun EelSendChannel<IOException>.asOutputStream(blockingContext: CoroutineContext = Dispatchers.IO): OutputStream =
   OutputStreamAdapterImpl(this, blockingContext)
 
+/**
+ * Reads data from [receiveChannel] with buffer as big as [bufferSize] and returns it from channel (until [receiveChannel] is closed)
+ * Each buffer is fresh (not reused) but not flipped.
+ * Errors are thrown out of the channel (directly or wrapped with [IOException] if not throwable).
+ */
+fun CoroutineScope.consumeReceiveChannelAsKotlin(receiveChannel: EelReceiveChannel<*>, bufferSize: Int = DEFAULT_BUFFER_SIZE): ReceiveChannel<ByteBuffer> =
+  consumeReceiveChannelAsKotlinImpl(receiveChannel, bufferSize)
 
 /**
  * Bidirectional [kotlinx.coroutines.channels.Channel.RENDEZVOUS] pipe much like [java.nio.channels.Pipe].
@@ -106,7 +115,7 @@ suspend fun <ERR_IN : Any, ERR_OUT : Any> copy(
       buffer.flip()
       do {
         // write data
-        when (val r = dst.send(buffer)) {
+        when (@Suppress("OPT_IN_USAGE") val r = dst.send(buffer)) {
           is EelResult.Error -> return@withContext ResultErrImpl(CopyResultError.OutError(r.error))
           is EelResult.Ok -> Unit
         }

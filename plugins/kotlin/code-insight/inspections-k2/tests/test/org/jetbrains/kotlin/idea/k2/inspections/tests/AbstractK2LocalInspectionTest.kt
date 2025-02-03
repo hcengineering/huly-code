@@ -1,8 +1,7 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 package org.jetbrains.kotlin.idea.k2.inspections.tests
 
-import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import com.intellij.platform.workspace.storage.MutableEntityStorage
 import com.intellij.testFramework.common.runAll
@@ -15,7 +14,7 @@ import org.jetbrains.kotlin.idea.base.test.k2FileName
 import org.jetbrains.kotlin.idea.core.script.SCRIPT_CONFIGURATIONS_SOURCES
 import org.jetbrains.kotlin.idea.core.script.k2.BaseScriptModel
 import org.jetbrains.kotlin.idea.core.script.k2.BundledScriptConfigurationsSource
-import org.jetbrains.kotlin.idea.core.script.k2.ScriptConfigurations
+import org.jetbrains.kotlin.idea.fir.K2DirectiveBasedActionUtils
 import org.jetbrains.kotlin.idea.fir.invalidateCaches
 import org.jetbrains.kotlin.idea.inspections.AbstractLocalInspectionTest
 import org.jetbrains.kotlin.idea.test.KotlinLightProjectDescriptor
@@ -34,7 +33,19 @@ abstract class AbstractK2LocalInspectionTest : AbstractLocalInspectionTest() {
 
     override val inspectionFileName: String = ".k2Inspection"
 
-    override fun checkForUnexpectedErrors(fileText: String) {}
+    override val skipErrorsBeforeCheckDirectives: List<String>
+        get() = super.skipErrorsBeforeCheckDirectives + K2DirectiveBasedActionUtils.DISABLE_K2_ERRORS_DIRECTIVE
+
+    override val skipErrorsAfterCheckDirectives: List<String>
+        get() = super.skipErrorsAfterCheckDirectives + K2DirectiveBasedActionUtils.DISABLE_K2_ERRORS_DIRECTIVE
+
+    override fun checkForErrorsBefore(mainFile: File,ktFile: KtFile, fileText: String) {
+        K2DirectiveBasedActionUtils.checkForErrorsBefore(mainFile, ktFile, fileText)
+    }
+
+    override fun checkForErrorsAfter(mainFile: File, ktFile: KtFile, fileText: String) {
+        K2DirectiveBasedActionUtils.checkForErrorsAfter(mainFile, ktFile, fileText)
+    }
 
     override fun fileName(): String = k2FileName(super.fileName(), testDataDirectory)
 
@@ -52,12 +63,6 @@ abstract class AbstractK2LocalInspectionTest : AbstractLocalInspectionTest() {
         if (k2FilePath.exists()) return k2FilePath
 
         return super.getAfterTestDataAbsolutePath(mainFileName)
-    }
-
-    override fun doTestFor(mainFile: File, inspection: LocalInspectionTool, fileText: String) {
-        IgnoreTests.runTestIfNotDisabledByFileDirective(mainFile.toPath(), IgnoreTests.DIRECTIVES.IGNORE_K2, "after") {
-            doTestForInternal(mainFile, inspection, fileText)
-        }
     }
 
     override fun doTest(path: String) {

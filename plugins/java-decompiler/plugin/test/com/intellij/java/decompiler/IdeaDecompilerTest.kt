@@ -17,6 +17,7 @@ import com.intellij.openapi.application.PluginPathManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager
+import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.registry.Registry
@@ -67,6 +68,49 @@ class IdeaDecompilerTest : LightJavaCodeInsightFixtureTestCase() {
     assertTrue(decompiled, decompiled.contains("private static class CaseInsensitiveComparator"))
     assertFalse(decompiled, decompiled.contains("/* compiled code */"))
     assertFalse(decompiled, decompiled.contains("synthetic"))
+    assertFalse(decompiled, decompiled.contains("Limits for direct nodes are exceeded"))
+    assertFalse(decompiled, decompiled.contains("Limits for variable nodes are exceeded"))
+  }
+
+  fun testSimpleWithNodeLimit() {
+    val advancedSetting = "decompiler.max.direct.nodes.count"
+    val previousCount = AdvancedSettings.getInt(advancedSetting)
+    try {
+      AdvancedSettings.setInt(advancedSetting, 5)
+      val file = getTestFile("${IdeaTestUtil.getMockJdk18Path().path}/jre/lib/rt.jar!/java/lang/String.class")
+      val decompiled = IdeaDecompiler().getText(file).toString()
+      assertTrue(decompiled, decompiled.contains("Limits for direct nodes are exceeded"))
+      //small methods are decompiled normally
+      assertTrue(decompiled, decompiled.contains("""
+          public String(char[] var1) {
+                  this.value = Arrays.copyOf(var1, var1.length);
+              }""".trimIndent()))
+    }
+    finally {
+      AdvancedSettings.setInt(advancedSetting, previousCount)
+    }
+  }
+
+  fun testSimpleWithVariableLimit() {
+    val advancedSetting = "decompiler.max.variable.nodes.count"
+    val previousCount = AdvancedSettings.getInt(advancedSetting)
+    try {
+      AdvancedSettings.setInt(advancedSetting, 5)
+      val file = getTestFile("${IdeaTestUtil.getMockJdk18Path().path}/jre/lib/rt.jar!/java/lang/String.class")
+      val decompiled = IdeaDecompiler().getText(file).toString()
+      assertTrue(decompiled, decompiled.contains("Limits for variable nodes are exceeded"))
+      //small methods are decompiled normally
+      assertTrue(decompiled, decompiled.contains(
+        """
+        public char[] toCharArray() {
+                char[] var1 = new char[this.value.length];
+                System.arraycopy(this.value, 0, var1, 0, this.value.length);
+                return var1;
+            }""".trimIndent()))
+    }
+    finally {
+      AdvancedSettings.setInt(advancedSetting, previousCount)
+    }
   }
 
   fun testStubCompatibility() {

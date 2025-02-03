@@ -6,10 +6,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.io.NioFiles;
 import com.intellij.tracing.Tracer;
-import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.*;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.BuildTargetType;
 import org.jetbrains.jps.builders.JpsBuildBundle;
@@ -53,7 +50,7 @@ public final class BuildDataManager {
   private final @NotNull ConcurrentMap<BuildTarget<?>, BuildTargetStorages> myTargetStorages = new ConcurrentHashMap<>();
   // not used for a new single-db storage
   private final @NotNull ConcurrentMap<BuildTarget<?>, SourceToOutputMappingWrapper> buildTargetToSourceToOutputMapping = new ConcurrentHashMap<>();
-  private final @Nullable ExperimentalBuildDataManager newDataManager;
+  private final @Nullable BuildDataProvider newDataManager;
 
   private @Nullable ProjectStamps myFileStampService;
 
@@ -83,11 +80,9 @@ public final class BuildDataManager {
     this(dataPaths,
          targetsState,
          relativizer,
-         storageManager,
+         storageManager == null ? null : new ExperimentalBuildDataManager(storageManager, relativizer),
          storageManager != null || ProjectStamps.PORTABLE_CACHES ? null : new ProjectStamps(dataPaths.getDataStorageDir(), targetsState.impl),
          null);
-
-
   }
 
   @SuppressWarnings("unused")
@@ -96,11 +91,11 @@ public final class BuildDataManager {
                                                 @NotNull BuildTargetStateManager targetStateManager,
                                                 @NotNull PathRelativizerService relativizer,
                                                 @NotNull BuildDataVersionManager versionManager,
-                                                @NotNull StorageManager storageManager) throws IOException {
+                                                @NotNull BuildDataProvider buildDataProvider) throws IOException {
     return new BuildDataManager(dataPaths,
                                 new BuildTargetsState(targetStateManager),
                                 relativizer,
-                                storageManager,
+                                buildDataProvider,
                                 null,
                                 versionManager);
   }
@@ -108,7 +103,7 @@ public final class BuildDataManager {
   private BuildDataManager(@NotNull BuildDataPaths dataPaths,
                            BuildTargetsState targetsState,
                            @NotNull PathRelativizerService relativizer,
-                           @Nullable StorageManager storageManager,
+                           @Nullable BuildDataProvider buildDataProvider,
                            @Nullable ProjectStamps projectStamps,
                            @Nullable BuildDataVersionManager versionManager) throws IOException {
     myDataPaths = dataPaths;
@@ -116,13 +111,13 @@ public final class BuildDataManager {
     myFileStampService = projectStamps;
     Path dataStorageRoot = dataPaths.getDataStorageDir();
     try {
-      if (storageManager == null) {
+      if (buildDataProvider == null) {
         newDataManager = null;
         sourceToFormMap = new OneToManyPathsMapping(getSourceToFormsRoot().resolve("data"), relativizer);
         outputToTargetMapping = new OutputToTargetRegistry(getOutputToSourceRegistryRoot().resolve("data"), relativizer);
       }
       else {
-        newDataManager = new ExperimentalBuildDataManager(storageManager, relativizer);
+        newDataManager = buildDataProvider;
         sourceToFormMap = null;
         outputToTargetMapping = null;
       }
@@ -461,7 +456,7 @@ public final class BuildDataManager {
         myTargetStorages.clear();
         buildTargetToSourceToOutputMapping.clear();
       },
-      IOOperation.adapt(newDataManager, ExperimentalBuildDataManager::close),
+      IOOperation.adapt(newDataManager, BuildDataProvider::close),
       IOOperation.adapt(myFileStampService, StorageOwner::close),
       IOOperation.adapt(outputToTargetMapping, StorageOwner::close),
 
@@ -662,29 +657,19 @@ public final class BuildDataManager {
     }
 
     @Override
-    public void setOutputs(@NotNull String srcPath, @NotNull List<String> outputs) throws IOException {
+    public void setOutputs(@NotNull Path sourceFile, @NotNull List<@NotNull Path> outputs) throws IOException {
       try {
-        myDelegate.setOutputs(srcPath, outputs);
+        myDelegate.setOutputs(sourceFile, outputs);
       }
       finally {
-        outputToTargetMapping.addMappings(outputs, myBuildTargetId);
+        outputToTargetMapping.addMappings(myBuildTargetId, outputs);
       }
     }
 
     @Override
-    public void setOutput(@NotNull String srcPath, @NotNull String outputPath) throws IOException {
+    public void appendOutput(@NotNull String sourcePath, @NotNull String outputPath) throws IOException {
       try {
-        myDelegate.setOutput(srcPath, outputPath);
-      }
-      finally {
-        outputToTargetMapping.addMapping(outputPath, myBuildTargetId);
-      }
-    }
-
-    @Override
-    public void appendOutput(@NotNull String srcPath, @NotNull String outputPath) throws IOException {
-      try {
-        myDelegate.appendOutput(srcPath, outputPath);
+        myDelegate.appendOutput(sourcePath, outputPath);
       }
       finally {
         outputToTargetMapping.addMapping(outputPath, myBuildTargetId);
@@ -692,8 +677,8 @@ public final class BuildDataManager {
     }
 
     @Override
-    public void remove(@NotNull String srcPath) throws IOException {
-      myDelegate.remove(srcPath);
+    public void remove(@NotNull Path sourceFile) throws IOException {
+      myDelegate.remove(sourceFile);
     }
 
     @Override
@@ -702,8 +687,18 @@ public final class BuildDataManager {
     }
 
     @Override
-    public @Nullable Collection<String> getOutputs(@NotNull String srcPath) throws IOException {
-      return myDelegate.getOutputs(srcPath);
+    public @Nullable Collection<String> getOutputs(@NotNull String sourcePath) throws IOException {
+      return myDelegate.getOutputs(sourcePath);
+    }
+
+    @Override
+    public @Nullable @Unmodifiable Collection<@NotNull Path> getOutputs(@NotNull Path sourceFile) throws IOException {
+      return myDelegate.getOutputs(sourceFile);
+    }
+
+    @Override
+    public @NotNull Iterator<@NotNull Path> getSourceFileIterator() throws IOException {
+      return myDelegate.getSourceFileIterator();
     }
 
     @Override

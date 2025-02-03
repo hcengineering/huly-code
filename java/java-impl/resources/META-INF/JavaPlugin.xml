@@ -415,6 +415,8 @@
     <projectService serviceImplementation="com.intellij.jarRepository.RemoteRepositoriesConfiguration"/>
     <projectService serviceImplementation="com.intellij.jarRepository.services.MavenRepositoryServicesManager"/>
     <projectService serviceImplementation="com.intellij.codeInsight.JavaProjectCodeInsightSettings"/>
+    <optionController implementation="com.intellij.codeInsight.JavaProjectCodeInsightSettings$Provider"/>
+    <applicationService serviceImplementation="com.intellij.codeInsight.JavaIdeCodeInsightSettings"/>
     <projectService serviceInterface="com.intellij.testIntegration.TestFailedLineManager"
                     serviceImplementation="com.intellij.execution.codeInspection.TestFailedLineManagerImpl"/>
     <projectService serviceInterface="com.intellij.codeInspection.ex.EntryPointsManager"
@@ -654,8 +656,6 @@
     <externalSystem.beforeRunTaskImporter
       implementation="com.intellij.openapi.externalSystem.service.project.settings.BuildArtifactsTaskImporter"/>
     <externalSystemConfigurationHandler implementation="com.intellij.openapi.externalSystem.service.project.settings.ArtifactsImporter"/>
-    <externalSystem.moduleDataServiceExtension
-      implementation="com.intellij.openapi.externalSystem.service.project.ModuleDataServiceJavaExtension"/>
     <externalSystem.runConfigurationEx implementation="com.intellij.execution.ExternalSystemRunConfigurationJavaExtension"/>
     <applicationService serviceInterface="com.intellij.openapi.externalSystem.service.execution.ExternalSystemJdkProvider"
                         serviceImplementation="com.intellij.openapi.externalSystem.service.execution.ExternalSystemJavaSdkProvider"
@@ -867,6 +867,10 @@
 
     <projectStructureDetector implementation="com.intellij.ide.util.projectWizard.importSources.impl.JavaProjectStructureDetector"
                               order="first"/>
+
+    <registryKey key="testDiscovery.enabled"
+                 defaultValue="false"
+                 description="Enable instrumentation during tests to be able to start 'tests which pass this code' later"/>
 
     <runConfigurationExtension implementation="com.intellij.execution.testDiscovery.TestDiscoveryExtension"/>
     <runConfigurationExtension implementation="com.intellij.execution.impl.JavaDebuggerAutoAttach"/>
@@ -1510,10 +1514,10 @@
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.RenameActionCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.OptimizeImportCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.FormatCodeCompletionCommand" />
-    <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.RefactorThisCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.RecentFilesCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.ProjectViewCompletionCommand" />
-    <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.CommentCompletionCommand" />
+    <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.LineCommentCompletionCommand" />
+    <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.JavaPsiElementCommentCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.IntroduceVariableCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.ShowUsagesActionCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.GenerateGetterSetterHandleCompletionCommand" />
@@ -1522,7 +1526,6 @@
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.DeleteCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.CopyFQNCompletionCommand" />
     <codeInsight.completion.command implementation="com.intellij.codeInsight.completion.commands.impl.GoToImplementationCompletionCommand" />
-
 
     <weigher implementationClass="com.intellij.codeInsight.completion.LoggerWeigher" key="completion" id="logger"/>
 
@@ -1968,6 +1971,11 @@
                      level="INFORMATION"
                      implementationClass="com.intellij.codeInspection.streamToLoop.StreamToLoopInspection"
                      key="inspection.stream.to.loop.display.name" bundle="messages.JavaBundle"/>
+    <localInspection groupPath="Java" language="JAVA" shortName="UnreachableCatch"
+                     groupKey="group.names.verbose.or.redundant.code.constructs" groupBundle="messages.InspectionsBundle" 
+                     enabledByDefault="true" level="WARNING"
+                     implementationClass="com.intellij.codeInspection.deadCode.UnreachableCatchInspection"
+                     key="inspection.unreachable.catch.name" bundle="messages.JavaAnalysisBundle"/>
     <localInspection groupPath="Java" language="JAVA" shortName="OptionalToIf"
                      groupKey="group.names.code.style.issues" groupBundle="messages.InspectionsBundle" enabledByDefault="true"
                      level="INFORMATION"
@@ -2291,6 +2299,10 @@
     <registryKey defaultValue="false"
                  description="Use shallow unused declaration analysis in batch mode (like in the editor, Java only)"
                  key="java.unused.declaration.inspection.use.shallow.local.anaysis.as.global"/>
+    <localInspection groupPath="Java" language="JAVA" key="inspection.static.import.can.be.used.display.name"
+                     groupBundle="messages.InspectionsBundle" groupKey="group.names.imports" enabledByDefault="true"
+                     level="WARNING" cleanupTool="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES"
+                     implementationClass="com.intellij.codeInspection.StaticImportCanBeUsedInspection" bundle="messages.JavaBundle"/>
 
     <intentionAction>
       <language>JAVA</language>
@@ -2373,6 +2385,12 @@
     <intentionAction>
       <language>JAVA</language>
       <className>com.intellij.codeInsight.intention.impl.AddOnDemandStaticImportAction</className>
+      <bundleName>messages.JavaBundle</bundleName>
+      <categoryKey>intention.category.imports</categoryKey>
+    </intentionAction>
+    <intentionAction>
+      <language>JAVA</language>
+      <className>com.intellij.codeInsight.intention.impl.AddOnDemandStaticImportToAutoImportAction</className>
       <bundleName>messages.JavaBundle</bundleName>
       <categoryKey>intention.category.imports</categoryKey>
     </intentionAction>
@@ -2778,10 +2796,22 @@
     <completion.contributor language="TEXT" id="commandsPlain" order="first, after liveTemplates"
                             implementationClass="com.intellij.codeInsight.completion.commands.core.CommandCompletionContributor"/>
     <lookup.charFilter implementation="com.intellij.codeInsight.completion.commands.core.CommandCompletionCharFilter" order="first" id="commandCompletion"/>
+    <lookup.customizer implementation="com.intellij.codeInsight.completion.commands.core.CommandCompletionLookupCustomizer" order="last" id="commandCompletionLookupCustomizer"/>
 
     <registryKey key="java.completion.command.enabled" defaultValue="false"
                  description="Enable experimental support command completion" restartRequired="true"/>
 
+    <registryKey key="java.completion.argument.live.template" defaultValue="false"
+                 description="When completing a method call, start a live template with all arguments"/>
+    <registryKey key="java.completion.argument.live.template.completion" defaultValue="false"
+                 description="If java.completion.argument.live.template is enabled, show completion for method arguments immediately"/>
+    <registryKey key="java.completion.show.constructors" defaultValue="false"
+                 description="Show separate constructors when completing constructor call, instead of a single class name"/>
+    <registryKey key="java.javadoc.use.templates" defaultValue="true"
+                 description="Use code templates to generate JavaDoc stubs"/>
+    <registryKey key="java.completion.methods.use.tags"
+                 defaultValue="true"
+                 description="Use additional tags for methods for completion"/>
   </extensions>
 
   <extensions defaultExtensionNs="org.jetbrains">

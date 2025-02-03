@@ -1,7 +1,8 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 package com.intellij.codeInsight.daemon.impl;
 
+import com.intellij.analysis.AnalysisBundle;
 import com.intellij.codeHighlighting.*;
 import com.intellij.codeInsight.daemon.impl.analysis.HighlightInfoHolder;
 import com.intellij.lang.Language;
@@ -67,7 +68,7 @@ final class ChameleonSyntaxHighlightingPass extends ProgressableTextEditorHighli
                                           @NotNull ProperTextRange restrictRange,
                                           @NotNull ProperTextRange priorityRange,
                                           @Nullable Editor editor) {
-    super(file.getProject(), document, "chameleon", file, editor, restrictRange, false, HighlightInfoProcessor.getEmpty());
+    super(file.getProject(), document, AnalysisBundle.message("pass.chameleon"), file, editor, restrictRange, false, HighlightInfoProcessor.getEmpty());
     myPriorityRange = priorityRange;
   }
 
@@ -142,7 +143,7 @@ final class ChameleonSyntaxHighlightingPass extends ProgressableTextEditorHighli
   }
 
   @Override
-  protected @Nullable String getPresentableName() {
+  public @Nullable String getPresentableName() {
     return null; // do not show progress for
   }
 }

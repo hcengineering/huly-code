@@ -5,6 +5,7 @@ fun simpleFun2(name: String, value: Int){}
 
 val f = foo(/*<# [namedParameters.kt:8]index| = #>*/0, lastName = "Johnson")
 val f2 = foo(/*<# [namedParameters.kt:8]index| = #>*/0, firstName = "Joe", /*<# [namedParameters.kt:48]lastName| = #>*/"Johnson")
+fun fVararg(vararg v: String) = fVararg(/*<# …|[namedParameters.kt:287]v| = #>*/*v)
 fun m() {
     val myName = "name"
     val name = "name"
@@ -16,4 +17,11 @@ fun m() {
     simpleFun2(name)
     simpleFun2(myName)
     simpleFun2(/*<# [namedParameters.kt:125]name| = #>*/n)
+}
+
+class Buzz(val name: String)
+
+fun buzzyFun(buzz: Buzz) {
+    buzzyFun(Buzz(name))
+    buzzyFun(Buzz(/*<# [namedParameters.kt:546]name| = #>*/"me"))
 }

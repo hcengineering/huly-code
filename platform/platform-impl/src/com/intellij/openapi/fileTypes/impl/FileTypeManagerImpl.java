@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.openapi.fileTypes.impl;
 
 import com.intellij.concurrency.ConcurrentCollectionFactory;
@@ -203,7 +203,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
 
     checkDuplicatedAlarm = singleAlarm(400, coroutineScope, this::checkUnique);
     EP_NAME.addExtensionPointListener(this, this);
-    FileTypeOverrider.EP_NAME.addExtensionPointListener(new ExtensionPointListener<>() {
+    FileTypeOverrider.EP_NAME.addExtensionPointListener(coroutineScope, new ExtensionPointListener<>() {
       @Override
       public void extensionAdded(FileTypeOverrider extension, @NotNull PluginDescriptor pluginDescriptor) {
         fileTypeOverriderCache = null;
@@ -259,7 +259,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
   }
 
-  record FileTypeWithDescriptor(@NotNull FileType fileType, @NotNull PluginDescriptor pluginDescriptor) implements Scheme {
+  @ApiStatus.Internal
+  public record FileTypeWithDescriptor(@NotNull FileType fileType, @NotNull PluginDescriptor pluginDescriptor) implements Scheme {
     private static final PluginDescriptor WILD_CARD = new DefaultPluginDescriptor("WILD_CARD");
 
     @Override
@@ -282,7 +283,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
 
     // equals to all FileTypeWithDescriptor with this fileType
-    static @NotNull FileTypeWithDescriptor allFor(@NotNull FileType fileType) {
+    @ApiStatus.Internal
+    public static @NotNull FileTypeWithDescriptor allFor(@NotNull FileType fileType) {
       return new FileTypeWithDescriptor(fileType, WILD_CARD);
     }
 
@@ -292,7 +294,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
   }
 
-  static @NotNull IdeaPluginDescriptor coreIdeaPluginDescriptor() {
+  @ApiStatus.Internal
+  public static @NotNull IdeaPluginDescriptor coreIdeaPluginDescriptor() {
     return Objects.requireNonNull(PluginManagerCore.getPlugin(PluginManagerCore.CORE_ID), "The core plugin is amiss");
   }
 
@@ -958,7 +961,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     return getFileTypeWithDescriptorByExtension(extension).fileType();
   }
 
-  @NotNull FileTypeWithDescriptor getFileTypeWithDescriptorByExtension(@NotNull String extension) {
+  @ApiStatus.Internal
+  public @NotNull FileTypeWithDescriptor getFileTypeWithDescriptorByExtension(@NotNull String extension) {
     FileTypeBean pendingFileType = withReadLock(() -> pendingAssociations.findByExtension(extension));
     if (pendingFileType != null) {
       FileTypeWithDescriptor type = instantiateFileTypeBean(pendingFileType);
@@ -1037,7 +1041,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     return ContainerUtil.map2Array(getRegisteredFileTypeWithDescriptors(), FileType.class, ftd->ftd.fileType);
   }
 
-  @NotNull List<FileTypeWithDescriptor> getRegisteredFileTypeWithDescriptors() {
+  @ApiStatus.Internal
+  public @NotNull List<FileTypeWithDescriptor> getRegisteredFileTypeWithDescriptors() {
     instantiatePendingFileTypes();
     return getAllFileTypeWithDescriptors();
   }
@@ -1092,7 +1097,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     associate(detectPluginDescriptor(type), matcher, true);
   }
 
-  static @NotNull FileTypeWithDescriptor detectPluginDescriptor(@NotNull FileType type) {
+  @ApiStatus.Internal
+  public static @NotNull FileTypeWithDescriptor detectPluginDescriptor(@NotNull FileType type) {
     PluginDescriptor pluginDescriptor = PluginManagerCore.getPluginDescriptorOrPlatformByClassName(type.getClass().getName());
     if (pluginDescriptor == null) pluginDescriptor = coreIdeaPluginDescriptor();
     return new FileTypeWithDescriptor(type, pluginDescriptor);
@@ -1555,7 +1561,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
   }
 
-  private static void checkUnique(Set<FileTypeWithDescriptor> descriptors) {
+  private static void checkUnique(@NotNull Set<FileTypeWithDescriptor> descriptors) {
     ConcurrentHashMap<String, FileTypeWithDescriptor> names = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, FileTypeWithDescriptor> displayNames = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, FileTypeWithDescriptor> descriptions = new ConcurrentHashMap<>();
@@ -1607,7 +1613,8 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     }
   }
 
-  static @NotNull FileTypeWithDescriptor coreDescriptorFor(@NotNull FileType fileType) {
+  @ApiStatus.Internal
+  public static @NotNull FileTypeWithDescriptor coreDescriptorFor(@NotNull FileType fileType) {
     return new FileTypeWithDescriptor(fileType, coreIdeaPluginDescriptor());
   }
 
@@ -1716,12 +1723,14 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
     return fileType != UnknownFileType.INSTANCE && !fileType.isReadOnly();
   }
 
-  @NotNull FileTypeAssocTable<FileTypeWithDescriptor> getExtensionMap() {
+  @ApiStatus.Internal
+  public @NotNull FileTypeAssocTable<FileTypeWithDescriptor> getExtensionMap() {
     instantiatePendingFileTypes();
     return patternsTable;
   }
 
-  void setPatternsTable(@NotNull Set<FileTypeWithDescriptor> fileTypes, @NotNull FileTypeAssocTable<FileTypeWithDescriptor> assocTable) {
+  @ApiStatus.Internal
+  public void setPatternsTable(@NotNull Set<FileTypeWithDescriptor> fileTypes, @NotNull FileTypeAssocTable<FileTypeWithDescriptor> assocTable) {
     Map<FileNameMatcher, FileTypeWithDescriptor> removedMappings = getExtensionMap().getRemovedMappings(assocTable, fileTypes);
     String message = "set patterns table called: file types " + fileTypes + ", ass. table:" + assocTable;
     makeFileTypesChange(message, () -> {
@@ -1790,7 +1799,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
       for (FileNameMatcher matcher : pair.matchers) {
         registerReDetectedMapping(fileType.getName(), matcher);
         if (matcher instanceof ExtensionFileNameMatcher extMatcher) {
-          // also check exact file name matcher
+          // also check the exact file name matcher
           registerReDetectedMapping(fileType.getName(), new ExactFileNameMatcher("." + extMatcher.getExtension()));
         }
       }

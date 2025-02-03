@@ -16,6 +16,7 @@ import com.intellij.workspaceModel.ide.legacyBridge.impl.java.JAVA_RESOURCE_ROOT
 import com.intellij.workspaceModel.ide.legacyBridge.impl.java.JAVA_SOURCE_ROOT_ENTITY_TYPE_ID
 import com.intellij.workspaceModel.ide.legacyBridge.impl.java.JAVA_TEST_RESOURCE_ROOT_ENTITY_TYPE_ID
 import com.intellij.workspaceModel.ide.legacyBridge.impl.java.JAVA_TEST_ROOT_ENTITY_TYPE_ID
+import org.jetbrains.idea.maven.importing.MavenImportUtil.getAnnotationProcessorDirectory
 import org.jetbrains.idea.maven.importing.MavenWorkspaceConfigurator
 import org.jetbrains.idea.maven.importing.StandardMavenModuleType
 import org.jetbrains.idea.maven.project.MavenImportingSettings
@@ -38,13 +39,20 @@ internal class WorkspaceFolderImporter(
   private val workspaceConfigurators: List<MavenWorkspaceConfigurator>
 ) {
 
-  fun createContentRoots(mavenProject: MavenProject, moduleType: StandardMavenModuleType, module: ModuleEntity,
-                         stats: WorkspaceImportStats): CachedProjectFolders {
-    val allFolders = mutableListOf<ContentRootCollector.ImportedFolder>()
-
+  fun createContentRoots(
+    mavenProject: MavenProject, moduleType: StandardMavenModuleType, module: ModuleEntity,
+    stats: WorkspaceImportStats,
+  ): OutputFolders {
     val cachedFolders = importingContext.projectToCachedFolders.getOrPut(mavenProject) {
       collectMavenFolders(mavenProject, stats)
     }
+
+    val outputFolders = OutputFolders(cachedFolders.outputPath, cachedFolders.testOutputPath)
+
+    // do not create source roots in additional <compileSourceRoots> modules
+    if (moduleType == StandardMavenModuleType.MAIN_ONLY_ADDITIONAL) return outputFolders
+
+    val allFolders = mutableListOf<ContentRootCollector.ImportedFolder>()
 
     addContentRoot(cachedFolders, allFolders)
     addCachedFolders(moduleType, cachedFolders, allFolders)
@@ -60,12 +68,12 @@ internal class WorkspaceFolderImporter(
       root.sourceFolders.forEach { folder ->
         registerSourceRootFolder(newContentRootEntity, folder)
       }
-      val updatedModule = builder.modifyModuleEntity(module) {
+      builder.modifyModuleEntity(module) {
         this.contentRoots += newContentRootEntity
       }
     }
 
-    return cachedFolders
+    return outputFolders
   }
 
   private fun addContentRoot(cachedFolders: CachedProjectFolders,
@@ -281,6 +289,8 @@ internal class WorkspaceFolderImporter(
     val projectContentRootPath: String,
     val outputPath: String,
     val testOutputPath: String,
-    val folders: List<ContentRootCollector.ImportedFolder>
+    val folders: List<ContentRootCollector.ImportedFolder>,
   )
+
+  data class OutputFolders(val outputPath: String, val testOutputPath: String)
 }

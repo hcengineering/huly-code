@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.diagnostic;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
@@ -10,10 +10,11 @@ import org.jetbrains.annotations.Nullable;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-/** Internal API. See a note in {@link MessagePool}. */
+/** @deprecated obsolete; use {@link IdeaLoggingEvent} */
+@Deprecated(forRemoval = true)
 @ApiStatus.Internal
+@SuppressWarnings("unused")
 public final class IdeaReportingEvent extends IdeaLoggingEvent {
-  private final TextBasedThrowable myThrowable;
   private final IdeaPluginDescriptor myPlugin;
 
   public IdeaReportingEvent(
@@ -22,8 +23,7 @@ public final class IdeaReportingEvent extends IdeaLoggingEvent {
     @NotNull String stacktrace,
     @Nullable IdeaPluginDescriptor plugin
   ) {
-    super(message, null, messageObject);
-    myThrowable = new TextBasedThrowable(stacktrace);
+    super(message, new TextBasedThrowable(stacktrace), messageObject.getIncludedAttachments(), plugin, messageObject);
     myPlugin = plugin;
   }
 
@@ -35,18 +35,16 @@ public final class IdeaReportingEvent extends IdeaLoggingEvent {
     return getData().getThrowableText();
   }
 
+  /** @deprecated use {@link IdeaLoggingEvent#getPlugin} */
+  @Deprecated(forRemoval = true)
+  @Override
   public @Nullable IdeaPluginDescriptor getPlugin() {
     return myPlugin;
   }
 
   @Override
-  public Throwable getThrowable() {
-    return myThrowable;
-  }
-
-  @Override
   public @NotNull String getThrowableText() {
-    return myThrowable.myStacktrace;
+    return ((TextBasedThrowable)getThrowable()).myStacktrace;
   }
 
   @Override

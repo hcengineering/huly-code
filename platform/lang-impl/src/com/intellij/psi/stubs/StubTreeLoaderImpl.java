@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.psi.stubs;
 
 import com.intellij.openapi.application.AppUIExecutor;
@@ -98,7 +98,7 @@ final class StubTreeLoaderImpl extends StubTreeLoader {
   @Override
   public @Nullable ObjectStubTree<?> readFromVFile(@NotNull Project project, final @NotNull VirtualFile vFile) {
     if ((DumbService.getInstance(project).isDumb() &&
-         FileBasedIndex.getInstance().getCurrentDumbModeAccessType() != DumbModeAccessType.RELIABLE_DATA_ONLY) ||
+         FileBasedIndex.getInstance().getCurrentDumbModeAccessType(project) != DumbModeAccessType.RELIABLE_DATA_ONLY) ||
         NoAccessDuringPsiEvents.isInsideEventProcessing()) {
       return null;
     }
@@ -214,7 +214,7 @@ final class StubTreeLoaderImpl extends StubTreeLoader {
 
     for (PsiFileStub<?> root : ((PsiFileStubImpl<?>)tree.getRoot()).getStubRoots()) {
       if (root instanceof StubBase) {
-        StubList stubList = ((StubBase<?>)root).myStubList;
+        StubList stubList = ((StubBase<?>)root).getStubList();
         for (int i = 0; i < stubList.size(); i++) {
           StubBase<?> each = stubList.getCachedStub(i);
           PsiElement cachedPsi = each == null ? null : each.getCachedPsi();

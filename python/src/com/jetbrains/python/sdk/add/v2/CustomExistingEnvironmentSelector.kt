@@ -1,6 +1,7 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.sdk.add.v2
 
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.observable.properties.ObservableMutableProperty
 import com.intellij.openapi.observable.util.notEqualsTo
 import com.intellij.openapi.ui.validation.DialogValidationRequestor
@@ -11,9 +12,9 @@ import com.jetbrains.python.newProject.collector.InterpreterStatisticsInfo
 import com.jetbrains.python.sdk.ModuleOrProject
 import com.jetbrains.python.sdk.PySdkUtil
 import com.jetbrains.python.sdk.PythonSdkUtil
-import com.jetbrains.python.sdk.poetry.pyProjectToml
 import com.jetbrains.python.statistics.InterpreterCreationMode
 import com.jetbrains.python.statistics.InterpreterType
+import com.jetbrains.python.errorProcessing.ErrorSink
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.ApiStatus.Internal
@@ -22,7 +23,7 @@ import java.util.*
 
 
 @Internal
-abstract class CustomExistingEnvironmentSelector(private val name: String, model: PythonMutableTargetAddInterpreterModel, protected val moduleOrProject: ModuleOrProject) : PythonExistingEnvironmentConfigurator(model) {
+internal abstract class CustomExistingEnvironmentSelector(private val name: String, model: PythonMutableTargetAddInterpreterModel, protected val moduleOrProject: ModuleOrProject) : PythonExistingEnvironmentConfigurator(model) {
   private lateinit var comboBox: PythonInterpreterComboBox
   protected val existingEnvironments: MutableStateFlow<List<PythonSelectableInterpreter>> = MutableStateFlow(emptyList())
   protected val selectedEnv: ObservableMutableProperty<PythonSelectableInterpreter?> = propertyGraph.property(null)
@@ -31,7 +32,7 @@ abstract class CustomExistingEnvironmentSelector(private val name: String, model
     model.scope.launch {
       val modulePath = when (moduleOrProject) {
         is ModuleOrProject.ProjectOnly -> moduleOrProject.project.basePath?.let { Path.of(it) }
-        is ModuleOrProject.ModuleAndProject -> pyProjectToml(moduleOrProject.module)?.let { Path.of(it.parent.path) }
+        is ModuleOrProject.ModuleAndProject -> findModulePath(moduleOrProject.module)
       }
 
       if (modulePath != null) {
@@ -40,7 +41,7 @@ abstract class CustomExistingEnvironmentSelector(private val name: String, model
     }
   }
 
-  override fun buildOptions(panel: Panel, validationRequestor: DialogValidationRequestor) {
+  override fun buildOptions(panel: Panel, validationRequestor: DialogValidationRequestor, errorSink: ErrorSink) {
     with(panel) {
       executableSelector(
         executable,
@@ -49,6 +50,12 @@ abstract class CustomExistingEnvironmentSelector(private val name: String, model
         message("sdk.create.custom.venv.missing.text", name),
       ).component
 
+      addInterpretersComboBox(panel)
+    }
+  }
+
+  protected open fun addInterpretersComboBox(panel: Panel) {
+    with(panel) {
       row(message("sdk.create.custom.existing.env.title", name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() })) {
         comboBox = pythonInterpreterComboBox(selectedEnv, model, { path -> addEnvByPath(path) }, model.interpreterLoading)
           .align(Align.FILL)
@@ -82,4 +89,5 @@ abstract class CustomExistingEnvironmentSelector(private val name: String, model
   internal abstract val executable: ObservableMutableProperty<String>
   internal abstract val interpreterType: InterpreterType
   internal abstract suspend fun detectEnvironments(modulePath: Path)
+  internal abstract suspend fun findModulePath(module: Module): Path?
 }

@@ -77,7 +77,7 @@ internal fun findAllMoveConflicts(
     targetDir: PsiDirectory,
     targetPkg: FqName,
     usages: List<MoveRenameUsageInfo>,
-    target: K2MoveTargetDescriptor.DeclarationTarget<*>? = null
+    target: K2MoveTargetDescriptor.Declaration<*>? = null
 ): MultiMap<PsiElement, String> {
     val targetIdeaModule = targetDir.module ?: return MultiMap.empty()
     val targetKaModule = targetIdeaModule.toKaSourceModuleForProductionOrTest() ?: return MultiMap.empty()
@@ -93,6 +93,7 @@ internal fun findAllMoveConflicts(
         putAllValues(checkNameClashConflicts(allDeclarationsToMove, targetPkg, targetKaModule, target?.getTarget() as? KtClassOrObject))
         putAllValues(checkUsedTypeParameterFromParentClassConflict(allDeclarationsToMove, target))
         putAllValues(checkFunctionOverriddenInSubclassConflict(allDeclarationsToMove))
+        putAllValues(checkRequiresClassInstanceConflict(usages, allDeclarationsToMove, target))
     }
 }
 

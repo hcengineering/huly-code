@@ -27,11 +27,13 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.platform.eel.*
 import com.intellij.platform.eel.path.EelPath
-import com.intellij.platform.eel.provider.getEelApi
-import com.intellij.platform.eel.provider.getEelApiBlocking
-import com.intellij.platform.eel.impl.utils.awaitProcessResult
 import com.intellij.platform.eel.provider.asEelPath
 import com.intellij.platform.eel.provider.asNioPath
+import com.intellij.platform.eel.provider.getEelDescriptor
+import com.intellij.platform.eel.provider.upgradeBlocking
+import com.intellij.platform.eel.provider.utils.awaitProcessResult
+import com.intellij.platform.eel.provider.utils.stderrString
+import com.intellij.platform.eel.provider.utils.stdoutString
 import com.intellij.util.Urls
 import com.intellij.util.io.HttpRequests
 import com.intellij.util.io.delete
@@ -111,7 +113,7 @@ class JdkInstaller : JdkInstallerBase() {
   public override fun eelFromPath(targetDir: Path): OsAbstractionForJdkInstaller.Eel? =
     if (Registry.`is`("java.home.finder.use.eel"))
       EelForJdkInstallerImpl(runBlockingMaybeCancellable {
-        targetDir.getEelApi()
+        targetDir.getEelDescriptor().upgrade()
       })
     else
       null
@@ -139,7 +141,7 @@ class JdkInstaller : JdkInstallerBase() {
       val process = eel.exec.execute(builder).getOrThrow()
       try {
         withTimeout(timeout.milliseconds) {
-          process.awaitProcessResult()
+          process.awaitProcessResult().let { ProcessOutput(it.stdoutString, it.stderrString, it.exitCode, false, false) }
         }
       }
       catch (_: TimeoutCancellationException) {
@@ -177,7 +179,7 @@ class JdkInstaller : JdkInstallerBase() {
     val userHome = eel.fs.user.home
 
     val relativePath = when (eel.platform) {
-        is EelPlatform.Windows, is EelPlatform.Linux -> ".jdks"
+        is EelPlatform.Windows, is EelPlatform.Linux, is EelPlatform.FreeBSD -> ".jdks"
         is EelPlatform.Darwin -> "Library/Java/JavaVirtualMachines"
     }
 
@@ -494,7 +496,7 @@ abstract class JdkInstallerBase {
       if (jdkPath == null) return null
       if (!jdkPath.isDirectory()) return null
       val predicate = when {
-        Registry.`is`("java.home.finder.use.eel") -> JdkPredicate.forEel(jdkPath.getEelApiBlocking())
+        Registry.`is`("java.home.finder.use.eel") -> JdkPredicate.forEel(jdkPath.getEelDescriptor().upgradeBlocking())
         WslPath.isWslUncPath(jdkPath.toString()) -> JdkPredicate.forWSL()
         else -> JdkPredicate.default()
       }

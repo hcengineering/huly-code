@@ -56,14 +56,18 @@ import org.jetbrains.jps.model.serialization.PathMacroUtil;
 import org.jetbrains.jps.service.JpsServiceManager;
 import org.jetbrains.jps.service.SharedThreadPool;
 
-import javax.tools.*;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticListener;
+import javax.tools.JavaFileObject;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -150,14 +154,12 @@ public final class JavaBuilder extends ModuleLevelBuilder {
     ourClassProcessors.add(processor);
   }
 
-  private final Executor taskExecutor;
-  private final AtomicBoolean isRunning = new AtomicBoolean(false);
-  private final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
+  private final Executor myTaskRunner;
   private final Collection<JavacFileReferencesRegistrar> myRefRegistrars = new ArrayList<>();
 
-  public JavaBuilder(Executor taskExecutor) {
+  public JavaBuilder() {
     super(BuilderCategory.TRANSLATOR);
-    this.taskExecutor = taskExecutor;
+    myTaskRunner = SharedThreadPool.getInstance().createBoundedExecutor("JavaBuilder Pool", 1);
     //add here class processors in the sequence they should be executed
   }
 
@@ -783,7 +785,7 @@ public final class JavaBuilder extends ModuleLevelBuilder {
     assert counter != null;
 
     counter.down();
-    taskQueue.add(() -> {
+    myTaskRunner.execute(() -> {
       try {
         taskRunnable.run();
       }
@@ -791,28 +793,9 @@ public final class JavaBuilder extends ModuleLevelBuilder {
         context.processMessage(new CompilerMessage(getBuilderName(), e));
       }
       finally {
-        try {
-          scheduleNext();
-        }
-        finally {
-          counter.up();
-        }
+        counter.up();
       }
     });
-
-    if (isRunning.compareAndSet(false, true)) {
-      scheduleNext();
-    }
-  }
-
-  private void scheduleNext() {
-    Runnable nextTask = taskQueue.poll();
-    if (nextTask == null) {
-      isRunning.set(false);
-    }
-    else {
-      taskExecutor.execute(nextTask);
-    }
   }
 
   private static synchronized @NotNull ExternalJavacManager ensureJavacServerStarted(@NotNull CompileContext context) throws IOException {

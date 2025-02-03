@@ -8,14 +8,14 @@ import com.intellij.util.io.delete
 import com.jetbrains.python.packaging.common.PythonOutdatedPackage
 import com.jetbrains.python.packaging.common.PythonPackage
 import com.jetbrains.python.packaging.common.PythonPackageSpecification
-import com.jetbrains.python.sdk.VirtualEnvReader
+import com.jetbrains.python.venvReader.VirtualEnvReader
 import com.jetbrains.python.sdk.uv.UvCli
 import com.jetbrains.python.sdk.uv.UvLowLevel
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
 
-internal class UvLowLevelImpl(val cwd: Path, val uvCli: UvCli) : UvLowLevel {
+internal class UvLowLevelImpl(val cwd: Path, private val uvCli: UvCli) : UvLowLevel {
   override suspend fun initializeEnvironment(init: Boolean, python: Path?): Result<Path> {
     val addPythonArg: (MutableList<String>) -> Unit = { args ->
       python?.let {
@@ -93,9 +93,8 @@ internal class UvLowLevelImpl(val cwd: Path, val uvCli: UvCli) : UvLowLevel {
     }
   }
 
-  override suspend fun installPackage(spec: PythonPackageSpecification, options: List<String>): Result<Unit> {
-    val version = if (spec.versionSpecs.isNullOrBlank()) spec.name else "${spec.name}${spec.versionSpecs}"
-    uvCli.runUv(cwd, "add", version, *options.toTypedArray()).getOrElse {
+  override suspend fun installPackage(name: PythonPackageSpecification, options: List<String>): Result<Unit> {
+    uvCli.runUv(cwd, "pip", "install", formatPackageName(name), *options.toTypedArray()).getOrElse {
       return Result.failure(it)
     }
 
@@ -103,16 +102,30 @@ internal class UvLowLevelImpl(val cwd: Path, val uvCli: UvCli) : UvLowLevel {
   }
 
   override suspend fun uninstallPackage(name: PythonPackage): Result<Unit> {
-    // TODO: check if package is in dependencies
-    val result = uvCli.runUv(cwd, "remove", name.name)
-    if (result.isFailure) {
-      // try just to uninstall
-      uvCli.runUv(cwd, "pip", "uninstall", name.name).onFailure {
-        return Result.failure(it)
-      }
+    // TODO: check if package is in dependencies and reject it
+    uvCli.runUv(cwd, "pip", "uninstall", name.name)
+      .onFailure { return Result.failure(it) }
+
+    return Result.success(Unit)
+  }
+
+  override suspend fun addDependency(name: PythonPackageSpecification, options: List<String>): Result<Unit> {
+    uvCli.runUv(cwd, "add", formatPackageName(name), *options.toTypedArray()).getOrElse {
+      return Result.failure(it)
     }
 
     return Result.success(Unit)
+  }
+
+  override suspend fun removeDependency(name: PythonPackage): Result<Unit> {
+    uvCli.runUv(cwd, "remove", name.name)
+      .onFailure { return Result.failure(it) }
+
+    return Result.success(Unit)
+  }
+
+  fun formatPackageName(name: PythonPackageSpecification): String {
+    return if (name.versionSpecs.isNullOrBlank()) name.name else "${name.name}${name.versionSpecs}"
   }
 }
 

@@ -1565,6 +1565,7 @@ c:com.intellij.openapi.util.text.HtmlChunk$Element
 - addRaw(java.lang.String):com.intellij.openapi.util.text.HtmlChunk$Element
 - addText(java.lang.String):com.intellij.openapi.util.text.HtmlChunk$Element
 - appendTo(java.lang.StringBuilder):V
+- applyStyles(java.util.Map):com.intellij.openapi.util.text.HtmlChunk
 - attr(java.lang.String):com.intellij.openapi.util.text.HtmlChunk$Element
 - attr(java.lang.String,I):com.intellij.openapi.util.text.HtmlChunk$Element
 - attr(java.lang.String,java.lang.String):com.intellij.openapi.util.text.HtmlChunk$Element
@@ -1736,6 +1737,7 @@ Fc:com.intellij.openapi.util.text.StringUtil
 - s:isJavaIdentifierStart(C):Z
 - s:isLatinAlphanumeric(java.lang.CharSequence):Z
 - s:isLineBreak(C):Z
+- s:isLowerCase(java.lang.CharSequence):Z
 - s:isNotEmpty(java.lang.String):Z
 - s:isNotNegativeNumber(java.lang.CharSequence):Z
 - s:isNumeric(java.lang.CharSequence):Z
@@ -2149,6 +2151,7 @@ com.intellij.util.Consumer
 f:com.intellij.util.CoroutineScopeKt
 - sf:asDisposable(kotlinx.coroutines.CoroutineScope):com.intellij.openapi.Disposable
 - sf:attachAsChildTo(com.intellij.openapi.Disposable,kotlinx.coroutines.CoroutineScope):V
+- sf:disposeOnCompletion(com.intellij.openapi.Disposable,kotlinx.coroutines.CoroutineScope):V
 f:com.intellij.util.DefaultBundleService
 - <init>():V
 - compute(java.util.function.Supplier):java.lang.Object

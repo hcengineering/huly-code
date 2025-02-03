@@ -4,6 +4,20 @@
 package org.jetbrains.bazel.jvm
 
 import com.google.protobuf.CodedOutputStream
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.context.Context
+import io.opentelemetry.exporter.logging.otlp.internal.traces.OtlpStdoutSpanExporter
+import io.opentelemetry.sdk.OpenTelemetrySdk
+import io.opentelemetry.sdk.common.export.MemoryMode
+import io.opentelemetry.sdk.resources.Resource
+import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
+import io.opentelemetry.sdk.trace.samplers.Sampler
+import io.opentelemetry.semconv.ServiceAttributes
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
@@ -11,7 +25,6 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import org.jetbrains.bazel.jvm.WorkRequestState.*
 import java.io.*
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -20,49 +33,68 @@ import kotlin.coroutines.coroutineContext
 import kotlin.system.exitProcess
 
 fun interface WorkRequestExecutor {
-  suspend fun execute(request: WorkRequest, writer: Writer, baseDir: Path): Int
+  suspend fun execute(request: WorkRequest, writer: Writer, baseDir: Path, tracingContext: Context, tracer: Tracer): Int
 }
 
-internal fun createLogger(classifier: String, coroutineScope: CoroutineScope): AsyncFileLogger? {
-  val dir = Path.of(System.getProperty("user.home"), "$classifier-worker")
-  // changing env or flag leads to rebuild, so, we create logger if log dir exists
-  if (!Files.isDirectory(dir)) {
-    return null
-  }
-  return AsyncFileLogger(file = dir.resolve("log-" + System.currentTimeMillis() + ".txt"), coroutineScope = coroutineScope)
+fun configureOpenTelemetry(out: OutputStream, serviceName: String): OpenTelemetrySdk {
+  val spanExporter = OtlpStdoutSpanExporter.builder()
+    .setOutput(out)
+    .setMemoryMode(MemoryMode.REUSABLE_DATA)
+    .build()
+
+  val batchSpanProcessor = BatchSpanProcessor.builder(spanExporter)
+    .build()
+
+  val resource = Resource.create(
+    Attributes.of(ServiceAttributes.SERVICE_NAME, serviceName)
+  )
+  val tracerProvider = SdkTracerProvider.builder()
+    .setResource(resource)
+    .setSampler(Sampler.alwaysOn())
+    .addSpanProcessor(batchSpanProcessor) // For batch exporting (preferred in production)
+    .build()
+
+  // Build and set the OpenTelemetry SDK
+  val openTelemetrySdk = OpenTelemetrySdk.builder()
+    .setTracerProvider(tracerProvider)
+    .build()
+  return openTelemetrySdk
 }
 
-fun processRequests(startupArgs: Array<String>, executor: WorkRequestExecutor, debugLogClassifier: String? = null) {
+private val noopTracer = OpenTelemetry.noop().getTracer("noop")
+
+fun processRequests(
+  startupArgs: Array<String>,
+  executor: WorkRequestExecutor,
+  serviceName: String?,
+  setup: (Tracer, CoroutineScope) -> Unit = { _, _  -> },
+) {
   if (!startupArgs.contains("--persistent_worker")) {
     System.err.println("Only persistent worker mode is supported")
     exitProcess(1)
   }
 
-  // wrap the system streams into a WorkerIO instance to prevent unexpected reads and writes on stdin/stdout
+  val tracer = if (serviceName == null) {
+    noopTracer
+  }
+  else {
+    configureOpenTelemetry(System.err, serviceName).getTracer(serviceName)
+  }
   try {
     runBlocking(Dispatchers.Default) {
-      val logger = debugLogClassifier?.let { createLogger(classifier = debugLogClassifier, this) }
-      if (logger != null) {
-        coroutineContext.job.invokeOnCompletion {
-          logger.log("main job completed (cause=$it)")
-        }
+      tracer.spanBuilder("process requests").use { span ->
+        setup(tracer, this@runBlocking)
+        WorkRequestHandler(requestExecutor = executor, input = System.`in`, out = System.out, tracer = tracer)
+          .processRequests(Context.current().with(span))
       }
 
-      try {
-        WorkRequestHandler(requestExecutor = executor, input = System.`in`, out = System.out, logger = logger)
-          .processRequests()
-      }
-      finally {
-        logger?.shutdown()
-      }
+      exitProcess(0)
     }
   }
   catch (e: Throwable) {
     e.printStackTrace(System.err)
     exitProcess(1)
   }
-
-  exitProcess(0)
 }
 
 private class RequestState(@JvmField val request: WorkRequest) {
@@ -91,7 +123,7 @@ internal class WorkRequestHandler internal constructor(
    * Must be quick and safe - executed in a read thread
    */
   private val cancelHandler: ((Int) -> Unit)? = null,
-  private val logger: AsyncFileLogger? = null,
+  private val tracer: Tracer,
 ) {
   private val workingDir = Path.of(".").toAbsolutePath().normalize()
 
@@ -101,13 +133,17 @@ internal class WorkRequestHandler internal constructor(
   private val activeRequests = ConcurrentHashMap<Int, RequestState>()
 
   @OptIn(DelicateCoroutinesApi::class)
-  internal suspend fun processRequests() {
+  internal suspend fun processRequests(tracingContext: Context) {
     val requestChannel = Channel<RequestState>(Channel.UNLIMITED)
     try {
       coroutineScope {
-        startTaskProcessing(requestChannel)
+        tracer.spanBuilder("process requests").setParent(tracingContext).use { span ->
+          startTaskProcessing(requestChannel, tracingContext.with(span))
+        }
 
-        readRequests(requestChannel)
+        tracer.spanBuilder("read requests").setParent(tracingContext).use { span ->
+          readRequests(requestChannel, span)
+        }
       }
     }
     finally {
@@ -116,42 +152,45 @@ internal class WorkRequestHandler internal constructor(
           requestChannel.close()
         }
 
-        logger?.log("Unprocessed requests: ${activeRequests.keys.joinToString(", ")}")
+        //logger?.log("Unprocessed requests: ${activeRequests.keys.joinToString(", ")}")
 
-        for (item in requestChannel) {
-          cancelRequestOnShutdown(item)
+        tracer.spanBuilder("cancelRequests on shutdown").setParent(tracingContext).use { span ->
+          for (item in requestChannel) {
+            cancelRequestOnShutdown(item, span)
+          }
+          for (item in activeRequests.values) {
+            cancelRequestOnShutdown(item, span)
+          }
+          activeRequests.clear()
         }
-        for (item in activeRequests.values) {
-          cancelRequestOnShutdown(item)
-        }
-        activeRequests.clear()
       }
     }
   }
 
-  private suspend fun readRequests(requestChannel: Channel<RequestState>) {
-    val inputListToReuse = ArrayList<Input>()
+  private suspend fun readRequests(requestChannel: Channel<RequestState>, span: Span) {
+    val inputPathsToReuse = ArrayList<String>()
+    val inputDigestsToReuse = ArrayList<ByteArray>()
     val argListToReuse = ArrayList<String>()
     while (coroutineContext.isActive) {
       val request = try {
         runInterruptible(Dispatchers.IO) {
-          readWorkRequestFromStream(input, inputListToReuse, argListToReuse)
+          readWorkRequestFromStream(input, inputPathsToReuse, inputDigestsToReuse, argListToReuse)
         }
       }
       catch (e: InterruptedIOException) {
-        logger?.log("stop processing: $e")
+        span.recordException(e)
         null
       }
 
       if (request == null) {
-        logger?.log("stop processing - no more requests")
+        span.addEvent("stop processing - no more requests")
         requestChannel.close()
         break
       }
 
       val requestId = request.requestId
 
-      logger?.log("request(id=$requestId${if (request.cancel) ", cancel=true" else ""}) start")
+      //logger?.log("request(id=$requestId${if (request.cancel) ", cancel=true" else ""}) start")
       if (request.cancel) {
         withContext(NonCancellable) {
           // Theoretically, we could have gotten two singleplex requests, and we can't tell those apart.
@@ -163,7 +202,7 @@ internal class WorkRequestHandler internal constructor(
               if (cancelHandler != null) {
                 cancelHandler(request.requestId)
               }
-              logger?.log("request(id=$requestId) cancelled before handling")
+              //logger?.log("request(id=$requestId) cancelled before handling")
               writeAndRemoveRequest(requestId = requestId, wasCancelled = true)
             }
           }
@@ -188,15 +227,44 @@ internal class WorkRequestHandler internal constructor(
     }
   }
 
-  private fun CoroutineScope.startTaskProcessing(requestChannel: Channel<RequestState>) {
+  private fun CoroutineScope.startTaskProcessing(requestChannel: Channel<RequestState>, tracingContext: Context) {
     repeat(Runtime.getRuntime().availableProcessors().coerceAtLeast(2)) {
       launch {
         for (item in requestChannel) {
-          logger?.log("request(id=${item.request.requestId}) started to execute")
           val stateRef = item.state
           when {
             stateRef.compareAndSet(NOT_STARTED, STARTED) -> {
-              handleRequest(request = item.request, requestState = stateRef)
+              val request = item.request
+              val span = if (request.verbosity > 0) {
+                tracer.spanBuilder("execute request")
+                  .setAllAttributes(Attributes.of(
+                    AttributeKey.stringArrayKey("arguments"), request.arguments.toList(),
+                    //AttributeKey.stringArrayKey("inputs"), request.inputs.map { it.path },
+                    AttributeKey.longKey("id"), request.requestId.toLong(),
+                    AttributeKey.stringKey("sandboxDir"), request.sandboxDir?.toString() ?: "",
+                  ))
+                  .setParent(tracingContext)
+                  .startSpan()
+              }
+              else {
+                null
+              }
+
+              try {
+                handleRequest(
+                  request = request,
+                  requestState = stateRef,
+                  tracingContext = span?.let { tracingContext.with(it) },
+                  parentSpan = span,
+                )
+              }
+              catch (e: Throwable) {
+                span?.recordException(e)
+                throw e
+              }
+              finally {
+                span?.end()
+              }
             }
             else -> {
               val state = stateRef.get()
@@ -249,11 +317,14 @@ internal class WorkRequestHandler internal constructor(
     }
   }
 
-  private suspend fun cancelRequestOnShutdown(item: RequestState) {
+  private suspend fun cancelRequestOnShutdown(item: RequestState, span: Span) {
     val stateRef = item.state
     val requestId = item.request.requestId
     if (stateRef.compareAndSet(NOT_STARTED, FINISHED) || stateRef.compareAndSet(STARTED, FINISHED)) {
-      logger?.log("request(id=$requestId}) failed because it was not handled due to worker being forced to exit")
+      span.addEvent(
+        "request failed because it was not handled due to worker being forced to exit",
+        Attributes.of(AttributeKey.longKey("request"), requestId.toLong()),
+      )
       writeAndRemoveRequest(requestId = requestId, exitCode = 2)
     }
     else {
@@ -264,21 +335,37 @@ internal class WorkRequestHandler internal constructor(
     }
   }
 
-  /**
-   * Handles and responds to the given [WorkRequest].
-   *
-   * @throws IOException if there is an error talking to the server. Errors from calling the [][.callback] are reported with exit code 1.
-   */
-  // visible for tests
-  internal suspend fun handleRequest(request: WorkRequest, requestState: AtomicReference<WorkRequestState>) {
+  internal suspend fun handleRequest(
+    request: WorkRequest,
+    requestState: AtomicReference<WorkRequestState>,
+    tracingContext: Context?,
+    parentSpan: Span?,
+  ) {
     val baseDir = if (request.sandboxDir.isNullOrEmpty()) workingDir else workingDir.resolve(request.sandboxDir)
     var exitCode = 1
-    val stringWriter = StringWriter()
+    val stringWriter = StringBuilderWriter()
     var errorToThrow: Throwable? = null
     val requestId = request.requestId
+    val span = if (tracingContext == null) {
+      null
+    }
+    else {
+      tracer.spanBuilder("requestExecutor.execute").setParent(tracingContext).startSpan()
+    }
     try {
-      //System.err.println("request: ${request.inputs.asSequence().take(4).joinToString { it.path }}, $baseDir, ${request.sandboxDir}")
-      exitCode = requestExecutor.execute(request = request, writer = stringWriter, baseDir = baseDir)
+      try {
+        val tracingContext = if (tracingContext == null) Context.root() else tracingContext.with(span!!)
+        exitCode = requestExecutor.execute(
+          request = request,
+          writer = stringWriter,
+          baseDir = baseDir,
+          tracingContext = tracingContext,
+          tracer = if (tracingContext == null) noopTracer else tracer,
+        )
+      }
+      finally {
+        span?.end()
+      }
     }
     catch (e: CancellationException) {
       errorToThrow = e
@@ -289,23 +376,112 @@ internal class WorkRequestHandler internal constructor(
         errorToThrow = e
       }
     }
+    finally {
+      span?.end()
+    }
 
     withContext(NonCancellable) {
-      if (requestState.compareAndSet(STARTED, FINISHED)) {
-        logger?.log("request(id=$requestId) handled(exitCode=$exitCode)")
-        writeAndRemoveRequest(
-          requestId = requestId,
-          exitCode = exitCode,
-          outString = stringWriter.buffer.takeIf { it.isNotEmpty() }?.toString(),
+      if (!requestState.compareAndSet(STARTED, FINISHED)) {
+        parentSpan?.addEvent(
+          "request state was modified during processing",
+          Attributes.of(AttributeKey.stringKey("state"), requestState.get().name),
         )
+        return@withContext
       }
-      else {
-        logger?.log("request(id=$requestId) state was changed to ${requestState.get()}")
+
+      val outString = stringWriter.toString()
+      writeAndRemoveRequest(
+        requestId = requestId,
+        exitCode = exitCode,
+        outString = outString.takeIf { it.isNotEmpty() },
+      )
+
+      if (request.verbosity > 0) {
+        parentSpan?.addEvent(
+          "request processed",
+          Attributes.of(AttributeKey.longKey("exitCode"), exitCode.toLong(), AttributeKey.stringKey("out"), outString),
+        )
       }
     }
 
     if (errorToThrow != null) {
       throw errorToThrow
     }
+  }
+}
+
+private class StringBuilderWriter : Writer() {
+  private val sb = StringBuilder()
+
+  override fun write(cbuf: CharArray?) {
+    synchronized(lock) {
+      sb.append(cbuf)
+    }
+  }
+
+  override fun write(c: Int) {
+    synchronized(lock) {
+      sb.append(c)
+    }
+  }
+
+  override fun write(cbuf: CharArray, off: Int, len: Int) {
+    if (len != 0) {
+      synchronized(lock) {
+        sb.append(cbuf, off, len)
+      }
+    }
+  }
+
+  override fun write(str: String?) {
+    if (!str.isNullOrEmpty()) {
+      synchronized(lock) {
+        sb.append(str)
+      }
+    }
+  }
+
+  override fun write(str: String?, off: Int, len: Int) {
+    if (len != 0) {
+      synchronized(lock) {
+        sb.append(str, off, off + len)
+      }
+    }
+  }
+
+  override fun append(csq: CharSequence): StringBuilderWriter {
+    synchronized(lock) {
+      sb.append(csq)
+    }
+    return this
+  }
+
+  override fun append(csq: CharSequence?, start: Int, end: Int): StringBuilderWriter {
+    synchronized(lock) {
+      sb.append(csq, start, end)
+    }
+    return this
+  }
+
+  override fun append(c: Char): StringBuilderWriter {
+    synchronized(lock) {
+      sb.append(c)
+    }
+    return this
+  }
+
+  override fun toString(): String {
+    synchronized(lock) {
+      if (sb.isEmpty()) {
+        return ""
+      }
+      return sb.toString()
+    }
+  }
+
+  override fun flush() {
+  }
+
+  override fun close() {
   }
 }

@@ -10,7 +10,7 @@ Intentions can be considered as small refactoring actions.
 - `kotlin.code-insight.intentions.shared`
 
 Preferably, an intention should extend `KotlinApplicableModCommandAction`.
-It works over the ModCommand API that allows performing analysis on a background thread.\
+It works over the ModCommand API that allows to perform analysis on a background thread.\
 To learn more about the ModCommand API,
 read [the short API description and migration guide](https://docs.google.com/document/d/1-2_cNjq-Mc28j0eCX1TEuMM-k6UXKvfPTutvIBafIJA/).
 
@@ -46,8 +46,7 @@ The most important methods you need to implement:
     - Checks whether it is applicable to an element at caret offset.
 - `applyTo(element, editor)`
     - Performs changes over a physical PSI.
-- You will want to use `SelfTargetingIntention` and `SelfTargetingRangeIntention`
-  when the action must not be invoked inside a write action.
+- Use `SelfTargetingIntention` and `SelfTargetingRangeIntention` when the action must not be invoked inside a write action.
 
 ## Inspections
 
@@ -70,10 +69,10 @@ and `AbstractKotlinInspection`.
 
 ### `KotlinDiagnosticBasedInspectionBase`
 A subclass of `KotlinApplicableInspectionBase.Simple` that is intended
-to create inspections from [extra compiler checks](https://kotlinlang.org/docs/whatsnew-eap.html#extra-compiler-checks)
+to create inspections from [extra compiler checks](https://kotlinlang.org/docs/whatsnew21.html#kotlin-k2-compiler)
 (`KaDiagnosticCheckerFilter.ONLY_EXTENDED_CHECKERS`), whose warnings are not highlighted by default, unlike warnings
 from regular checks (`KaDiagnosticCheckerFilter.ONLY_COMMON_CHECKERS`).\
-Extending `KotlinDiagnosticBasedInspectionBase` also allows running extra compiler checks and possibly applying fixes in batch.
+Extending `KotlinDiagnosticBasedInspectionBase` also allows to run extra compiler checks and possibly apply fixes in batch.
 - `prepareContextByDiagnostic(element, diagnostic)`
     - Prepares the context that is provided for `getProblemDescription` and `createQuickFix`.
     - `element` is a physical PSI.
@@ -84,7 +83,7 @@ Extending `KotlinDiagnosticBasedInspectionBase` also allows running extra compil
 
 ## Quick Fixes
 
-Quick fixes are actions on errors and warnings provided by the compiler - they are registered in `KotlinK2QuickFixRegistrar`.
+Quick fixes are actions on errors and warnings provided by the compiler – they are registered in `KotlinK2QuickFixRegistrar`.
 
 ### Location
 - `kotlin.code-insight.fixes.k2`
@@ -106,7 +105,7 @@ There are two ways to register a quick-fix factory:
 
 ### Testing actions
 
-* If the action's priority differs from NORMAL, it is good practice to use the `// PRIORITY` directive in test data files.
+* If the action priority differs from NORMAL, it is good practice to use the `// PRIORITY` directive in test data files.
   For example:
 ```kotlin
 // PRIORITY: HIGH

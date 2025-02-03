@@ -18,4 +18,12 @@ public interface ADField extends ADMember {
   @Nullable
   ADTypeReference getTypeReference();
 
+  @NotNull
+  PsiElement getColon();
+
+  @NotNull
+  PsiElement getMinus();
+
+  @NotNull PsiElement getNavigationElement();
+
 }

@@ -1067,7 +1067,9 @@ open class FileEditorManagerImpl(
 
   internal suspend fun checkForbidSplitAndOpenFile(window: EditorWindow, file: VirtualFile, options: FileEditorOpenOptions) {
     if (forbidSplitFor(file) && !window.isFileOpen(file)) {
-      closeFile(file)
+      withContext(Dispatchers.EDT) {
+        closeFile(file)
+      }
     }
 
     if (!ClientId.isCurrentlyUnderLocalId) {
@@ -1483,6 +1485,7 @@ open class FileEditorManagerImpl(
     return result
   }
 
+  @RequiresEdt
   override fun getSelectedTextEditorWithRemotes(): Array<Editor> {
     val result = ArrayList<Editor>()
     for (e in selectedEditorWithRemotes) {

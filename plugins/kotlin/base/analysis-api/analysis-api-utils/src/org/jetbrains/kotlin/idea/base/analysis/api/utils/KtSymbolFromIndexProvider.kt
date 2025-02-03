@@ -38,10 +38,22 @@ class KtSymbolFromIndexProvider(
         if (!psiFilter(this)) return false
 
         if (kotlinFqName?.isExcludedFromAutoImport(project, file) == true) return false
+        
+        if (this !is KtDeclaration) {
+            // no more checks for non-kotlin elements
+            return true
+        }
 
-        return this !is KtDeclaration
-                || !isExpectDeclaration()
-                || useSiteModule.targetPlatform.isCommon()
+        if (isExpectDeclaration() && !useSiteModule.targetPlatform.isCommon()) {
+            // filter out expect declarations outside of common modules
+            return false
+        }
+        
+        if (isFromKotlinMetadataOrBuiltins()) {
+            return false
+        }
+
+        return true
     }
 
     context(KaSession)
@@ -94,6 +106,23 @@ class KtSymbolFromIndexProvider(
         classDeclarations.mapNotNull { it.namedClassSymbol } +
                 typeAliasDeclarations.map { it.symbol } +
                 declarationsFromExtension
+
+    /**
+     * Collects [KaClassSymbol]s of objects with non-trivial base classes.
+     *
+     * @see KotlinSubclassObjectNameIndex
+     */
+    context(KaSession)
+    fun getKotlinSubclassObjectsByNameFilter(
+        nameFilter: (Name) -> Boolean,
+        scope: GlobalSearchScope = analysisScope,
+        psiFilter: (KtObjectDeclaration) -> Boolean = { true },
+    ): Sequence<KaClassSymbol> = KotlinSubclassObjectNameIndex.getAllElements<KtObjectDeclaration>(
+        project,
+        scope,
+        keyFilter = { nameFilter(getShortName(it)) },
+    ) { it.isAcceptable(psiFilter) }
+        .map { it.symbol }
 
     context(KaSession)
     @KaExperimentalApi
@@ -157,7 +186,6 @@ class KtSymbolFromIndexProvider(
         ) { declaration ->
             declaration.isAcceptable(psiFilter)
                     && !declaration.isExtensionDeclaration()
-                    && !declaration.isKotlinBuiltins()
         }
     }.map { it.symbol }
         .filterIsInstance<KaCallableSymbol>() +
@@ -176,7 +204,6 @@ class KtSymbolFromIndexProvider(
         val processor = CancelableCollectFilterProcessor { declaration: KtNamedDeclaration ->
             declaration is KtCallableDeclaration
                     && declaration.isAcceptable(psiFilter)
-                    && !declaration.isKotlinBuiltins()
         }
 
         helper.processElements(
@@ -244,7 +271,6 @@ class KtSymbolFromIndexProvider(
     ).flatMap { helper ->
         val processor = CancelableCollectFilterProcessor { declaration: KtCallableDeclaration ->
             declaration.isAcceptable(psiFilter)
-                    && !declaration.isKotlinBuiltins()
                     && declaration.receiverTypeReference == null
         }
 
@@ -287,7 +313,6 @@ class KtSymbolFromIndexProvider(
 
                     indexHelper.getAllElements(key.key, project, scope) { declaration ->
                                 declaration.isAcceptable(psiFilter)
-                                && !declaration.isKotlinBuiltins()
                     }
                 }
             }.map { it.symbol }
@@ -327,7 +352,6 @@ class KtSymbolFromIndexProvider(
         ).flatMap { index ->
             index.getAllElements(project, scope, keyFilter) { declaration: KtCallableDeclaration ->
                 declaration.isAcceptable(psiFilter)
-                        && !declaration.isKotlinBuiltins()
             }
         }.map { it.symbol }
             .filterIsInstance<KaCallableSymbol>()
@@ -429,7 +453,7 @@ private val KotlinBuiltins = setOf(
     "kotlin/internal/ProgressionUtilKt",
 )
 
-private fun KtCallableDeclaration.isKotlinBuiltins(): Boolean {
+private fun KtDeclaration.isFromKotlinMetadataOrBuiltins(): Boolean {
     val file = containingKtFile
     val virtualFile = file.virtualFile
     if (virtualFile.extension == METADATA_FILE_EXTENSION) return true

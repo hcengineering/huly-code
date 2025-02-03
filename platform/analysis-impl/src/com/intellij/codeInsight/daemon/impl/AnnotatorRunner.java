@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.codeInsight.daemon.impl;
 
 import com.intellij.codeInsight.daemon.AnnotatorStatisticsCollector;
@@ -28,11 +28,13 @@ import com.intellij.util.ReflectionUtil;
 import com.intellij.util.containers.CollectionFactory;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.HashingStrategy;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-final class AnnotatorRunner {
+@ApiStatus.Internal
+public final class AnnotatorRunner {
   private static final Logger LOG = Logger.getInstance(AnnotatorRunner.class);
   private final Project myProject;
   private final PsiFile myPsiFile;
@@ -42,7 +44,7 @@ final class AnnotatorRunner {
   private final AnnotatorStatisticsCollector myAnnotatorStatisticsCollector = new AnnotatorStatisticsCollector();
   private final List<HighlightInfo> results = Collections.synchronizedList(new ArrayList<>());
 
-  AnnotatorRunner(@NotNull PsiFile psiFile,
+  public AnnotatorRunner(@NotNull PsiFile psiFile,
                   boolean batchMode,
                   @NotNull AnnotationSession annotationSession) {
     myProject = psiFile.getProject();
@@ -53,7 +55,8 @@ final class AnnotatorRunner {
   }
 
   // run annotators on PSI elements inside/outside while running `runnable` in parallel
-  boolean runAnnotatorsAsync(@NotNull List<? extends PsiElement> inside,
+  @ApiStatus.Internal
+  public boolean runAnnotatorsAsync(@NotNull List<? extends PsiElement> inside,
                              @NotNull List<? extends PsiElement> outside,
                              @NotNull Runnable runnable,
                              @NotNull ResultSink resultSink) {
@@ -179,11 +182,12 @@ final class AnnotatorRunner {
       }
 
       // create manually to avoid extra call to HighlightInfoFilter.accept() in HighlightInfo.Builder.create()
+      //noinspection deprecation
       HighlightInfo patched = new HighlightInfo(injectedInfo.forcedTextAttributes, injectedInfo.forcedTextAttributesKey, injectedInfo.type,
-                          hostRange.getStartOffset(), hostRange.getEndOffset(),
-                          injectedInfo.getDescription(), injectedInfo.getToolTip(), injectedInfo.getSeverity(), isAfterEndOfLine, null,
-                          false, 0, injectedInfo.getProblemGroup(), injectedInfo.toolId, injectedInfo.getGutterIconRenderer(), HighlightInfoUpdaterImpl.MANAGED_HIGHLIGHT_INFO_GROUP, injectedInfo.unresolvedReference);
-      patched.setHint(injectedInfo.hasHint());
+                                                hostRange.getStartOffset(), hostRange.getEndOffset(),
+                                                injectedInfo.getDescription(), injectedInfo.getToolTip(), injectedInfo.getSeverity(), isAfterEndOfLine, null,
+                                                false, 0, injectedInfo.getProblemGroup(), injectedInfo.toolId, injectedInfo.getGutterIconRenderer(), HighlightInfoUpdaterImpl.MANAGED_HIGHLIGHT_INFO_GROUP,
+                                                injectedInfo.hasHint(), injectedInfo.getLazyQuickFixes());
 
       List<HighlightInfo.IntentionActionDescriptor> quickFixes = new ArrayList<>();
       injectedInfo.findRegisteredQuickFix((descriptor, quickfixTextRange) -> {

@@ -384,15 +384,6 @@ a:com.intellij.xdebugger.impl.actions.handlers.XDebuggerActionHandler
 - pa:isEnabled(com.intellij.xdebugger.XDebugSession,com.intellij.openapi.actionSystem.DataContext):Z
 - perform(com.intellij.openapi.project.Project,com.intellij.openapi.actionSystem.AnActionEvent):V
 - pa:perform(com.intellij.xdebugger.XDebugSession,com.intellij.openapi.actionSystem.DataContext):V
-c:com.intellij.xdebugger.impl.actions.handlers.XDebuggerEvaluateActionHandler
-- com.intellij.xdebugger.impl.actions.handlers.XDebuggerActionHandler
-- <init>():V
-- s:getDisplayText(com.intellij.xdebugger.evaluation.ExpressionInfo,com.intellij.openapi.editor.Document):java.lang.String
-- s:getExpressionText(com.intellij.xdebugger.evaluation.ExpressionInfo,com.intellij.openapi.editor.Document):java.lang.String
-- s:getExpressionText(com.intellij.xdebugger.evaluation.XDebuggerEvaluator,com.intellij.openapi.project.Project,com.intellij.openapi.editor.Editor):org.jetbrains.concurrency.Promise
-- s:getSelectedTextAsync(com.intellij.xdebugger.evaluation.XDebuggerEvaluator,com.intellij.openapi.actionSystem.DataContext):org.jetbrains.concurrency.Promise
-- p:isEnabled(com.intellij.xdebugger.XDebugSession,com.intellij.openapi.actionSystem.DataContext):Z
-- p:perform(com.intellij.xdebugger.XDebugSession,com.intellij.openapi.actionSystem.DataContext):V
 c:com.intellij.xdebugger.impl.breakpoints.XBreakpointPanelProvider
 - com.intellij.xdebugger.impl.breakpoints.ui.BreakpointPanelProvider
 - <init>():V
@@ -652,30 +643,22 @@ f:com.intellij.xdebugger.impl.evaluate.quick.common.ValueHintType$Companion
 - f:serializer():kotlinx.serialization.KSerializer
 f:com.intellij.xdebugger.impl.frame.StackInfo
 - sf:Companion:com.intellij.xdebugger.impl.frame.StackInfo$Companion
-- f:component1():com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- f:component2():com.intellij.xdebugger.frame.XExecutionStack
-- f:component3():java.lang.String
-- f:copy(com.intellij.xdebugger.impl.frame.StackInfo$StackKind,com.intellij.xdebugger.frame.XExecutionStack,java.lang.String):com.intellij.xdebugger.impl.frame.StackInfo
-- bs:copy$default(com.intellij.xdebugger.impl.frame.StackInfo,com.intellij.xdebugger.impl.frame.StackInfo$StackKind,com.intellij.xdebugger.frame.XExecutionStack,java.lang.String,I,java.lang.Object):com.intellij.xdebugger.impl.frame.StackInfo
+- f:component1():java.lang.String
+- f:component2():javax.swing.Icon
+- f:component3():com.intellij.xdebugger.frame.XExecutionStack$AdditionalDisplayInfo
+- f:component4():com.intellij.xdebugger.frame.XExecutionStack
+- f:copy(java.lang.String,javax.swing.Icon,com.intellij.xdebugger.frame.XExecutionStack$AdditionalDisplayInfo,com.intellij.xdebugger.frame.XExecutionStack):com.intellij.xdebugger.impl.frame.StackInfo
+- bs:copy$default(com.intellij.xdebugger.impl.frame.StackInfo,java.lang.String,javax.swing.Icon,com.intellij.xdebugger.frame.XExecutionStack$AdditionalDisplayInfo,com.intellij.xdebugger.frame.XExecutionStack,I,java.lang.Object):com.intellij.xdebugger.impl.frame.StackInfo
 - equals(java.lang.Object):Z
-- f:getAdditionalDisplayInfo():com.intellij.xdebugger.frame.XExecutionStack$AdditionalDisplayInfo
-- f:getError():java.lang.String
-- f:getKind():com.intellij.xdebugger.impl.frame.StackInfo$StackKind
+- f:getAdditionalDisplayText():com.intellij.xdebugger.frame.XExecutionStack$AdditionalDisplayInfo
+- f:getDisplayText():java.lang.String
+- f:getIcon():javax.swing.Icon
 - f:getStack():com.intellij.xdebugger.frame.XExecutionStack
-- f:getText():java.lang.String
 - hashCode():I
 f:com.intellij.xdebugger.impl.frame.StackInfo$Companion
 - f:error(java.lang.String):com.intellij.xdebugger.impl.frame.StackInfo
 - f:from(com.intellij.xdebugger.frame.XExecutionStack):com.intellij.xdebugger.impl.frame.StackInfo
-- f:getLoading():com.intellij.xdebugger.impl.frame.StackInfo
-e:com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- java.lang.Enum
-- sf:Error:com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- sf:ExecutionStack:com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- sf:Loading:com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- s:getEntries():kotlin.enums.EnumEntries
-- s:valueOf(java.lang.String):com.intellij.xdebugger.impl.frame.StackInfo$StackKind
-- s:values():com.intellij.xdebugger.impl.frame.StackInfo$StackKind[]
+- f:getLOADING():com.intellij.xdebugger.impl.frame.StackInfo
 a:com.intellij.xdebugger.impl.frame.XDebugView
 - com.intellij.openapi.Disposable
 - <init>():V
@@ -744,8 +727,7 @@ f:com.intellij.xdebugger.impl.frame.XDebuggerThreadsList
 - setModel(javax.swing.ListModel):V
 - uiDataSnapshot(com.intellij.openapi.actionSystem.DataSink):V
 f:com.intellij.xdebugger.impl.frame.XDebuggerThreadsList$Companion
-- f:create(javax.swing.ListCellRenderer):com.intellij.xdebugger.impl.frame.XDebuggerThreadsList
-- f:createDefault():com.intellij.xdebugger.impl.frame.XDebuggerThreadsList
+- f:createDefault(Z):com.intellij.xdebugger.impl.frame.XDebuggerThreadsList
 - f:getTHREADS_LIST():com.intellij.openapi.actionSystem.DataKey
 com.intellij.xdebugger.impl.frame.XStackFrameContainerEx
 - com.intellij.xdebugger.frame.XExecutionStack$XStackFrameContainer
@@ -755,23 +737,7 @@ c:com.intellij.xdebugger.impl.frame.XStandaloneVariablesView
 - <init>(com.intellij.openapi.project.Project,com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider,com.intellij.xdebugger.frame.XStackFrame):V
 - processSessionEvent(com.intellij.xdebugger.impl.frame.XDebugView$SessionEvent,com.intellij.xdebugger.XDebugSession):V
 - rebuildView():V
-f:com.intellij.xdebugger.impl.frame.XThreadsFramesView
-- com.intellij.xdebugger.impl.frame.XDebugView
-- sf:Companion:com.intellij.xdebugger.impl.frame.XThreadsFramesView$Companion
-- <init>(com.intellij.openapi.project.Project):V
-- dispose():V
-- f:getDefaultFocusedComponent():javax.swing.JComponent
-- f:getFrames():com.intellij.xdebugger.impl.frame.XDebuggerFramesList
-- getMainComponent():javax.swing.JComponent
-- f:getProject():com.intellij.openapi.project.Project
-- f:getThreads():com.intellij.xdebugger.impl.frame.XDebuggerThreadsList
-- f:isThreadsViewVisible():Z
-- processSessionEvent(com.intellij.xdebugger.impl.frame.XDebugView$SessionEvent,com.intellij.xdebugger.XDebugSession):V
-- f:saveUiState():V
-- f:setThreadsVisible(Z):V
-- f:start(com.intellij.xdebugger.XDebugSession):V
-f:com.intellij.xdebugger.impl.frame.XThreadsFramesView$Companion
-f:com.intellij.xdebugger.impl.frame.XValueMarkers
+Fc:com.intellij.xdebugger.impl.frame.XValueMarkers
 - canMarkValue(com.intellij.xdebugger.frame.XValue):Z
 - clear():V
 - s:createValueMarkers(com.intellij.xdebugger.frame.XValueMarkerProvider):com.intellij.xdebugger.impl.frame.XValueMarkers
@@ -1698,14 +1664,17 @@ c:com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl
 - clearFullValueEvaluator():V
 - getFullValueEvaluator():com.intellij.xdebugger.frame.XFullValueEvaluator
 - getIconTag():java.lang.Object
+- getInlayIcon():javax.swing.Icon
 - getLink():com.intellij.xdebugger.frame.XDebuggerTreeNodeHyperlink
 - getName():java.lang.String
 - getRawValue():java.lang.String
 - getValuePresentation():com.intellij.xdebugger.frame.presentation.XValuePresentation
 - getXValue():com.intellij.xdebugger.frame.XValue
+- hasLinks():Z
 - isComputed():Z
 - markChanged():V
 - setFullValueEvaluator(com.intellij.xdebugger.frame.XFullValueEvaluator):V
+- setInlayIcon(javax.swing.Icon):V
 - setPresentation(javax.swing.Icon,com.intellij.xdebugger.frame.presentation.XValuePresentation,Z):V
 - setPresentation(javax.swing.Icon,java.lang.String,java.lang.String,Z):V
 - setValueModificationStarted():V

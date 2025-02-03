@@ -51,8 +51,8 @@ import org.gradle.wrapper.WrapperConfiguration;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.plugins.gradle.frameworkSupport.GradleDsl;
 import org.jetbrains.plugins.gradle.frameworkSupport.settingsScript.GradleSettingScriptBuilder;
-import org.jetbrains.plugins.gradle.frameworkSupport.settingsScript.GroovyDslGradleSettingScriptBuilder;
 import org.jetbrains.plugins.gradle.jvmcompat.GradleJvmSupportMatrix;
 import org.jetbrains.plugins.gradle.service.execution.GradleExternalTaskConfigurationType;
 import org.jetbrains.plugins.gradle.service.execution.GradleRunConfiguration;
@@ -267,17 +267,12 @@ public abstract class GradleImportingTestCase extends JavaExternalSystemImportin
     return myProjectRoot;
   }
 
-  protected void assumeTestJavaRuntime(@NotNull JavaVersion javaRuntimeVersion) {
-  }
-
   @NotNull
   private String requireRealJdkHome() {
     if (myWSLDistribution != null) {
       return requireWslJdkHome(myWSLDistribution);
     }
-    JavaVersion javaRuntimeVersion = JavaVersion.current();
-    assumeTestJavaRuntime(javaRuntimeVersion);
-    return findJdkPath();
+    return requireJdkHome();
   }
 
   private static String requireWslJdkHome(@NotNull WSLDistribution distribution) {
@@ -288,12 +283,14 @@ public abstract class GradleImportingTestCase extends JavaExternalSystemImportin
     return distribution.getWindowsPath(jdkPath);
   }
 
-  public static @NotNull String requireJdkHome(@NotNull GradleVersion gradleVersion) {
-    return requireJdkHome(gradleVersion, JavaVersionRestriction.NO);
+  public @NotNull String requireJdkHome() {
+    return requireJdkHome(getCurrentGradleVersion(), myTargetJavaVersionWatcher.getRestriction());
   }
 
-  public static @NotNull String requireJdkHome(@NotNull GradleVersion gradleVersion,
-                                               @NotNull JavaVersionRestriction javaVersionRestriction) {
+  public static @NotNull String requireJdkHome(
+    @NotNull GradleVersion gradleVersion,
+    @NotNull JavaVersionRestriction javaVersionRestriction
+  ) {
     if (GradleJvmSupportMatrix.isSupported(gradleVersion, JavaVersion.current()) &&
         !javaVersionRestriction.isRestricted(gradleVersion, JavaVersion.current())) {
       return IdeaTestUtil.requireRealJdkHome();
@@ -301,10 +298,6 @@ public abstract class GradleImportingTestCase extends JavaExternalSystemImportin
     // fix exception of FJP at JavaHomeFinder.suggestHomePaths => ... => EnvironmentUtil.getEnvironmentMap => CompletableFuture.<clinit>
     IdeaForkJoinWorkerThreadFactory.setupForkJoinCommonPool(true);
     return GradleJvmResolver.resolveGradleJvmHomePath(gradleVersion, javaVersionRestriction);
-  }
-
-  public String findJdkPath() {
-    return requireJdkHome(getCurrentGradleVersion(), myTargetJavaVersionWatcher.getRestriction());
   }
 
   protected void collectAllowedRoots(final List<String> roots, PathAssembler.LocalDistribution distribution) {
@@ -452,7 +445,7 @@ public abstract class GradleImportingTestCase extends JavaExternalSystemImportin
   }
 
   public @NotNull String settingsScript(@NotNull Consumer<GradleSettingScriptBuilder<?>> configure) {
-    var builder = new GroovyDslGradleSettingScriptBuilder();
+    var builder = GradleSettingScriptBuilder.create(getCurrentGradleVersion(), GradleDsl.GROOVY);
     configure.accept(builder);
     return builder.generate();
   }
@@ -477,7 +470,7 @@ public abstract class GradleImportingTestCase extends JavaExternalSystemImportin
         allprojects {
             repositories {
                 maven {
-                    url 'https://repo.labs.intellij.net/repo1'
+                    url = 'https://repo.labs.intellij.net/repo1'
                 }
             }
         }

@@ -1163,15 +1163,15 @@ f:com.intellij.openapi.application.ex.ApplicationUtil$CannotRunReadActionExcepti
 f:com.intellij.openapi.application.impl.AnyModalityState
 - com.intellij.openapi.application.ModalityState
 - sf:ANY:com.intellij.openapi.application.impl.AnyModalityState
-- dominates(com.intellij.openapi.application.ModalityState):Z
+- accepts(com.intellij.openapi.application.ModalityState):Z
 com.intellij.openapi.application.impl.ModalContextProjectLocator
 - a:isPartOf(javax.swing.JFrame,com.intellij.openapi.project.Project):Z
 f:com.intellij.openapi.application.impl.ModalityStateEx
 - com.intellij.openapi.application.ModalityState
 - <init>():V
+- accepts(com.intellij.openapi.application.ModalityState):Z
 - appendJob(kotlinx.coroutines.Job):com.intellij.openapi.application.ModalityState
 - appendProgress(com.intellij.openapi.progress.ProgressIndicator):com.intellij.openapi.application.ModalityState
-- dominates(com.intellij.openapi.application.ModalityState):Z
 a:com.intellij.openapi.command.CommandProcessorEx
 - com.intellij.openapi.command.CommandProcessor
 - <init>():V
@@ -1495,11 +1495,8 @@ a:com.intellij.openapi.fileEditor.impl.FileDocumentManagerBase
 - f:getDocument(com.intellij.openapi.vfs.VirtualFile):com.intellij.openapi.editor.Document
 - pa:getDocumentListener():com.intellij.openapi.editor.event.DocumentListener
 - getFile(com.intellij.openapi.editor.Document):com.intellij.openapi.vfs.VirtualFile
-- ps:getPreviewCharCount(com.intellij.openapi.vfs.VirtualFile):I
-- ps:isBinaryWithoutDecompiler(com.intellij.openapi.vfs.VirtualFile):Z
 - isPartialPreviewOfALargeFile(com.intellij.openapi.editor.Document):Z
 - reloadBinaryFiles():V
-- ps:setDocumentTooLarge(com.intellij.openapi.editor.Document,Z):V
 f:com.intellij.openapi.fileEditor.impl.LoadTextUtil
 - s:changeLineSeparators(com.intellij.openapi.project.Project,com.intellij.openapi.vfs.VirtualFile,java.lang.String,java.lang.Object):V
 - s:charsetForWriting(com.intellij.openapi.project.Project,com.intellij.openapi.vfs.VirtualFile,java.lang.String,java.nio.charset.Charset):com.intellij.openapi.util.Pair$NonNull
@@ -1634,7 +1631,6 @@ c:com.intellij.openapi.progress.util.AbstractProgressIndicatorBase
 - finishNonCancelableSection():V
 - p:getCancellationTrace():java.lang.Throwable
 - getFraction():D
-- p:getLock():java.lang.Object
 - getModalityState():com.intellij.openapi.application.ModalityState
 - getText():java.lang.String
 - getText2():java.lang.String
@@ -3890,11 +3886,6 @@ f:com.intellij.psi.text.BlockSupport$ReparsedSuccessfullyException
 - fillInStackTrace():java.lang.Throwable
 com.intellij.psi.tree.ChildRoleBase
 - sf:NONE:I
-c:com.intellij.psi.tree.DefaultRoleFinder
-- com.intellij.psi.tree.RoleFinder
-- <init>(java.util.function.Supplier):V
-- <init>(com.intellij.psi.tree.IElementType[]):V
-- findChild(com.intellij.lang.ASTNode):com.intellij.lang.ASTNode
 a:com.intellij.psi.tree.IErrorCounterReparseableElementType
 - com.intellij.psi.tree.IReparseableElementType
 - sf:FATAL_ERROR:I

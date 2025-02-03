@@ -9,7 +9,6 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.builders.*;
-import org.jetbrains.jps.builders.impl.BuildTargetChunk;
 import org.jetbrains.jps.builders.java.JavaBuilderUtil;
 import org.jetbrains.jps.builders.logging.ProjectBuilderLogger;
 import org.jetbrains.jps.builders.storage.SourceToOutputMapping;
@@ -80,10 +79,8 @@ public final class BuildOperations {
     // handle deleted paths
     final BuildFSState fsState = projectDescriptor.fsState;
     final SourceToOutputMapping sourceToOutputMap = projectDescriptor.dataManager.getSourceToOutputMap(target);
-    for (Iterator<String> it = sourceToOutputMap.getSourcesIterator(); it.hasNext(); ) {
-      String path = it.next();
-      // can check if the file exists
-      Path file = Path.of(path);
+    for (Iterator<Path> it = sourceToOutputMap.getSourceFileIterator(); it.hasNext(); ) {
+      Path file = it.next();
       if (!currentFiles.contains(file)) {
         fsState.registerDeleted(context, target, file, stampStorage);
       }
@@ -91,11 +88,11 @@ public final class BuildOperations {
     projectDescriptor.fsState.markInitialScanPerformed(target);
   }
 
-  public static void markTargetsUpToDate(CompileContext context, BuildTargetChunk chunk) throws IOException {
+  public static void markTargetsUpToDate(@NotNull CompileContext context, @NotNull Collection<? extends BuildTarget<?>> targets) throws IOException {
     final ProjectDescriptor projectDescriptor = context.getProjectDescriptor();
     final BuildFSState fsState = projectDescriptor.fsState;
     BuildDataManager dataManager = projectDescriptor.dataManager;
-    for (BuildTarget<?> target : chunk.getTargets()) {
+    for (BuildTarget<?> target : targets) {
       dataManager.getTargetStateManager().storeNonExistentOutputRoots(target, context);
     }
 
@@ -103,8 +100,8 @@ public final class BuildOperations {
       return;
     }
 
-    boolean marked = dropRemovedPaths(context, chunk);
-    for (BuildTarget<?> target : chunk.getTargets()) {
+    boolean marked = dropRemovedPaths(context, targets);
+    for (BuildTarget<?> target : targets) {
       if (target instanceof ModuleBuildTarget) {
         context.clearNonIncrementalMark((ModuleBuildTarget)target);
       }
@@ -121,19 +118,21 @@ public final class BuildOperations {
     }
   }
 
-  private static boolean dropRemovedPaths(CompileContext context, BuildTargetChunk chunk) throws IOException {
-    Map<BuildTarget<?>, Collection<String>> map = Utils.REMOVED_SOURCES_KEY.get(context);
+  private static boolean dropRemovedPaths(@NotNull CompileContext context, @NotNull Collection<? extends BuildTarget<?>> targets) throws IOException {
+    Map<BuildTarget<?>, Collection<Path>> map = Utils.REMOVED_SOURCES_KEY.get(context);
+    if (map == null) {
+      return false;
+    }
+
     boolean dropped = false;
-    if (map != null) {
-      for (BuildTarget<?> target : chunk.getTargets()) {
-        Collection<String> paths = map.remove(target);
-        if (paths != null) {
-          SourceToOutputMapping storage = context.getProjectDescriptor().dataManager.getSourceToOutputMap(target);
-          for (String path : paths) {
-            storage.remove(path);
-          }
-          dropped = true;
+    for (BuildTarget<?> target : targets) {
+      Collection<Path> paths = map.remove(target);
+      if (paths != null) {
+        SourceToOutputMapping storage = context.getProjectDescriptor().dataManager.getSourceToOutputMap(target);
+        for (Path file : paths) {
+          storage.remove(file);
         }
+        dropped = true;
       }
     }
     return dropped;
@@ -154,21 +153,22 @@ public final class BuildOperations {
    *         each changed source.
    */
   public static <R extends BuildRootDescriptor, T extends BuildTarget<R>>
-  Map<T, Map<File, List<String>>> cleanOutputsCorrespondingToChangedFiles(final CompileContext context, DirtyFilesHolder<R, T> dirtyFilesHolder) throws ProjectBuildException {
+  Map<T, Map<Path, List<Path>>> cleanOutputsCorrespondingToChangedFiles(@NotNull CompileContext context,
+                                                                          @NotNull DirtyFilesHolder<R, T> dirtyFilesHolder) throws ProjectBuildException {
     final BuildDataManager dataManager = context.getProjectDescriptor().dataManager;
     try {
-      final Map<T, Map<File, List<String>>> sourcesToCleanedOutputByTargets = new HashMap<>();
+      Map<T, Map<Path, List<Path>>> sourcesToCleanedOutputByTargets = new HashMap<>();
 
       Set<Path> dirsToDelete = FileCollectionFactory.createCanonicalPathSet();
       final Collection<String> allDeletedOutputPaths = new ArrayList<>();
 
-      dirtyFilesHolder.processDirtyFiles(new FileProcessor<R, T>() {
+      dirtyFilesHolder.processDirtyFiles(new FileProcessor<>() {
         // cache the mapping locally
         private final Map<T, SourceToOutputMapping> mappingsCache = new HashMap<>();
         private final Object2IntMap<T> idsCache = new Object2IntOpenHashMap<>();
 
         @Override
-        public boolean apply(@NotNull T target, @NotNull File file, @NotNull R sourceRoot) throws IOException {
+        public boolean apply(@NotNull T target, @NotNull File ioFile, @NotNull R sourceRoot) throws IOException {
           SourceToOutputMapping srcToOut = mappingsCache.get(target);
           if (srcToOut == null) {
             srcToOut = dataManager.getSourceToOutputMap(target);
@@ -183,25 +183,26 @@ public final class BuildOperations {
             targetId = idsCache.getInt(target);
           }
 
-          Collection<String> outputs = srcToOut.getOutputs(file.getPath());
-          List<String> failedToDeleteOutputs = new ArrayList<>();
+          Path file = ioFile.toPath();
+          Collection<Path> outputs = srcToOut.getOutputs(file);
+          List<Path> failedToDeleteOutputs = new ArrayList<>();
           if (outputs == null) {
             return true;
           }
 
           boolean shouldPruneOutputDirs = target instanceof ModuleBasedTarget;
           List<String> deletedForThisSource = new ArrayList<>(outputs.size());
-          for (String output : outputs) {
-            Path outputFile = Path.of(output);
-            boolean deletedSuccessfully = deleteRecursivelyAndCollectDeleted(outputFile, deletedForThisSource, shouldPruneOutputDirs ? dirsToDelete : null);
+          for (Path outputFile : outputs) {
+            boolean deletedSuccessfully =
+              deleteRecursivelyAndCollectDeleted(outputFile, deletedForThisSource, shouldPruneOutputDirs ? dirsToDelete : null);
             if (!deletedSuccessfully && Files.exists(outputFile)) {
-              failedToDeleteOutputs.add(output);
+              failedToDeleteOutputs.add(outputFile);
             }
           }
 
           allDeletedOutputPaths.addAll(deletedForThisSource);
           dataManager.getOutputToTargetMapping().removeMappings(deletedForThisSource, targetId, srcToOut);
-          Map<File, List<String>> cleaned = sourcesToCleanedOutputByTargets.computeIfAbsent(target, k -> new HashMap<>());
+          Map<Path, List<Path>> cleaned = sourcesToCleanedOutputByTargets.computeIfAbsent(target, k -> new HashMap<>());
           cleaned.put(file, failedToDeleteOutputs);
           return true;
         }

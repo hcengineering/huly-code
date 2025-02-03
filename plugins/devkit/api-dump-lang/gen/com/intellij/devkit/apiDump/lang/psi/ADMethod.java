@@ -21,4 +21,12 @@ public interface ADMethod extends ADMember {
   @Nullable
   ADTypeReference getTypeReference();
 
+  @Nullable
+  PsiElement getColon();
+
+  @NotNull
+  PsiElement getMinus();
+
+  @NotNull PsiElement getNavigationElement();
+
 }

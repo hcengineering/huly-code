@@ -1,6 +1,7 @@
 #  Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
-import numpy as np
 import io
+import numpy as np
+
 try:
     import tensorflow as tf
 except ImportError:
@@ -37,12 +38,25 @@ def get_type(table):
 
 def get_shape(table):
     # type: (np.ndarray) -> str
-    return str(table.shape[0])
+    shape = None
+    try:
+        import tensorflow as tf
+        if isinstance(table, tf.SparseTensor):
+            shape = table.dense_shape.numpy()
+        else:
+            shape = table.shape
+    except ImportError:
+        pass
+
+    if len(shape) == 1:
+        return str((int(shape[0]), 1))
+    else:
+        return str((int(shape[0]), int(shape[1])))
 
 
 def get_head(table):
     # type: (np.ndarray) -> str
-    return repr(__create_table(table).head(1).to_html(notebook=True))
+    return "None"
 
 
 def get_column_types(table):
@@ -126,24 +140,24 @@ class _NpTable:
         html.append('<thead>\n'
                     '<tr style="text-align: right;">\n'
                     '<th></th>\n')
-        html += self._collect_cols_names_html()
+        html += self.__collect_cols_names_html()
         html.append('</tr>\n'
                     '</thead>\n')
 
         # tbody
-        html += self._collect_values_html(None)
+        html += self.__collect_values_html(None)
 
         html.append('</table>\n')
 
         return "".join(html)
 
-    def _collect_cols_names_html(self):
+    def __collect_cols_names_html(self):
         if self.type == ONE_DIM:
             return ['<th>0</th>\n']
 
         return ['<th>{}</th>\n'.format(i) for i in range(len(self.array[0]))]
 
-    def _collect_values_html(self, max_cols):
+    def __collect_values_html(self, max_cols):
         html = ['<tbody>\n']
         rows = self.array.shape[0]
         for row_num in range(rows):
@@ -151,8 +165,11 @@ class _NpTable:
             html.append('<th>{}</th>\n'.format(int(self.indexes[row_num])))
             if self.type == ONE_DIM:
                 # None usually is not supported in tensors, but to be totally sure
-                if self.format is not None and self.array[row_num] is not None:
-                    value = self.format % self.array[row_num]
+                if self.format is not None and self.array[row_num] is not None and self.array[row_num] == self.array[row_num]:
+                    try:
+                        value = self.format % self.array[row_num]
+                    except Exception as _:
+                        value = self.array[row_num]
                 else:
                     value = self.array[row_num]
                 html.append('<td>{}</td>\n'.format(value))
@@ -160,8 +177,11 @@ class _NpTable:
                 cols = len(self.array[0])
                 max_cols = cols if max_cols is None else min(max_cols, cols)
                 for col_num in range(max_cols):
-                    if self.format is not None and self.array[row_num][col_num]:
-                        value = self.format % self.array[row_num][col_num]
+                    if self.format is not None and self.array[row_num][col_num] is not None and self.array[row_num][col_num] == self.array[row_num][col_num]:
+                        try:
+                            value = self.format % self.array[row_num][col_num]
+                        except Exception as _:
+                            value = self.array[row_num][col_num]
                     else:
                         value = self.array[row_num][col_num]
                     html.append('<td>{}</td>\n'.format(value))
@@ -176,12 +196,12 @@ class _NpTable:
 
         np.savetxt(csv_stream, self.array, delimiter=CSV_FORMAT_SEPARATOR, fmt=float_format)
         csv_string = csv_stream.getvalue()
-        csv_rows_with_index = self._insert_index_at_rows_begging_csv(csv_string)
+        csv_rows_with_index = self.__insert_index_at_rows_begging_csv(csv_string)
 
-        col_names = self._collect_col_names_csv()
+        col_names = self.__collect_col_names_csv()
         return col_names + "\n" + csv_rows_with_index
 
-    def _insert_index_at_rows_begging_csv(self, csv_string):
+    def __insert_index_at_rows_begging_csv(self, csv_string):
         # type: (str) -> str
         csv_rows = csv_string.split('\n')
         csv_rows_with_index = []
@@ -189,7 +209,7 @@ class _NpTable:
             csv_rows_with_index.append(str(row_index) + CSV_FORMAT_SEPARATOR + csv_rows[row_index])
         return "\n".join(csv_rows_with_index)
 
-    def _collect_col_names_csv(self):
+    def __collect_col_names_csv(self):
         if self.type == ONE_DIM:
             return '{}0'.format(CSV_FORMAT_SEPARATOR)
 
@@ -210,7 +230,7 @@ class _NpTable:
 
         cols, orders = sort_keys
         if 0 in cols:
-            return self._sort_by_index(True in orders)
+            return self.__sort_by_index(True in orders)
 
         if self.type == ONE_DIM:
             extended = np.column_stack((self.indexes, self.array))
@@ -230,7 +250,7 @@ class _NpTable:
         self.array = extended[:, 1:]
         return self
 
-    def _sort_by_index(self, order):
+    def __sort_by_index(self, order):
         if order:
             return self
         self.array = self.array[::-1]
@@ -334,9 +354,6 @@ def __set_pd_options(format):
     _jb_max_rows = pd.get_option('display.max_rows')
     if format is not None:
         _jb_float_options = pd.get_option('display.float_format')
-    format_function = __define_format_function(format)
-    if format_function is not None:
-        pd.set_option('display.float_format', format_function)
 
     pd.set_option('display.max_columns', max_cols)
     pd.set_option('display.max_rows', max_rows)
@@ -344,6 +361,10 @@ def __set_pd_options(format):
         pd.set_option('display.max_colwidth', max_colwidth)
     except ValueError:
         pd.set_option('display.max_colwidth', MAX_COLWIDTH)
+
+    format_function = __define_format_function(format)
+    if format_function is not None:
+        pd.set_option('display.float_format', format_function)
 
     return _jb_max_cols, _jb_max_colwidth, _jb_max_rows, _jb_float_options
 
@@ -361,7 +382,7 @@ def __define_format_function(format):
     if format is None or format == 'null':
         return None
 
-    if format.startswith("%"):
+    if type(format) == str and format.startswith("%"):
         return lambda x: format % x
     else:
         return None

@@ -35,8 +35,10 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkType;
 import com.intellij.openapi.projectRoots.SdkTypeId;
 import com.intellij.openapi.projectRoots.impl.DependentSdkType;
+import com.intellij.openapi.projectRoots.impl.jdkDownloader.JdkDownloadTask;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider;
+import com.intellij.openapi.roots.ui.configuration.projectRoot.SdkDownloadTask;
 import com.intellij.openapi.util.InvalidDataException;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.io.FileUtil;
@@ -50,18 +52,23 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.UIBundle;
 import com.intellij.util.io.PathKt;
 import org.gradle.util.GradleVersion;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.model.java.JdkVersionDetector;
 import org.jetbrains.plugins.gradle.codeInspection.GradleInspectionBundle;
 import org.jetbrains.plugins.gradle.frameworkSupport.BuildScriptDataBuilder;
 import org.jetbrains.plugins.gradle.frameworkSupport.buildscript.GradleBuildScriptBuilder;
 import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData;
+import org.jetbrains.plugins.gradle.service.execution.GradleDaemonJvmCriteria;
+import org.jetbrains.plugins.gradle.service.execution.GradleDaemonJvmHelper;
 import org.jetbrains.plugins.gradle.service.project.wizard.util.GradleWrapperUtil;
 import org.jetbrains.plugins.gradle.settings.DistributionType;
 import org.jetbrains.plugins.gradle.settings.GradleDefaultProjectSettings;
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings;
 import org.jetbrains.plugins.gradle.settings.GradleSettings;
 import org.jetbrains.plugins.gradle.util.GradleConstants;
+import org.jetbrains.plugins.gradle.util.GradleJvmCriteriaUtil;
 import org.jetbrains.plugins.gradle.util.GradleJvmResolutionUtil;
 import org.jetbrains.plugins.gradle.util.GradleJvmValidationUtil;
 
@@ -72,9 +79,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
+@ApiStatus.Internal
 public abstract class AbstractGradleModuleBuilder extends AbstractExternalModuleBuilder<GradleProjectSettings> {
 
   private static final Logger LOG = Logger.getInstance(AbstractGradleModuleBuilder.class);
@@ -105,18 +111,19 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
   private Path rootProjectPath;
   private boolean myUseKotlinDSL;
   private boolean isCreatingNewProject;
-  private boolean createEmptyContentRoots = true;
+  private boolean isCreatingDaemonToolchain = false;
+  private boolean isCreatingEmptyContentRoots = true;
   private GradleVersion gradleVersion;
   private DistributionType gradleDistributionType;
   private @Nullable String gradleHome;
 
+  private boolean isCreatingWrapper = true;
   private boolean isCreatingBuildScriptFile = true;
   private boolean isCreatingSettingsScriptFile = true;
   private VirtualFile buildScriptFile;
-  private VirtualFile settingsScriptFile;
   private GradleBuildScriptBuilder<?> buildScriptBuilder;
-  private final List<Consumer<GradleBuildScriptBuilder<?>>> buildScriptConfigurators = new ArrayList<>();
-  private final List<BiConsumer<VirtualFile, VirtualFile>> preImportConfigurators = new ArrayList<>();
+
+  private @Nullable SdkDownloadTask mySdkDownloadTask;
 
   public AbstractGradleModuleBuilder() {
     super(GradleConstants.SYSTEM_ID, GradleDefaultProjectSettings.createProjectSettings(""));
@@ -166,7 +173,7 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
     }
 
     if (isCreatingSettingsScriptFile) {
-      settingsScriptFile = setupGradleSettingsFile(
+      setupGradleSettingsFile(
         rootProjectPath, modelContentRootDir, project.getName(),
         myProjectId == null ? module.getName() : myProjectId.getArtifactId(),
         isCreatingNewLinkedProject(),
@@ -176,8 +183,6 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
 
     if (isCreatingBuildScriptFile) {
       buildScriptBuilder = GradleBuildScriptBuilder.create(gradleVersion, myUseKotlinDSL);
-      buildScriptConfigurators.forEach(it -> it.accept(buildScriptBuilder));
-
       var scriptDataBuilder = new BuildScriptDataBuilder(buildScriptFile, buildScriptBuilder);
       modifiableRootModel.getModule().putUserData(BUILD_SCRIPT_DATA, scriptDataBuilder);
     }
@@ -236,24 +241,65 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
     }
 
     if (isCreatingBuildScriptFile) {
-      preImportConfigurators.forEach(c -> c.accept(buildScriptFile, settingsScriptFile));
       openBuildScriptFile(project, buildScriptFile);
     }
-    if (isCreatingNewLinkedProject() && gradleDistributionType.isWrapped()) {
+    if (isCreatingWrapper && isCreatingNewLinkedProject() && gradleDistributionType.isWrapped()) {
       generateGradleWrapper(project);
     }
-    reloadProject(project);
+    ExternalProjectsManagerImpl.getInstance(project).runWhenInitialized(() -> {
+      setUpProjectDaemonJvmCriteria(project, () -> {
+        reloadProject(project);
+      });
+    });
+  }
+
+  private void setUpProjectDaemonJvmCriteria(@NotNull Project project, @NotNull Runnable callback) {
+    if (!isCreatingDaemonToolchain) {
+      LOG.debug("The Gradle Daemon JVM criteria's setting up is skipped");
+      callback.run();
+      return;
+    }
+    var daemonJvmCriteria = resolveDaemonJvmCriteria();
+    if (daemonJvmCriteria == null) {
+      LOG.warn("Unable to obtain current Gradle JDK configuration to set up Daemon JVM criteria");
+      callback.run();
+      return;
+    }
+    var externalProjectPath = getExternalProjectSettings().getExternalProjectPath();
+    GradleDaemonJvmHelper.updateProjectDaemonJvmCriteria(project, externalProjectPath, daemonJvmCriteria)
+      .whenComplete((isSuccess, exception) -> {
+        if (exception != null || !isSuccess) {
+          LOG.warn("Unable to update to set up Daemon JVM criteria");
+        }
+        callback.run();
+      });
+  }
+
+  private @Nullable GradleDaemonJvmCriteria resolveDaemonJvmCriteria() {
+    var jdk = myJdk;
+    if (jdk != null) {
+      var homePath = jdk.getHomePath();
+      if (homePath != null) {
+        var jdkInfo = JdkVersionDetector.getInstance().detectJdkVersionInfo(homePath);
+        if (jdkInfo != null) {
+          return GradleJvmCriteriaUtil.toJvmCriteria(jdkInfo);
+        }
+      }
+    }
+    var sdkDownloadTask = mySdkDownloadTask;
+    if (sdkDownloadTask instanceof JdkDownloadTask jdkDownloadTask) {
+      return GradleJvmCriteriaUtil.toJvmCriteria(jdkDownloadTask.jdkItem);
+    }
+    return null;
   }
 
   private void reloadProject(@NotNull Project project) {
-    ExternalProjectsManagerImpl.getInstance(project).runWhenInitialized(() -> {
-      ImportSpecBuilder importSpec = new ImportSpecBuilder(project, GradleConstants.SYSTEM_ID);
-      if (createEmptyContentRoots) {
-        importSpec.createDirectoriesForEmptyContentRoots();
-      }
-      importSpec.callback(new ConfigureGradleModuleCallback(importSpec));
-      ExternalSystemUtil.refreshProject(PathKt.getSystemIndependentPath(rootProjectPath), importSpec);
-    });
+    ImportSpecBuilder importSpec = new ImportSpecBuilder(project, GradleConstants.SYSTEM_ID);
+    if (isCreatingEmptyContentRoots) {
+      importSpec.createDirectoriesForEmptyContentRoots();
+    }
+    importSpec.callback(new ConfigureGradleModuleCallback(importSpec));
+    ExternalSystemUtil.refreshProject(PathKt.getSystemIndependentPath(rootProjectPath), importSpec);
   }
 
   private void generateGradleWrapper(@NotNull Project project) {
@@ -263,19 +309,6 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
     vcs.markFileForAdding(rootProjectPath.resolve("gradlew.bat"), false);
     GradleWrapperUtil.generateGradleWrapper(rootProjectPath, gradleVersion);
     vcs.finish();
-  }
-
-  public void configureBuildScript(@NotNull Consumer<GradleBuildScriptBuilder<?>> configure) {
-    buildScriptConfigurators.add(configure);
-  }
-
-  /**
-   * Runs the configure callback just before the Gradle import starts.
-   * The first parameter to the callback is the buildScriptFile, the second parameter is the settingsScriptFile.
-   * Can be used to do more advanced modifications of the Gradle files.
-   */
-  public void configurePreImport(@NotNull BiConsumer<@NotNull VirtualFile, @NotNull VirtualFile> configure) {
-    preImportConfigurators.add(configure);
   }
 
   private @Nullable VirtualFile createAndConfigureBuildScriptFile() {
@@ -514,8 +547,20 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
     isCreatingNewProject = creatingNewProject;
   }
 
-  public void setCreateEmptyContentRoots(boolean createEmptyContentRoots) {
-    this.createEmptyContentRoots = createEmptyContentRoots;
+  public boolean isCreatingDaemonToolchain() {
+    return isCreatingDaemonToolchain;
+  }
+
+  public void setCreatingDaemonToolchain(boolean usingDaemonToolchain) {
+    isCreatingDaemonToolchain = usingDaemonToolchain;
+  }
+
+  public boolean isCreatingEmptyContentRoots() {
+    return isCreatingEmptyContentRoots;
+  }
+
+  public void setCreatingEmptyContentRoots(boolean creatingEmptyContentRoots) {
+    this.isCreatingEmptyContentRoots = creatingEmptyContentRoots;
   }
 
   public void setGradleVersion(@NotNull GradleVersion version) {
@@ -534,6 +579,14 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
     this.isCreatingSettingsScriptFile = creatingSettingsScriptFile;
   }
 
+  public boolean isCreatingWrapper() {
+    return isCreatingWrapper;
+  }
+
+  public void setCreatingWrapper(boolean creatingWrapper) {
+    isCreatingWrapper = creatingWrapper;
+  }
+
   public boolean isCreatingSettingsScriptFile() {
     return isCreatingSettingsScriptFile;
   }
@@ -544,6 +597,14 @@ public abstract class AbstractGradleModuleBuilder extends AbstractExternalModule
 
   public boolean isCreatingBuildScriptFile() {
     return isCreatingBuildScriptFile;
+  }
+
+  public @Nullable SdkDownloadTask getSdkDownloadTask() {
+    return mySdkDownloadTask;
+  }
+
+  public void setSdkDownloadTask(@Nullable SdkDownloadTask sdkDownloadTask) {
+    mySdkDownloadTask = sdkDownloadTask;
   }
 
   @Override

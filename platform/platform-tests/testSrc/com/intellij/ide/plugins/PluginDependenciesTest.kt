@@ -4,16 +4,18 @@ package com.intellij.ide.plugins
 import com.intellij.ide.plugins.cl.PluginClassLoader
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.testFramework.assertions.Assertions.assertThat
-import com.intellij.testFramework.rules.InMemoryFsRule
+import com.intellij.testFramework.junit5.TestApplication
+import com.intellij.testFramework.rules.InMemoryFsExtension
 import com.intellij.util.io.write
 import org.intellij.lang.annotations.Language
-import org.junit.Rule
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
+@TestApplication
 internal class PluginDependenciesTest {
-  @Rule
+  @RegisterExtension
   @JvmField
-  val inMemoryFs = InMemoryFsRule()
+  val inMemoryFs = InMemoryFsExtension()
 
   private val rootPath get() = inMemoryFs.fs.getPath("/")
   private val pluginDirPath get() = rootPath.resolve("plugin")
@@ -103,6 +105,8 @@ internal class PluginDependenciesTest {
 
   @Test
   fun `disable plugin if dependency of required content module is not available`() {
+    PluginManagerCore.getAndClearPluginLoadingErrors() //clear errors which may be registered by other tests
+    
     PluginBuilder()
       .noDepends()
       .id("sample.plugin")
@@ -171,6 +175,24 @@ internal class PluginDependenciesTest {
     val depPluginDescriptor = result.findEnabledPlugin(PluginId.getId("dep"))!!
     val mainClassLoader = result.findEnabledPlugin(PluginId.getId("sample.plugin"))!!.pluginClassLoader
     assertThat((mainClassLoader as PluginClassLoader)._getParents()).contains(depPluginDescriptor)
+  }
+
+  @Test
+  fun `dependencies between plugin modules`() {
+    PluginBuilder()
+      .noDepends()
+      .id("sample.plugin")
+      .module("embedded.module", PluginBuilder().packagePrefix("embedded"), loadingRule = ModuleLoadingRule.EMBEDDED)
+      .module("required.module", PluginBuilder().packagePrefix("required").dependency("embedded.module"), loadingRule = ModuleLoadingRule.REQUIRED)
+      .module("required2.module", PluginBuilder().packagePrefix("required2").dependency("required.module"), loadingRule = ModuleLoadingRule.REQUIRED)
+      .build(pluginDirPath.resolve("sample-plugin"))
+    val pluginSet = buildPluginSet()
+    assertThat(pluginSet.getEnabledModules()).hasSize(4)
+    val requiredModuleDescriptor = pluginSet.findEnabledModule("required.module")!!
+    val requiredModule2Descriptor = pluginSet.findEnabledModule("required2.module")!!
+    val embeddedModuleDescriptor = pluginSet.findEnabledModule("embedded.module")!!
+    checkParentClassLoaders(requiredModule2Descriptor, requiredModuleDescriptor)
+    checkParentClassLoaders(requiredModuleDescriptor, embeddedModuleDescriptor)
   }
 
   @Test

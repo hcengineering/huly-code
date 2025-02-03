@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.refactoring;
 
 import com.intellij.find.findUsages.PsiElement2UsageTargetAdapter;
@@ -60,10 +60,7 @@ import com.intellij.util.ThrowableRunnable;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.containers.MultiMap;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import org.jetbrains.annotations.NonNls;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.TestOnly;
+import org.jetbrains.annotations.*;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -97,11 +94,17 @@ public abstract class BaseRefactoringProcessor implements Runnable {
     myRefactoringScope = refactoringScope;
   }
 
+  @ApiStatus.Internal
+  public Runnable getPrepareSuccessfulSwingThreadCallback() {
+    return myPrepareSuccessfulSwingThreadCallback;
+  }
+
   protected abstract @NotNull UsageViewDescriptor createUsageViewDescriptor(UsageInfo @NotNull [] usages);
 
   /**
    * Is called inside atomic action.
    */
+  @ApiStatus.OverrideOnly
   protected abstract UsageInfo @NotNull [] findUsages();
 
   /**
@@ -117,6 +120,7 @@ public abstract class BaseRefactoringProcessor implements Runnable {
    * @param refUsages usages to be filtered
    * @return true if preprocessed successfully
    */
+  @ApiStatus.OverrideOnly
   protected boolean preprocessUsages(@NotNull Ref<UsageInfo[]> refUsages) {
     prepareSuccessful();
     return true;
@@ -125,10 +129,12 @@ public abstract class BaseRefactoringProcessor implements Runnable {
   /**
    * Is called inside atomic action.
    */
+  @ApiStatus.OverrideOnly
   protected boolean isPreviewUsages(UsageInfo @NotNull [] usages) {
     return myIsPreviewUsages;
   }
 
+  @ApiStatus.Internal
   protected boolean isPreviewUsages() {
     return myIsPreviewUsages;
   }
@@ -324,6 +330,7 @@ public abstract class BaseRefactoringProcessor implements Runnable {
     execute(usages);
   }
 
+  @ApiStatus.OverrideOnly
   protected void execute(final UsageInfo @NotNull [] usages) {
     long executeStart = System.currentTimeMillis();
     CommandProcessor.getInstance().executeCommand(myProject, () -> {

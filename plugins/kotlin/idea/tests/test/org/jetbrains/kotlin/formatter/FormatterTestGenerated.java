@@ -790,6 +790,11 @@ public abstract class FormatterTestGenerated extends AbstractFormatterTest {
                 runTest("testData/formatter/CommentInFunctionLiteral.after.kt");
             }
 
+            @TestMetadata("ContextParameterMultiline.after.kt")
+            public void testContextParameterMultiline() throws Exception {
+                runTest("testData/formatter/ContextParameterMultiline.after.kt");
+            }
+
             @TestMetadata("ContinuationIndentInAssigments.after.kt")
             public void testContinuationIndentInAssigments() throws Exception {
                 runTest("testData/formatter/ContinuationIndentInAssigments.after.kt");
@@ -968,6 +973,16 @@ public abstract class FormatterTestGenerated extends AbstractFormatterTest {
             @TestMetadata("ExtendsListWrap.after.kt")
             public void testExtendsListWrap() throws Exception {
                 runTest("testData/formatter/ExtendsListWrap.after.kt");
+            }
+
+            @TestMetadata("FloatingPointRangeWithDots.after.kt")
+            public void testFloatingPointRangeWithDots() throws Exception {
+                runTest("testData/formatter/FloatingPointRangeWithDots.after.kt");
+            }
+
+            @TestMetadata("FloatingPointRangeWithoutDots.after.kt")
+            public void testFloatingPointRangeWithoutDots() throws Exception {
+                runTest("testData/formatter/FloatingPointRangeWithoutDots.after.kt");
             }
 
             @TestMetadata("ForLineBreak.after.kt")
@@ -2140,6 +2155,16 @@ public abstract class FormatterTestGenerated extends AbstractFormatterTest {
             @TestMetadata("ExtendsListAlignEnum.after.inv.kt")
             public void testExtendsListAlignEnum() throws Exception {
                 runTest("testData/formatter/ExtendsListAlignEnum.after.inv.kt");
+            }
+
+            @TestMetadata("FloatingPointRangeWithDots.after.inv.kt")
+            public void testFloatingPointRangeWithDots() throws Exception {
+                runTest("testData/formatter/FloatingPointRangeWithDots.after.inv.kt");
+            }
+
+            @TestMetadata("FloatingPointRangeWithoutDots.after.inv.kt")
+            public void testFloatingPointRangeWithoutDots() throws Exception {
+                runTest("testData/formatter/FloatingPointRangeWithoutDots.after.inv.kt");
             }
 
             @TestMetadata("ForLineBreak.after.inv.kt")

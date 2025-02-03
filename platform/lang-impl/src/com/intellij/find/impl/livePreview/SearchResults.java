@@ -23,6 +23,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.ActionCallback;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.openapi.util.registry.Registry;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.ArrayUtil;
@@ -454,7 +455,7 @@ public class SearchResults implements DocumentListener, CaretListener {
     updateExcluded();
     notifyChanged();
     if (myCursor == null || !myCursor.equals(oldCursorRange)) {
-      if (toChangeSelection) {
+      if (toChangeSelection && Registry.is("ide.find.auto.scroll.to.next.occurrence")) {
         updateSelection(true, true, true);
       }
       notifyCursorMoved();

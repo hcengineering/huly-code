@@ -5,9 +5,7 @@ import com.intellij.openapi.application.smartReadAction
 import com.intellij.openapi.externalSystem.service.execution.ExternalSystemJdkUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.JavaSdkType
-import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.backend.workspace.WorkspaceModel
@@ -25,19 +23,18 @@ import org.jetbrains.kotlin.idea.core.script.KotlinScriptEntitySource
 import org.jetbrains.kotlin.idea.core.script.LibraryDependencyFactory
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager.Companion.toVfsRoots
 import org.jetbrains.kotlin.idea.core.script.k2.BaseScriptModel
-import org.jetbrains.kotlin.idea.core.script.k2.ScriptConfigurations
+import org.jetbrains.kotlin.idea.core.script.k2.ScriptConfigurationWithSdk
 import org.jetbrains.kotlin.idea.core.script.k2.ScriptConfigurationsSource
 import org.jetbrains.kotlin.idea.core.script.scriptDefinitionsSourceOfType
+import org.jetbrains.kotlin.idea.core.script.ucache.relativeName
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinitionsSource
 import org.jetbrains.kotlin.scripting.definitions.findScriptDefinition
-import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.scripting.resolve.VirtualFileScriptSource
 import org.jetbrains.kotlin.scripting.resolve.adjustByDefinition
 import org.jetbrains.kotlin.scripting.resolve.refineScriptCompilationConfiguration
 import org.jetbrains.kotlin.tools.projectWizard.transformers.Predicate
 import java.io.File
 import java.nio.file.Path
-import kotlin.io.path.pathString
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.jvm.JvmDependency
 import kotlin.script.experimental.jvm.jdkHome
@@ -70,89 +67,72 @@ internal open class GradleScriptConfigurationsSource(override val project: Proje
         project.scriptDefinitionsSourceOfType<GradleScriptDefinitionsSource>()
 
     override suspend fun updateConfigurations(scripts: Iterable<GradleScriptModel>) {
-        val sdks = mutableMapOf<Path, Sdk>()
-
-        val newConfigurations = mutableMapOf<VirtualFile, ResultWithDiagnostics<ScriptCompilationConfigurationWrapper>>()
-
-        for (script in scripts) {
-            val sourceCode = VirtualFileScriptSource(script.virtualFile)
+        val configurations = scripts.associate { it ->
+            val sourceCode = VirtualFileScriptSource(it.virtualFile)
             val definition = findScriptDefinition(project, sourceCode)
 
-            val javaProjectSdk = ProjectRootManager.getInstance(project).projectSdk?.takeIf { it.sdkType is JavaSdkType }
+            val sdk = ProjectRootManager.getInstance(project).projectSdk?.takeIf { it.sdkType is JavaSdkType }
+                ?: it.javaHome?.let { ExternalSystemJdkUtil.lookupJdkByPath(it) }
 
-            val javaHomePath = (javaProjectSdk?.homePath ?: script.javaHome)?.let { Path.of(it) }
+            val javaHomePath = sdk?.homePath?.let { Path.of(it) }
 
             val configuration = definition.compilationConfiguration.with {
                 javaHomePath?.let {
                     jvm.jdkHome(it.toFile())
                 }
-                defaultImports(script.imports)
-                dependencies(JvmDependency(script.classPath.map { File(it) }))
-                ide.dependenciesSources(JvmDependency(script.sourcePath.map { File(it) }))
+                defaultImports(it.imports)
+                dependencies(JvmDependency(it.classPath.map { File(it) }))
+                ide.dependenciesSources(JvmDependency(it.sourcePath.map { File(it) }))
             }.adjustByDefinition(definition)
 
             val updatedConfiguration = smartReadAction(project) {
                 refineScriptCompilationConfiguration(sourceCode, definition, project, configuration)
             }
-            newConfigurations[script.virtualFile] = updatedConfiguration
 
-            if (javaProjectSdk != null) {
-                javaProjectSdk.homePath?.let { path ->
-                    sdks.computeIfAbsent(Path.of(path)) { javaProjectSdk }
-                }
-            } else if (javaHomePath != null) {
-                sdks.computeIfAbsent(javaHomePath) {
-                    ExternalSystemJdkUtil.lookupJdkByPath(it.pathString)
-                }
-            }
+            it.virtualFile to ScriptConfigurationWithSdk(updatedConfiguration, sdk)
         }
 
-        data.set(ScriptConfigurations(newConfigurations, sdks))
+        data.set(configurations)
     }
 
     private fun getUpdatedStorage(
         project: Project,
-        configurationsData: ScriptConfigurations,
+        configurations: Map<VirtualFile, ScriptConfigurationWithSdk>,
         entitySourceSupplier: (virtualFileUrl: VirtualFileUrl) -> KotlinScriptEntitySource,
     ): MutableEntityStorage {
         val updatedStorage = MutableEntityStorage.create()
 
-        val projectPath = project.basePath?.let { Path.of(it) } ?: return updatedStorage
-
-        val manager = WorkspaceModel.getInstance(project).getVirtualFileUrlManager()
-
-        val fileUrlManager = manager
+        val fileUrlManager = WorkspaceModel.getInstance(project).getVirtualFileUrlManager()
         val updatedFactory = LibraryDependencyFactory(fileUrlManager, updatedStorage)
 
-        for ((scriptFile, configurationWrapper) in configurationsData.configurations) {
-            val configuration = configurationWrapper.valueOrNull() ?: continue
+        for ((scriptFile, configurationWithSdk) in configurations) {
+            val configuration = configurationWithSdk.scriptConfiguration.valueOrNull() ?: continue
             val source = entitySourceSupplier(scriptFile.toVirtualFileUrl(fileUrlManager))
-
-            val basePath = projectPath.toFile()
-            val file = Path.of(scriptFile.path).toFile()
-            val relativeLocation = FileUtil.getRelativePath(basePath, file) ?: continue
 
             val definitionName = findScriptDefinition(project, VirtualFileScriptSource(scriptFile)).name
 
             val definitionScriptModuleName = "$KOTLIN_SCRIPTS_MODULE_NAME.$definitionName"
-            val locationName = relativeLocation.replace(VfsUtilCore.VFS_SEPARATOR_CHAR, ':')
-            val moduleName = "$definitionScriptModuleName.$locationName"
+            val locationName = scriptFile.relativeName(project).replace(VfsUtilCore.VFS_SEPARATOR_CHAR, ':')
 
-            val sdkDependency = configuration.javaHome?.toPath()?.let { configurationsData.sdks[it] }
-                ?.let { SdkDependency(SdkId(it.name, it.sdkType.name)) }
+            val sdkDependency = configurationWithSdk.sdk?.let { SdkDependency(SdkId(it.name, it.sdkType.name)) }
 
             val classes = toVfsRoots(configuration.dependenciesClassPath).toMutableSet()
             val sources = toVfsRoots(configuration.dependenciesSources).toMutableSet()
 
             val allDependencies = buildList {
                 addIfNotNull(sdkDependency)
-                addAll(getDependenciesFromGradleLibs(classes, sources, manager, project))
-                addAll(updatedStorage.createDependenciesWithSources(classes, sources, source, manager))
-                add(updatedStorage.createDependencyWithKeyword(classes, sources, source, manager, locationName, "accessors"))
-                add(updatedStorage.createDependencyWithKeyword(classes, sources, source, manager, locationName, "groovy"))
+                addAll(getDependenciesFromGradleLibs(classes, sources,
+                                                     WorkspaceModel.getInstance(project).getVirtualFileUrlManager(), project))
+                addAll(updatedStorage.createDependenciesWithSources(classes, sources, source,
+                                                                    WorkspaceModel.getInstance(project).getVirtualFileUrlManager()
+                ))
+                add(updatedStorage.createDependencyWithKeyword(classes, sources, source,
+                                                               WorkspaceModel.getInstance(project).getVirtualFileUrlManager(), locationName, "accessors"))
+                add(updatedStorage.createDependencyWithKeyword(classes, sources, source,
+                                                               WorkspaceModel.getInstance(project).getVirtualFileUrlManager(), locationName, "groovy"))
                 addAll(classes.sortedBy { it.name }.map { updatedFactory.get(it, source) })
             }
-            updatedStorage.addEntity(ModuleEntity(moduleName, allDependencies, source))
+            updatedStorage.addEntity(ModuleEntity("$definitionScriptModuleName.$locationName", allDependencies, source))
         }
 
         return updatedStorage

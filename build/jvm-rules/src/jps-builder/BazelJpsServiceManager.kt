@@ -3,21 +3,20 @@
 
 package org.jetbrains.bazel.jvm.jps
 
-import org.jetbrains.jps.backwardRefs.JavaBackwardReferenceIndexBuilder
+import org.jetbrains.bazel.jvm.jps.impl.javaModuleTypes
 import org.jetbrains.jps.builders.AdditionalRootsProviderService
-import org.jetbrains.jps.builders.PreloadedDataExtension
 import org.jetbrains.jps.builders.impl.java.JavacCompilerTool
 import org.jetbrains.jps.builders.java.ExcludedJavaSourceRootProvider
+import org.jetbrains.jps.builders.java.JavaBuilderExtension
 import org.jetbrains.jps.builders.java.JavaCompilingTool
 import org.jetbrains.jps.builders.java.JavaModuleBuildTargetType
 import org.jetbrains.jps.incremental.BuilderService
 import org.jetbrains.jps.incremental.ModuleLevelBuilder
-import org.jetbrains.jps.incremental.java.JavaBuilder
 import org.jetbrains.jps.model.*
+import org.jetbrains.jps.model.java.JpsJavaModuleType
 import org.jetbrains.jps.service.JpsServiceManager
 import org.jetbrains.jps.service.SharedThreadPool
-import org.jetbrains.kotlin.jps.build.KotlinBuilder
-import org.jetbrains.kotlin.jps.incremental.KotlinCompilerReferenceIndexBuilder
+import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -38,7 +37,13 @@ internal class BazelJpsServiceManager : JpsServiceManager() {
     extensions.put(AdditionalRootsProviderService::class.java, listOf())
     extensions.put(ExcludedJavaSourceRootProvider::class.java, listOf())
     // exclude CleanupTempDirectoryExtension
-    extensions.put(PreloadedDataExtension::class.java, listOf())
+    extensions.put(JavaBuilderExtension::class.java, listOf(
+      object : JavaBuilderExtension() {
+        override fun shouldHonorFileEncodingForCompilation(file: File): Boolean = false
+
+        override fun getCompilableModuleTypes() = javaModuleTypes
+      }
+    ))
 
     services.put(SharedThreadPool::class.java, BazelSharedThreadPool)
     services.put(JpsEncodingConfigurationService::class.java, DummyJpsEncodingConfigurationService)
@@ -117,14 +122,8 @@ private object BazelJavaBuilderService : BuilderService() {
   // remove ResourcesTargetType.ALL_TYPES and ProjectDependenciesResolver.ProjectDependenciesResolvingTargetType.INSTANCE
   override fun getTargetTypes() = listOf(JavaModuleBuildTargetType.PRODUCTION)
 
-// remove RmiStubsGenerator and DependencyResolvingBuilder
+  // remove RmiStubsGenerator and DependencyResolvingBuilder
   override fun createModuleLevelBuilders(): List<ModuleLevelBuilder> {
-    return listOf(
-      JavaBuilder(SharedThreadPool.getInstance()),
-      //NotNullInstrumentingBuilder(),
-      JavaBackwardReferenceIndexBuilder(),
-      KotlinBuilder(),
-      KotlinCompilerReferenceIndexBuilder(),
-    )
+    throw IllegalStateException("must not be called")
   }
 }

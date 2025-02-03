@@ -11,8 +11,11 @@ import com.intellij.openapi.progress.runBlockingMaybeCancellable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.platform.eel.*
+import com.intellij.platform.eel.EelApi
+import com.intellij.platform.eel.EelExecApi
+import com.intellij.platform.eel.EelTunnelsApi
 import com.intellij.platform.eel.fs.pathSeparator
+import com.intellij.platform.eel.getOrThrow
 import com.intellij.platform.eel.path.EelPath
 import com.intellij.platform.eel.provider.asEelPath
 import com.intellij.platform.eel.provider.utils.EelPathUtils
@@ -149,7 +152,7 @@ private class EelMavenCmdState(
       val builder = EelExecApi.ExecuteProcessOptions.Builder(exe.toString())
         .args(cmd.parametersList.parameters)
         .env(cmd.environment)
-        .workingDirectory(EelPath.parse(workingDirectory, eel.descriptor))
+        .workingDirectory(EelPath.parse(getWorkingDirectory(), eel.descriptor))
 
       eel.exec.execute(builder.build()).getOrThrow()
     }

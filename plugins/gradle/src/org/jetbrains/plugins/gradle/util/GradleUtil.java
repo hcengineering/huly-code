@@ -37,10 +37,7 @@ import org.jetbrains.plugins.gradle.model.data.GradleProjectBuildScriptData;
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings;
 import org.jetbrains.plugins.gradle.settings.GradleSettings;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -108,10 +105,16 @@ public final class GradleUtil {
     return configuration;
   }
 
-  public static boolean writeWrapperConfiguration(@NotNull Path targetPath, @NotNull WrapperConfiguration wrapperConfiguration) {
+  public static boolean writeWrapperConfiguration(@NotNull WrapperConfiguration wrapperConfiguration, @NotNull Path targetPath) {
     Properties wrapperProperties = new Properties();
     setFromWrapperConfiguration(wrapperConfiguration, wrapperProperties);
     return writeGradleProperties(wrapperProperties, targetPath);
+  }
+
+  public static byte @NotNull [] writeWrapperConfigurationToByteArray(@NotNull WrapperConfiguration wrapperConfiguration) {
+    Properties wrapperProperties = new Properties();
+    setFromWrapperConfiguration(wrapperConfiguration, wrapperProperties);
+    return writeWrapperConfigurationToByteArray(wrapperProperties);
   }
 
   public static @Nullable WrapperConfiguration readWrapperConfiguration(@NotNull Path wrapperPropertiesFile) {
@@ -156,7 +159,7 @@ public final class GradleUtil {
     }
     catch (IOException e) {
       GradleLog.LOG.warn(
-        String.format("I/O exception on reading gradle properties file at '%s'", propertiesFile.toAbsolutePath()), e);
+        String.format("I/O exception on reading Gradle properties file at '%s'", propertiesFile.toAbsolutePath()), e);
     }
     return null;
   }
@@ -171,6 +174,18 @@ public final class GradleUtil {
         String.format("I/O exception on writing Gradle properties into '%s'", propertiesFile.toAbsolutePath()), e);
     }
     return false;
+  }
+
+  private static byte @NotNull [] writeWrapperConfigurationToByteArray(@NotNull Properties properties) {
+    try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.ISO_8859_1))) {
+      properties.store(writer, null);
+      return output.toByteArray();
+    }
+    catch (IOException e) {
+      // the ByteArrayOutputStream doesn't throw IOException
+      throw new RuntimeException(e);
+    }
   }
 
   private static void applyPropertyValue(@NotNull Properties props,

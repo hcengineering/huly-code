@@ -25,7 +25,7 @@ public final class MavenPlugin implements Serializable {
   private final boolean myExtensions;
 
   private final Element myConfiguration;
-  private final List<Execution> myExecutions;
+  private final List<@NotNull Execution> myExecutions;
 
   private final List<MavenId> myDependencies;
 
@@ -35,7 +35,7 @@ public final class MavenPlugin implements Serializable {
                      boolean aDefault,
                      boolean extensions,
                      Element configuration,
-                     List<Execution> executions,
+                     List<@NotNull Execution> executions,
                      List<MavenId> dependencies) {
     myGroupId = groupId;
     myArtifactId = artifactId;
@@ -75,7 +75,7 @@ public final class MavenPlugin implements Serializable {
     return myConfiguration;
   }
 
-  public List<Execution> getExecutions() {
+  public List<@NotNull Execution> getExecutions() {
     return myExecutions;
   }
 
@@ -101,43 +101,6 @@ public final class MavenPlugin implements Serializable {
     }
 
     return null;
-  }
-
-  public List<Element> getCompileExecutionConfigurations() {
-    List<Element> result = new ArrayList<Element>();
-    for (MavenPlugin.Execution each : getExecutions()) {
-      if (isCompileExecution(each) && each.getConfigurationElement() != null) {
-        result.add(each.getConfigurationElement());
-      }
-    }
-    return result;
-  }
-
-  public List<Element> getTestCompileExecutionConfigurations() {
-    List<Element> result = new ArrayList<Element>();
-    for (MavenPlugin.Execution each : getExecutions()) {
-      if (isTestCompileExecution(each) && each.getConfigurationElement() != null) {
-        result.add(each.getConfigurationElement());
-      }
-    }
-    return result;
-  }
-
-
-  private static boolean isCompileExecution(Execution each) {
-    return !Objects.equals(each.getPhase(), "none") &&
-           ("default-compile".equals(each.getExecutionId()) ||
-            (each.getGoals() != null && each.getGoals().contains("compile")) ||
-            Objects.equals(each.getPhase(), "compile")
-           );
-  }
-
-  private static boolean isTestCompileExecution(Execution each) {
-    return !Objects.equals(each.getPhase(), "none") &&
-           ("default-testCompile".equals(each.getExecutionId()) ||
-            (each.getGoals() != null && each.getGoals().contains("testCompile")) ||
-            Objects.equals(each.getPhase(), "test-compile")
-           );
   }
 
   public String getDisplayString() {

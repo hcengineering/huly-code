@@ -4,6 +4,7 @@ package com.intellij.psi;
 import com.intellij.openapi.extensions.ProjectExtensionPointName;
 import com.intellij.openapi.project.PossiblyDumbAware;
 import com.intellij.openapi.util.Condition;
+import com.intellij.openapi.util.Predicates;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.Processor;
 import com.intellij.util.SmartList;
@@ -11,10 +12,7 @@ import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 
 /**
@@ -46,6 +44,19 @@ public abstract class PsiElementFinder implements PossiblyDumbAware {
    * @see JavaPsiFacade#findClasses(String, GlobalSearchScope)
    */
   public abstract PsiClass @NotNull [] findClasses(@NotNull String qualifiedName, @NotNull GlobalSearchScope scope);
+
+  /**
+   * Returns {@code true} if the specified scope contains the class with the specified fully qualified name satisfying the provided filter, 
+   * and {@code false} otherwise.
+   */
+  public boolean hasClass(@NotNull String qualifiedName, @NotNull GlobalSearchScope scope, @NotNull Predicate<PsiClass> filter) {
+    PsiClass[] classes = findClasses(qualifiedName, scope);
+    if (filter == Predicates.<PsiClass>alwaysTrue()) return classes.length > 0;
+    for (PsiClass aClass : classes) {
+      if (filter.test(aClass)) return true;
+    }
+    return false;
+  }
 
   /**
    * Searches the project for the package with the specified full-qualified name and returns one

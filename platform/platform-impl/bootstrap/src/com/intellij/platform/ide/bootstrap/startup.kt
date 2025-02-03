@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 @file:JvmName("StartupUtil")
 package com.intellij.platform.ide.bootstrap
 
@@ -32,10 +32,13 @@ import com.intellij.ui.scale.JBUIScale
 import com.intellij.ui.svg.SvgCacheManager
 import com.intellij.util.EnvironmentUtil
 import com.intellij.util.Java11Shim
+import com.intellij.util.PlatformUtils
 import com.intellij.util.lang.ZipFilePool
 import com.jetbrains.JBR
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.ApiStatus.Internal
+import com.intellij.platform.ide.bootstrap.kernel.startClientKernel
+import com.intellij.platform.ide.bootstrap.kernel.startServerKernel
 import java.awt.Toolkit
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -216,7 +219,7 @@ fun CoroutineScope.startApplication(
 
     if (!PluginAutoUpdater.shouldSkipAutoUpdate()) {
       span("plugin auto update") {
-          PluginAutoUpdater.applyPluginUpdates(logDeferred)
+        PluginAutoUpdater.applyPluginUpdates(logDeferred)
       }
     }
 
@@ -240,6 +243,17 @@ fun CoroutineScope.startApplication(
     }
   }
 
+  val kernelStarted = async {
+    span("Starting Kernel") {
+      if (PlatformUtils.isJetBrainsClient()) {
+        startClientKernel(mainScope)
+      }
+      else {
+        startServerKernel(mainScope)
+      }
+    }
+  }
+
   val appRegisteredJob = CompletableDeferred<Unit>()
 
   val appLoaded = async {
@@ -256,7 +270,7 @@ fun CoroutineScope.startApplication(
     val app = span("app instantiation") {
       // we don't want to inherit mainScope Dispatcher and CoroutineTimeMeasurer, we only want the job
       @Suppress("SSBasedInspection")
-      ApplicationImpl(CoroutineScope(mainScope.coroutineContext.job).childScope("Application"), isInternal)
+      ApplicationImpl(CoroutineScope(mainScope.coroutineContext.job + kernelStarted.await().coroutineContext).childScope("Application"), isInternal)
     }
 
     loadApp(
@@ -296,28 +310,31 @@ fun CoroutineScope.startApplication(
 
   // out of appLoaded scope
   launch {
-    // starter is used later, but we need to wait for appLoaded completion
-    val starter = appLoaded.await()
+    // wait for the kernel to start
+    withContext(kernelStarted.await().coroutineContext) {
+      // starter is used later, but we need to wait for appLoaded completion
+      val starter = appLoaded.await()
 
-    val isInitialStart = configImportDeferred.await()
-    // appLoaded not only provides starter but also loads app, that's why it is here
-    launch {
-      if (ConfigImportHelper.isFirstSession()) {
-        IdeStartupWizardCollector.logWizardExperimentState()
-      }
-    }
-
-    if (isInitialStart != null) {
-      LoadingState.compareAndSetCurrentState(LoadingState.COMPONENTS_LOADED, LoadingState.APP_READY)
-      val log = logDeferred.await()
-      runCatching {
-        span("startup wizard run") {
-          runStartupWizard(isInitialStart = isInitialStart, app = ApplicationManager.getApplication())
+      val isInitialStart = configImportDeferred.await()
+      // appLoaded not only provides starter but also loads app, that's why it is here
+      launch {
+        if (ConfigImportHelper.isFirstSession()) {
+          IdeStartupWizardCollector.logWizardExperimentState()
         }
-      }.getOrLogException(log)
-    }
+      }
 
-    executeApplicationStarter(starter = starter, args = args)
+      if (isInitialStart != null) {
+        LoadingState.compareAndSetCurrentState(LoadingState.COMPONENTS_LOADED, LoadingState.APP_READY)
+        val log = logDeferred.await()
+        runCatching {
+          span("startup wizard run") {
+            runStartupWizard(isInitialStart = isInitialStart, app = ApplicationManager.getApplication())
+          }
+        }.getOrLogException(log)
+      }
+
+      executeApplicationStarter(starter = starter, args = args)
+    }
   }
 }
 

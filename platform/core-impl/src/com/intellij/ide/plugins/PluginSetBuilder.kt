@@ -6,19 +6,28 @@ package com.intellij.ide.plugins
 import com.intellij.core.CoreBundle
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.util.Java11Shim
+import com.intellij.util.graph.DFSTBuilder
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Nls
 import org.jetbrains.annotations.PropertyKey
 import java.util.*
 import java.util.function.Supplier
+import kotlin.collections.HashMap
 
 @ApiStatus.Internal
 class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorImpl>) {
-  private val _moduleGraph = createModuleGraph(unsortedPlugins)
-  private val builder = _moduleGraph.builder()
-  @JvmField val moduleGraph: ModuleGraph = _moduleGraph.sorted(builder)
+  private val sortedModulesWithDependencies: ModulesWithDependencies
+  private val builder: DFSTBuilder<IdeaPluginDescriptorImpl>
+  val topologicalComparator: Comparator<IdeaPluginDescriptorImpl>
 
+  init {
+    val (unsortedModulesWithDependencies, additionalEdges) = createModulesWithDependenciesAndAdditionalEdges(unsortedPlugins)
+    builder = DFSTBuilder(ModuleGraph(unsortedModulesWithDependencies, additionalEdges), null, true)
+    topologicalComparator = toCoreAwareComparator(builder.comparator())
+    sortedModulesWithDependencies = unsortedModulesWithDependencies.sorted(topologicalComparator)
+  }
+  
   private val enabledPluginIds = HashMap<PluginId, IdeaPluginDescriptorImpl>(unsortedPlugins.size)
   private val enabledModuleV2Ids = HashMap<String, IdeaPluginDescriptorImpl>(unsortedPlugins.size * 2)
 
@@ -49,7 +58,7 @@ class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorIm
         .sortedWith(Comparator.comparing({ it.second }, String.CASE_INSENSITIVE_ORDER))
         .forEach {
           detailedMessage.append("  ").append(it.second).append(" depends on:\n")
-          moduleGraph.getDependencies(it.first).asSequence()
+          (sortedModulesWithDependencies.directDependencies[it.first] ?: emptyList()).asSequence()
             .filter { o: IdeaPluginDescriptorImpl -> component.contains(o) }
             .map(pluginToString)
             .sortedWith(java.lang.String.CASE_INSENSITIVE_ORDER)
@@ -66,7 +75,7 @@ class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorIm
     val pluginToNumber = Object2IntOpenHashMap<PluginId>(unsortedPlugins.size)
     pluginToNumber.put(PluginManagerCore.CORE_ID, 0)
     var number = 0 // TODO: shouldn't it be 1?
-    for (module in moduleGraph.nodes) {
+    for (module in sortedModulesWithDependencies.modules) {
       // no content, so will be no modules, add it
       if (module.descriptorPath != null || module.content.modules.isEmpty()) {
         pluginToNumber.putIfAbsent(module.pluginId, number++)
@@ -85,7 +94,7 @@ class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorIm
     val enabledRequiredContentModules = HashMap<String, IdeaPluginDescriptorImpl>()
     val disabledModuleToProblematicPlugin = HashMap<String, PluginId>()
 
-    m@ for (module in moduleGraph.nodes) {
+    m@ for (module in sortedModulesWithDependencies.modules) {
       if (module.isUseIdeaClassLoader && !canExtendIdeaClassLoader) {
         module.isEnabled = false
         logMessages.add("Module ${module.moduleName ?: module.pluginId} is not enabled because it uses deprecated `use-idea-classloader` attribute but PathClassLoader is disabled")
@@ -103,7 +112,7 @@ class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorIm
       }
 
       for (ref in module.dependencies.modules) {
-        if (!enabledModuleV2Ids.containsKey(ref.name)) {
+        if (!enabledModuleV2Ids.containsKey(ref.name) && !enabledRequiredContentModules.containsKey(ref.name)) {
           logMessages.add("Module ${module.moduleName ?: module.pluginId} is not enabled because dependency ${ref.name} is not available")
           if (module.moduleName != null) {
             disabledModuleToProblematicPlugin.put(module.moduleName, disabledModuleToProblematicPlugin.get(ref.name) ?: PluginId.getId(ref.name))
@@ -184,13 +193,13 @@ class PluginSetBuilder(@JvmField val unsortedPlugins: Set<IdeaPluginDescriptorIm
 
     val java11Shim = Java11Shim.INSTANCE
     return PluginSet(
-      moduleGraph = moduleGraph,
+      sortedModulesWithDependencies = sortedModulesWithDependencies, 
       allPlugins = allPlugins,
       enabledPlugins = sortedPlugins.filterTo(ArrayList<IdeaPluginDescriptorImpl>()) { it.isEnabled },
       enabledModuleMap = java11Shim.copyOf(enabledModuleV2Ids),
       enabledPluginAndV1ModuleMap = java11Shim.copyOf(enabledPluginIds),
       enabledModules = ArrayList<IdeaPluginDescriptorImpl>().also { result ->
-        for (module in moduleGraph.nodes) {
+        for (module in sortedModulesWithDependencies.modules) {
           if (if (module.moduleName == null) module.isEnabled else enabledModuleV2Ids.containsKey(module.moduleName)) {
             result.add(module)
           }

@@ -7,6 +7,12 @@ jvm_resources(
   strip_prefix = "resources"
 )
 
+jvm_resources(
+  name = "java-coverage_resources_1",
+  files = glob(["src/META-INF/**/*"]),
+  strip_prefix = "src"
+)
+
 jvm_library(
   name = "java-coverage",
   module_name = "intellij.java.coverage",
@@ -34,6 +40,7 @@ jvm_library(
     "@lib//:java-coverage-coverage-report",
     "//platform/util/jdom",
     "//platform/platform-impl:ide-impl",
+    "//plugins/coverage-common/intellij.platform.coverage.agent:coverage-agent",
     "@lib//:fastutil-min",
   ],
   exports = [
@@ -41,7 +48,10 @@ jvm_library(
     "//java/execution/openapi:java-execution",
     "//java/openapi:java",
   ],
-  runtime_deps = [":java-coverage_resources"]
+  runtime_deps = [
+    ":java-coverage_resources",
+    ":java-coverage_resources_1",
+  ]
 )
 
 jvm_library(
@@ -77,9 +87,13 @@ jvm_library(
     "//platform/util/jdom",
     "//platform/platform-impl:ide-impl",
     "//platform/platform-impl:ide-impl_test_lib",
+    "//plugins/coverage-common/intellij.platform.coverage.agent:coverage-agent",
     "@lib//:fastutil-min",
   ],
-  runtime_deps = [":java-coverage_resources"]
+  runtime_deps = [
+    ":java-coverage_resources",
+    ":java-coverage_resources_1",
+  ]
 )
 
 jvm_test(

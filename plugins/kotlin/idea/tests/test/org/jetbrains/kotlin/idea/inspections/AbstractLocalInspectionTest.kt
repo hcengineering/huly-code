@@ -22,7 +22,6 @@ import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import com.intellij.util.io.write
 import com.intellij.util.lang.JavaVersion
-import junit.framework.TestCase
 import org.jdom.Element
 import org.jetbrains.kotlin.idea.base.test.IgnoreTests
 import org.jetbrains.kotlin.idea.base.test.InTextDirectivesUtils
@@ -30,6 +29,8 @@ import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.highlighter.AbstractHighlightingPassBase
 import org.jetbrains.kotlin.idea.intentions.computeOnBackground
 import org.jetbrains.kotlin.idea.test.DirectiveBasedActionUtils
+import org.jetbrains.kotlin.idea.test.DirectiveBasedActionUtils.AFTER_ERROR_DIRECTIVE
+import org.jetbrains.kotlin.idea.test.DirectiveBasedActionUtils.DISABLE_ERRORS_DIRECTIVE
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinTestUtils
 import org.jetbrains.kotlin.idea.test.withCustomCompilerOptions
@@ -87,10 +88,21 @@ abstract class AbstractLocalInspectionTest : KotlinLightCodeInsightFixtureTestCa
 
     protected open fun doTest(path: String) {
         val mainFile = File(dataFilePath(fileName()))
-        val inspection = createInspection(mainFile)
+
+        val inspection: LocalInspectionTool = try {
+            createInspection(mainFile)
+        } catch (e: Throwable) {
+            val shouldBeIgnored =
+                InTextDirectivesUtils.isDirectiveDefined(FileUtil.loadFile(mainFile), IgnoreTests.DIRECTIVES.of(pluginMode))
+            if (shouldBeIgnored) {
+                return
+            } else {
+                throw e
+            }
+        }
 
         val fileText = FileUtil.loadFile(mainFile, true)
-        TestCase.assertTrue("\"<caret>\" is missing in file \"$mainFile\"", fileText.contains("<caret>"))
+        assertTrue("\"<caret>\" is missing in file \"$mainFile\"", fileText.contains("<caret>"))
 
         withCustomCompilerOptions(fileText, project, module) {
             val minJavaVersion = InTextDirectivesUtils.findStringWithPrefixes(fileText, "// MIN_JAVA_VERSION: ")?.toInt()
@@ -98,15 +110,16 @@ abstract class AbstractLocalInspectionTest : KotlinLightCodeInsightFixtureTestCa
                 return@withCustomCompilerOptions
             }
 
-            checkForUnexpectedErrors()
 
             val extraFileNames = findExtraFilesForTest(mainFile)
 
             myFixture.configureByFiles(*(listOf(mainFile.name) + extraFileNames).toTypedArray()).first()
 
-            if ((myFixture.file as? KtFile)?.isScript() == true) {
-                ScriptConfigurationManager.updateScriptDependenciesSynchronously(myFixture.file)
+            val ktFile = myFixture.file as KtFile
+            if (ktFile.isScript()) {
+                ScriptConfigurationManager.updateScriptDependenciesSynchronously(ktFile)
             }
+            checkForUnexpectedErrors(mainFile, ktFile, fileText, beforeCheck = true)
 
             doTestFor(mainFile, inspection, fileText)
 
@@ -148,16 +161,38 @@ abstract class AbstractLocalInspectionTest : KotlinLightCodeInsightFixtureTestCa
         return extraFileNames
     }
 
-    private fun checkForUnexpectedErrors() {
-        val ktFile = file as? KtFile ?: return
-        val fileText = ktFile.text
-        if (!InTextDirectivesUtils.isDirectiveDefined(fileText, "// SKIP_ERRORS_AFTER")) {
-            checkForUnexpectedErrors(fileText)
+    private fun checkForUnexpectedErrors(mainFile: File, ktFile: KtFile, fileText: String, beforeCheck: Boolean) {
+        if (beforeCheck) {
+            val skipErrorsBeforeCheck = InTextDirectivesUtils.findLinesWithPrefixesRemoved(
+                fileText,
+                *skipErrorsBeforeCheckDirectives.toTypedArray()
+            ).isNotEmpty()
+            if (!skipErrorsBeforeCheck) {
+                checkForErrorsBefore(mainFile, ktFile, fileText)
+            }
+        } else {
+            val skipErrorsAfterCheck = InTextDirectivesUtils.findLinesWithPrefixesRemoved(
+                fileText,
+                *skipErrorsAfterCheckDirectives.toTypedArray()
+            ).isNotEmpty()
+            if (!skipErrorsAfterCheck) {
+                checkForErrorsAfter(mainFile, ktFile, fileText)
+            }
         }
     }
 
-    protected open fun checkForUnexpectedErrors(fileText: String) {
-        DirectiveBasedActionUtils.checkForUnexpectedErrors(file as KtFile)
+    protected open val skipErrorsBeforeCheckDirectives: List<String> =
+        listOf(IgnoreTests.DIRECTIVES.of(pluginMode), DISABLE_ERRORS_DIRECTIVE, "// SKIP_ERRORS_BEFORE")
+
+    protected open val skipErrorsAfterCheckDirectives: List<String> =
+        listOf(IgnoreTests.DIRECTIVES.of(pluginMode), DISABLE_ERRORS_DIRECTIVE, "// SKIP_ERRORS_AFTER")
+
+    protected open fun checkForErrorsBefore(mainFile: File, ktFile: KtFile, fileText: String) {
+        DirectiveBasedActionUtils.checkForUnexpectedErrors(ktFile)
+    }
+
+    protected open fun checkForErrorsAfter(mainFile: File, ktFile: KtFile, fileText: String) {
+        DirectiveBasedActionUtils.checkForUnexpectedErrors(ktFile, directive = AFTER_ERROR_DIRECTIVE)
     }
 
     protected fun runInspectionWithFixesAndCheck(
@@ -353,7 +388,7 @@ abstract class AbstractLocalInspectionTest : KotlinLightCodeInsightFixtureTestCa
     }
 
     protected open fun doTestFor(mainFile: File, inspection: LocalInspectionTool, fileText: String) {
-        IgnoreTests.runTestIfNotDisabledByFileDirective(mainFile.toPath(), IgnoreTests.DIRECTIVES.IGNORE_K1, "after") {
+        IgnoreTests.runTestIfNotDisabledByFileDirective(mainFile.toPath(), IgnoreTests.DIRECTIVES.of(pluginMode), "after") {
             doTestForInternal(mainFile, inspection, fileText)
         }
     }
@@ -396,14 +431,14 @@ abstract class AbstractLocalInspectionTest : KotlinLightCodeInsightFixtureTestCa
         dispatchAllEventsInIdeEventQueue()
         try {
             myFixture.checkResultByFile("${afterFileAbsolutePath.fileName}")
-        } catch (e: FileComparisonFailedError) {
+        } catch (_: FileComparisonFailedError) {
             KotlinTestUtils.assertEqualsToFile(
                 File(testDataDirectory, "${afterFileAbsolutePath.fileName}"),
                 editor.document.text
             )
         }
 
-        checkForUnexpectedErrors()
+        checkForUnexpectedErrors(mainFile, file as KtFile, fileText, beforeCheck = false)
     }
 
     private fun createAfterFileIfItDoesNotExist(path: Path) {

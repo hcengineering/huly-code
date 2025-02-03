@@ -1,6 +1,7 @@
 package org.jetbrains.plugins.textmate.language.preferences
 
 import org.jetbrains.plugins.textmate.TestUtil
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorWeigherImpl
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -12,7 +13,7 @@ class PreferencesTest {
     val preferencesRegistry = loadPreferences(TestUtil.PREFERENCES_TEST_BUNDLE)
     val preferences = preferencesRegistry.getPreferences(TestUtil.scopeFromString("text.html.basic"))
     assertEquals(1, preferences.size.toLong())
-    assertEquals(setOf(TextMateAutoClosingPair("\"", "\"", null)),
+    assertEquals(setOf(TextMateAutoClosingPair("\"", "\"", 0)),
                  preferences[0].smartTypingPairs)
     assertEquals(setOf(TextMateBracePair("`", "`")), preferences[0].highlightingPairs)
   }
@@ -22,7 +23,7 @@ class PreferencesTest {
     val preferencesRegistry = loadPreferences(TestUtil.PREFERENCES_TEST_BUNDLE)
     val preferences = preferencesRegistry.getPreferences(TestUtil.scopeFromString("source.php string"))
     assertEquals(1, preferences.size.toLong())
-    assertEquals(setOf(TextMateAutoClosingPair("(", ")", null)),
+    assertEquals(setOf(TextMateAutoClosingPair("(", ")", 0)),
                  preferences[0].smartTypingPairs)
     assertEquals(setOf(TextMateBracePair("[", "]")), preferences[0].highlightingPairs)
   }
@@ -32,11 +33,11 @@ class PreferencesTest {
     val preferencesRegistry = loadPreferences(TestUtil.PREFERENCES_TEST_BUNDLE)
     val preferences = preferencesRegistry.getPreferences(TestUtil.scopeFromString("text.html source.php string.quoted.double.php"))
     assertEquals(2, preferences.size.toLong())
-    assertEquals(setOf(TextMateAutoClosingPair("(", ")", null)),
+    assertEquals(setOf(TextMateAutoClosingPair("(", ")", 0)),
                  preferences[0].smartTypingPairs)
     assertEquals(setOf(TextMateBracePair("[", "]")), preferences[0].highlightingPairs)
 
-    assertEquals(setOf(TextMateAutoClosingPair("\"", "\"", null)),
+    assertEquals(setOf(TextMateAutoClosingPair("\"", "\"", 0)),
                  preferences[1].smartTypingPairs)
     assertEquals(setOf(TextMateBracePair("`", "`")), preferences[1].highlightingPairs)
   }
@@ -45,8 +46,8 @@ class PreferencesTest {
   fun loadingWithTheSameScope() {
     val preferencesRegistry = loadPreferences(TestUtil.PREFERENCES_TEST_BUNDLE)
     val preferences: Preferences = mergeAll(preferencesRegistry.getPreferences(TestUtil.scopeFromString("same.scope")))
-    assertEquals(setOf(TextMateAutoClosingPair("[", "]", null),
-                       TextMateAutoClosingPair("(", ")", null)), preferences.smartTypingPairs)
+    assertEquals(setOf(TextMateAutoClosingPair("[", "]", 0),
+                       TextMateAutoClosingPair("(", ")", 0)), preferences.smartTypingPairs)
   }
 
   @Test
@@ -64,9 +65,9 @@ class PreferencesTest {
     val preferences: Preferences = mergeAll(
       preferencesRegistry.getPreferences(TestUtil.scopeFromString("text.html.markdown markup.raw")))
     assertEquals(setOf(
-      TextMateAutoClosingPair("{", "}", null),
-      TextMateAutoClosingPair("(", ")", null),
-      TextMateAutoClosingPair("\"", "\"", null)
+      TextMateAutoClosingPair("{", "}", 0),
+      TextMateAutoClosingPair("(", ")", 0),
+      TextMateAutoClosingPair("\"", "\"", 0)
     ), preferences.smartTypingPairs)
   }
 
@@ -93,19 +94,19 @@ class PreferencesTest {
     val preferencesRegistry = loadPreferences(TestUtil.RESTRUCTURED_TEXT)
     val preferences: Preferences = mergeAll(preferencesRegistry.getPreferences(TestUtil.scopeFromString("source.rst")))
     assertNotNull(preferences.onEnterRules)
-    assertFalse(preferences.onEnterRules!!.isEmpty())
+    assertFalse(preferences.onEnterRules.isEmpty())
   }
 
   private fun loadPreferences(bundleName: String): PreferencesRegistry {
     val preferences = TestUtil.readBundle(bundleName).readPreferences().iterator()
     assertNotNull(preferences)
-    val preferencesRegistry = PreferencesRegistryImpl()
+    val preferencesRegistry = PreferencesRegistryImpl(TextMateSelectorWeigherImpl())
     while (preferences.hasNext()) {
       val next = preferences.next()
       preferencesRegistry.addPreferences(Preferences(next.scopeName,
                                                      next.highlightingPairs,
                                                      next.smartTypingPairs,
-                                                     mutableSetOf<TextMateBracePair?>(),
+                                                     setOf<TextMateBracePair>(),
                                                      null,
                                                      next.indentationRules,
                                                      next.onEnterRules))
@@ -114,12 +115,12 @@ class PreferencesTest {
   }
 
   private fun mergeAll(preferences: List<Preferences>): Preferences {
-    val highlightingPairs = mutableSetOf<TextMateBracePair?>()
-    val smartTypingPairs = mutableSetOf<TextMateAutoClosingPair?>()
-    val surroundingPairs = mutableSetOf<TextMateBracePair?>()
-    val autoCloseBefore = mutableSetOf<Char?>()
+    val highlightingPairs = mutableSetOf<TextMateBracePair>()
+    val smartTypingPairs = mutableSetOf<TextMateAutoClosingPair>()
+    val surroundingPairs = mutableSetOf<TextMateBracePair>()
+    val autoCloseBefore = mutableSetOf<Char>()
     var indentationRules = IndentationRules.empty()
-    val onEnterRules = mutableSetOf<OnEnterRule?>()
+    val onEnterRules = mutableSetOf<OnEnterRule>()
 
     for (preference in preferences) {
       val localHighlightingPairs = preference.highlightingPairs
@@ -142,7 +143,7 @@ class PreferencesTest {
         }
       }
       if (preference.onEnterRules != null) {
-        onEnterRules.addAll(preference.onEnterRules!!)
+        onEnterRules.addAll(preference.onEnterRules)
       }
     }
     return Preferences("",

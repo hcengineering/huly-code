@@ -54,4 +54,21 @@ public class ADMethodImplGen extends ADMemberImplGen implements ADMethod {
     return PsiTreeUtil.getChildOfType(this, ADTypeReference.class);
   }
 
+  @Override
+  @Nullable
+  public PsiElement getColon() {
+    return findPsiChildByType(COLON);
+  }
+
+  @Override
+  @NotNull
+  public PsiElement getMinus() {
+    return findPsiChildByType(MINUS);
+  }
+
+  @Override
+  public @NotNull PsiElement getNavigationElement() {
+    return ADPsiImplUtil.getNavigationElement(this);
+  }
+
 }

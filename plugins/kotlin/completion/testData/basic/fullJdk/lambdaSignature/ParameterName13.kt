@@ -1,6 +1,6 @@
 // IGNORE_K1
 
-object Foo {
+data object Foo {
 
     operator fun component1(): Int = 42
 
@@ -8,9 +8,9 @@ object Foo {
 }
 
 fun bar() {
-    Foo.let { foo<caret> }
+    Foo.let { <caret> }
 }
 
 // INVOCATION_COUNT: 0
 // EXIST: { itemText: "foo", tailText: " -> ", allLookupStrings: "foo", typeText: "Foo" }
-// NOTHING_ELSE
+// EXIST: { lookupString: "i", itemText: "(i, string)", tailText: " -> ", allLookupStrings: "i, string", typeText: "(Int, String)" }

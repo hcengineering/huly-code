@@ -7,6 +7,12 @@ jvm_resources(
   strip_prefix = "xpath-lang/resources"
 )
 
+jvm_resources(
+  name = "xpath_resources_1",
+  files = glob(["xpath-view/src/META-INF/**/*"]),
+  strip_prefix = "xpath-view/src"
+)
+
 jvm_library(
   name = "xpath",
   module_name = "intellij.xpath",
@@ -16,10 +22,14 @@ jvm_library(
     "//xml/openapi:xml",
     "//platform/lang-api:lang",
     "//platform/platform-impl:ide-impl",
+    "//platform/refactoring",
     "//platform/indexing-impl",
     "//platform/lang-impl",
+    "//platform/usageView",
+    "//xml/xml-frontback:frontback",
     "//xml/impl",
     "//platform/editor-ui-ex:editor-ex",
+    "//RegExpSupport:regexp",
     "//plugins/xpath/xslt-rt:rt",
     "@lib//:jaxen",
     "//platform/util/nanoxml",
@@ -31,6 +41,7 @@ jvm_library(
   ],
   runtime_deps = [
     ":xpath_resources",
+    ":xpath_resources_1",
     "//xml/dom-impl",
   ]
 )
@@ -45,10 +56,15 @@ jvm_library(
     "//platform/lang-api:lang",
     "//platform/platform-impl:ide-impl",
     "//platform/platform-impl:ide-impl_test_lib",
+    "//platform/refactoring",
     "//platform/indexing-impl",
     "//platform/lang-impl",
+    "//platform/usageView",
+    "//xml/xml-frontback:frontback",
     "//xml/impl",
     "//platform/editor-ui-ex:editor-ex",
+    "//RegExpSupport:regexp",
+    "//RegExpSupport:regexp_test_lib",
     "//plugins/xpath/xslt-rt:rt",
     "@lib//:jaxen",
     "@lib//:junit4",
@@ -63,7 +79,10 @@ jvm_library(
     "//tools/intellij.tools.ide.metrics.benchmark:ide-metrics-benchmark",
     "//tools/intellij.tools.ide.metrics.benchmark:ide-metrics-benchmark_test_lib",
   ],
-  runtime_deps = [":xpath_resources"]
+  runtime_deps = [
+    ":xpath_resources",
+    ":xpath_resources_1",
+  ]
 )
 
 jvm_test(

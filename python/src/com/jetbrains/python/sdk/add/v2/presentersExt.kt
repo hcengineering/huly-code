@@ -1,7 +1,6 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.sdk.add.v2
 
-import com.intellij.execution.ExecutionException
 import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.module.ModuleUtil
 import com.intellij.openapi.project.ProjectManager
@@ -11,11 +10,13 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.platform.ide.progress.ModalTaskOwner
 import com.intellij.platform.ide.progress.TaskCancellation
 import com.intellij.platform.ide.progress.withModalProgress
-import com.jetbrains.python.failure
+import com.intellij.python.community.impl.venv.createVenv
 import com.jetbrains.python.PyBundle.message
+import com.jetbrains.python.errorProcessing.PyError
+import com.jetbrains.python.failure
 import com.jetbrains.python.sdk.PythonSdkType
-import com.jetbrains.python.sdk.VirtualEnvReader
 import com.jetbrains.python.sdk.conda.createCondaSdkFromExistingEnv
+import com.jetbrains.python.sdk.createSdk
 import com.jetbrains.python.sdk.excludeInnerVirtualEnv
 import com.jetbrains.python.sdk.flavors.conda.PyCondaCommand
 import com.jetbrains.python.sdk.persist
@@ -25,7 +26,7 @@ import java.nio.file.Path
 
 
 // todo should it be overriden for targets?
-suspend fun PythonMutableTargetAddInterpreterModel.setupVirtualenv(venvPath: Path, projectPath: Path): Result<Sdk> {
+suspend fun PythonMutableTargetAddInterpreterModel.setupVirtualenv(venvPath: Path, projectPath: Path): com.jetbrains.python.Result<Sdk, PyError> {
   val baseSdk = state.baseInterpreter.get()!!
 
 
@@ -36,33 +37,16 @@ suspend fun PythonMutableTargetAddInterpreterModel.setupVirtualenv(venvPath: Pat
                             }!!)
 
 
-  try {
-    createVirtualenv(baseSdkPath,
-                     venvPath,
-                     projectPath,
-                     inheritSitePackages = state.inheritSitePackages.get())
-  }
-  catch (e: ExecutionException) {
-    return Result.failure(e)
-  }
+  val venvPython = createVenv(baseSdkPath, venvPath, inheritSitePackages = state.inheritSitePackages.get()).getOr { return it }
 
   if (targetEnvironmentConfiguration != null) error("Remote targets aren't supported")
-  val venvPython = VirtualEnvReader.Instance.findPythonInPythonRoot(venvPath)
-  if (venvPython == null) {
-    return failure(message("commandLine.directoryCantBeAccessed", venvPath))
-  }
-
-  val homeFile = try {
+  val homeFile =
     // refresh needs write action
     writeAction {
       VfsUtil.findFile(venvPython, true)
     }
-  }
-  catch (e: ExecutionException) {
-    return Result.failure(e)
-  }
   if (homeFile == null) {
-    return failure(message("commandLine.directoryCantBeAccessed", venvPath))
+    return com.jetbrains.python.errorProcessing.failure(message("commandLine.directoryCantBeAccessed", venvPython))
   }
 
   val newSdk = createSdk(homeFile, projectPath, existingSdks.toTypedArray())
@@ -75,7 +59,7 @@ suspend fun PythonMutableTargetAddInterpreterModel.setupVirtualenv(venvPath: Pat
       }
     }
     ?.excludeInnerVirtualEnv(newSdk)
-  return Result.success(newSdk)
+  return com.jetbrains.python.Result.success(newSdk)
 
 }
 

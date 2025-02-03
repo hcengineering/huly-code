@@ -16,6 +16,8 @@ import fleet.util.async.conflateReduce
 import fleet.util.async.use
 import fleet.util.channels.channels
 import fleet.util.channels.use
+import fleet.fastutil.ints.IntMap
+import fleet.fastutil.ints.partition
 import fleet.util.logging.logger
 import kotlinx.collections.immutable.toPersistentHashMap
 import kotlinx.coroutines.*
@@ -69,7 +71,7 @@ internal typealias Timestamp = Long
 
 internal data class SpeculationData(
   val novelty: Novelty,
-  val idMappings: List<Map<EID, UID>>,
+  val idMappings: List<IntMap<UID>>,
 ) {
   companion object {
     fun empty(): SpeculationData {
@@ -347,7 +349,7 @@ private suspend fun remoteKernelConnection(
         dbSnapshot.selectPartitions(emptySet()).change {
           context.impl.mutableDb.initPartition(SharedPart)
           val eidMemoizer = Memoizer<EID>()
-          context.applySnapshot(snapshot) { uid ->
+          context.applyWorkspaceSnapshot(snapshot) { uid ->
             dbSnapshot.lookupOne(uidAttribute(), uid) ?: eidMemoizer.memo(false, uid) { EidGen.freshEID(SharedPart) }
           }
         }.dbAfter
@@ -417,7 +419,7 @@ private suspend fun rebaseLoop(
       whileSelect {
         rebaseLoopStateDebug.set(state)
         remoteKernelBroadcastReceiver.onReceiveCatching { broadcastOrClosed ->
-          frequentSpannedScope("broadcast") {
+          spannedScope("broadcast") {
             if (broadcastOrClosed.isClosed) {
               val closeCause = broadcastOrClosed.exceptionOrNull()
               val unconfirmed = unconfirmedInstructions(state)
@@ -449,7 +451,7 @@ private suspend fun rebaseLoop(
           }
         }
         changesReceiver.onReceiveCatching { changeOrClosed ->
-          frequentSpannedScope("change") {
+          spannedScope("change") {
             if (changeOrClosed.isClosed) {
               val closeCause = changeOrClosed.exceptionOrNull()
               if (closeCause == null) {
@@ -487,7 +489,7 @@ private suspend fun rebaseLoop(
         }
         if (state.rebaseLog.isRebasing()) {
           onTimeout(0) {
-            frequentSpannedScope("rebase step") {
+            spannedScope("rebase step") {
               val (rebaseLog, tx) = state.rebaseLog.continueRebase(encoder)
               state = state.copy(rebaseLog = rebaseLog)
               if (!state.rebaseLog.isRebasing()) {

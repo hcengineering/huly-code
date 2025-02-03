@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.intellij.build.bazel
 
 import com.intellij.openapi.util.NlsSafe
@@ -186,6 +186,10 @@ internal class BazelBuildFileGenerator(
     val community = ArrayList<ModuleDescriptor>()
     val ultimate = ArrayList<ModuleDescriptor>()
     for (module in project.model.project.modules) {
+      if (module.name == "fleet.compiler.plugins") {
+        continue
+      }
+
       val descriptor = getModuleDescriptor(module)
       if (descriptor.isCommunity) {
         community.add(descriptor)
@@ -337,7 +341,8 @@ internal class BazelBuildFileGenerator(
         // see community/plugins/kotlin/base/frontend-agnostic/README.md
         module.name != "kotlin.base.frontend-agnostic" &&
         // also a marker module like frontend-agnostic above
-        module.name != "intellij.platform.monolith"
+        module.name != "intellij.platform.monolith" &&
+        module.name != "intellij.platform.backend"
       }) {
         option("name", moduleDescriptor.targetName)
         visibility(arrayOf("//visibility:public"))
@@ -417,7 +422,7 @@ internal class BazelBuildFileGenerator(
       return
     }
     if (!module.isCommunity && module.module.name == "intellij.rider.plugins.renderdoc") {
-      resourceDependencies.add("//rider/plugins/renderdoc:renderdoc_resources")
+      resourceDependencies.add("//dotnet/Plugins/renderdoc-support:renderdoc_resources")
       return
     }
 

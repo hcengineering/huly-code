@@ -1,7 +1,6 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.pycharm.community.ide.impl.miscProject.impl
 
-import com.intellij.execution.ExecutionException
 import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
@@ -31,19 +30,16 @@ import com.intellij.psi.PsiManager
 import com.intellij.pycharm.community.ide.impl.PyCharmCommunityCustomizationBundle
 import com.intellij.pycharm.community.ide.impl.miscProject.MiscFileType
 import com.intellij.pycharm.community.ide.impl.miscProject.TemplateFileName
-import com.intellij.pycharm.community.ide.impl.miscProject.impl.ObtainPythonStrategy.FindOnSystem
-import com.intellij.pycharm.community.ide.impl.miscProject.impl.ObtainPythonStrategy.UseThesePythons
+import com.intellij.python.community.impl.venv.createVenv
+import com.intellij.python.community.services.systemPython.SystemPythonService
 import com.intellij.util.SystemProperties
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.jetbrains.python.*
-import com.jetbrains.python.psi.LanguageLevel
-import com.jetbrains.python.sdk.PySdkToInstallManager
-import com.jetbrains.python.sdk.VirtualEnvReader
-import com.jetbrains.python.sdk.add.v2.createSdk
-import com.jetbrains.python.sdk.add.v2.createVirtualenv
+import com.jetbrains.python.sdk.createSdk
 import com.jetbrains.python.sdk.flavors.PythonSdkFlavor
-import com.jetbrains.python.sdk.installer.installBinary
+import com.jetbrains.python.venvReader.VirtualEnvReader
 import kotlinx.coroutines.*
+import org.jetbrains.annotations.Nls
 import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -61,19 +57,20 @@ internal val miscProjectEnabled: Lazy<Boolean> = lazy { ABExperiment.getABExperi
  * Once created, uses [scopeProvider] to get scope
  * to launch [miscFileType] generation in background, returns it as a job.
  *
- * Pythons are obtained with [obtainPythonStrategy]
+ * Pythons are obtained with [systemPythonService]
  */
 @RequiresEdt
 fun createMiscProject(
   miscFileType: MiscFileType,
   scopeProvider: (Project) -> CoroutineScope,
-  obtainPythonStrategy: ObtainPythonStrategy,
+  confirmInstallation: suspend () -> Boolean,
   projectPath: Path = miscProjectDefaultPath.value,
-): Result<Job, LocalizedErrorString> =
+  systemPythonService: SystemPythonService = SystemPythonService(),
+): Result<Job, @Nls String> =
   runWithModalProgressBlocking(ModalTaskOwner.guess(),
                                PyCharmCommunityCustomizationBundle.message("misc.project.generating.env"),
                                TaskCancellation.cancellable()) {
-    createProjectAndSdk(projectPath, obtainPythonStrategy)
+    createProjectAndSdk(projectPath, confirmInstallation = confirmInstallation, systemPythonService = systemPythonService)
   }.mapResult { (project, sdk) ->
     Result.Success(scopeProvider(project).launch {
       withBackgroundProgress(project, PyCharmCommunityCustomizationBundle.message("misc.project.filling.file")) {
@@ -138,13 +135,14 @@ private suspend fun generateFile(where: Path, templateFileName: TemplateFileName
 
 /**
  * Creates a project with one module in [projectPath] and sdk using the highest python.
- * Pythons are searched in a system ([findPythonsOnSystem]) or provided explicitly (depends on [obtainPythonStrategy]).
- * In former case if no python were found, we [installLatestPython] (not in a latter case, though).
+ * Pythons are searched using [systemPythonService].
+ * If no Python found and [confirmInstallation] we install it using [SystemPythonService.getInstaller]
  */
 private suspend fun createProjectAndSdk(
   projectPath: Path,
-  obtainPythonStrategy: ObtainPythonStrategy,
-): Result<Pair<Project, Sdk>, LocalizedErrorString> {
+  confirmInstallation: suspend () -> Boolean,
+  systemPythonService: SystemPythonService,
+): Result<Pair<Project, Sdk>, @Nls String> {
   val projectPathVfs = createProjectDir(projectPath).getOr { return it }
   val venvDirPath = projectPath.resolve(VirtualEnvReader.DEFAULT_VIRTUALENV_DIRNAME)
 
@@ -153,15 +151,11 @@ private suspend fun createProjectAndSdk(
 
   if (venvPython == null) {
     // No venv found -- find system python to create venv
-    val systemPythonBinary = getSystemPython(obtainPythonStrategy).getOr { return it }
+    val systemPythonBinary = getSystemPython(confirmInstallation = confirmInstallation, systemPythonService).getOr { return it }
     logger.info("no venv in $venvDirPath, using system python $systemPythonBinary to create venv")
     // create venv using this system python
-    createVenv(systemPythonBinary, venvDirPath = venvDirPath, projectPath = projectPath).getOr { return it }
-    // try to find venv again
-    venvPython = findExistingVenv(venvDirPath)
-    if (venvPython == null) {
-      // No venv even after venv installation
-      return Result.failure(LocalizedErrorString(PyCharmCommunityCustomizationBundle.message("misc.project.error.create.venv", "", venvDirPath)))
+    venvPython = createVenv(systemPythonBinary, venvDir = venvDirPath).getOr {
+      return Result.failure(PyCharmCommunityCustomizationBundle.message("misc.project.error.create.venv", it.error.message, venvDirPath))
     }
   }
 
@@ -196,50 +190,40 @@ private suspend fun findExistingVenv(
   }
 }
 
-private suspend fun createVenv(systemPython: PythonBinary, venvDirPath: Path, projectPath: Path): Result<Unit, LocalizedErrorString> =
-  try {
-    createVirtualenv(systemPython, venvDirPath, projectPath)
-    Result.success(Unit)
-  }
-  catch (e: ExecutionException) {
-    Result.failure(LocalizedErrorString(PyCharmCommunityCustomizationBundle.message("misc.project.error.create.venv", e.toString(), venvDirPath)))
-  }
 
-private suspend fun getSystemPython(obtainPythonStrategy: ObtainPythonStrategy): Result<PythonBinary, LocalizedErrorString> {
+private suspend fun getSystemPython(confirmInstallation: suspend () -> Boolean, pythonService: SystemPythonService): Result<PythonBinary, @Nls String> {
+
+
   // First, find the latest python according to strategy
-  var systemPythonBinary = filterLatestUsablePython(
-    when (obtainPythonStrategy) {
-      is UseThesePythons -> obtainPythonStrategy.pythons
-      is FindOnSystem -> findPythonsOnSystem()
-    })
+  var systemPythonBinary = pythonService.findSystemPythons().minByOrNull { it.languageLevel }
 
   // No python found?
   if (systemPythonBinary == null) {
-    // Only install if pythons weren't provided explicitly, see fun doc
-    when (obtainPythonStrategy) {
-      is UseThesePythons -> Unit
-      is FindOnSystem -> {
-        // User is ok with installation
-        if (obtainPythonStrategy.confirmInstallation()) {
-          // Install
-          installLatestPython().onFailure { exception ->
-            // Failed to install python?
-            logger.warn("Python installation failed", exception)
-            return Result.Failure(LocalizedErrorString(
-              PyCharmCommunityCustomizationBundle.message("misc.project.error.install.python", exception.toString())))
-          }
+    // Install it
+    val installer = pythonService.getInstaller()
+                    ?: return Result.failure(PyCharmCommunityCustomizationBundle.message("misc.project.error.install.not.supported"))
+    if (confirmInstallation()) {
+      // Install
+      when (val r = installer.installLatestPython()) {
+        is Result.Failure -> {
+          val error = r.error
+          logger.warn("Python installation failed $error")
+          return Result.Failure(
+            PyCharmCommunityCustomizationBundle.message("misc.project.error.install.python", error))
+        }
+        is Result.Success -> {
           // Find the latest python again, after installation
-          systemPythonBinary = filterLatestUsablePython(findPythonsOnSystem())
+          systemPythonBinary = pythonService.findSystemPythons().minByOrNull { it.languageLevel }
         }
       }
     }
   }
 
   return if (systemPythonBinary == null) {
-    Result.Failure(LocalizedErrorString(PyCharmCommunityCustomizationBundle.message("misc.project.error.all.pythons.bad")))
+    Result.Failure(PyCharmCommunityCustomizationBundle.message("misc.project.error.all.pythons.bad"))
   }
   else {
-    Result.Success(systemPythonBinary)
+    Result.Success(systemPythonBinary.pythonBinary)
   }
 }
 
@@ -271,14 +255,14 @@ private suspend fun getSdk(pythonPath: PythonBinary, project: Project): Sdk =
 /**
  * Creating a project != creating a directory for it, but we need a directory to create a template file
  */
-private suspend fun createProjectDir(projectPath: Path): Result<VirtualFile, LocalizedErrorString> = withContext(Dispatchers.IO) {
+private suspend fun createProjectDir(projectPath: Path): Result<VirtualFile, @Nls String> = withContext(Dispatchers.IO) {
   try {
     projectPath.createDirectories()
   }
   catch (e: IOException) {
     thisLogger().warn("Couldn't create $projectPath", e)
-    return@withContext Result.Failure(LocalizedErrorString(
-      PyCharmCommunityCustomizationBundle.message("misc.project.error.create.dir", projectPath, e.localizedMessage)))
+    return@withContext Result.Failure(
+      PyCharmCommunityCustomizationBundle.message("misc.project.error.create.dir", projectPath, e.localizedMessage))
   }
   val projectPathVfs = VfsUtil.findFile(projectPath, true)
                        ?: error("Can't find VFS $projectPath")
@@ -295,51 +279,4 @@ private suspend fun ensureModuleHasRoot(module: Module, root: VirtualFile): Unit
       commit()
     }
   }
-}
-
-/**
- * Looks for system pythons. Returns flavor and all its pythons.
- */
-private fun findPythonsOnSystem(): Collection<PythonBinary> =
-  // TODO: PythonInterpreterService: detect valid system pythons
-  PythonSdkFlavor.getApplicableFlavors(false) //system=platform dependent (exclude venv)
-    .flatMap { flavor ->
-      flavor.dropCaches()
-      flavor.suggestLocalHomePaths(null, null)
-    }
-
-suspend fun installLatestPython(): kotlin.Result<Unit> = withContext(Dispatchers.IO) {
-  val pythonToInstall = PySdkToInstallManager.getAvailableVersionsToInstall().toSortedMap().values.last()
-  return@withContext withContext(Dispatchers.EDT) {
-    installBinary(pythonToInstall, null) {
-    }
-  }
-}
-
-/**
- * Looks for the latest python among [pythons]: each flavor might have one or more pythons.
- * Broken pythons are filtered out. If `null` is returned, no python found, you probably need to [installLatestPython]
- */
-private suspend fun filterLatestUsablePython(pythons: Collection<Path>): PythonBinary? {
-  var current: Pair<LanguageLevel, Path>? = null
-  for (pythonPath in pythons) {
-    val languageLevel = when (val r = pythonPath.validatePythonAndGetVersion()) {
-      is Result.Failure -> {
-        fileLogger().warn("Skipping python ${r.error}")
-        continue
-      }
-      is Result.Success -> r.result
-    }
-
-    // Highest possible, no need to search further
-    if (languageLevel == LanguageLevel.getLatest()) {
-      return pythonPath
-    }
-    if (current == null || current.first < languageLevel) {
-      // More recent Python found!
-      current = Pair(languageLevel, pythonPath)
-    }
-  }
-
-  return current?.second
 }

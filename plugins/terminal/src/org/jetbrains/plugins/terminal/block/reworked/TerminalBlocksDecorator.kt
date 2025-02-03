@@ -2,28 +2,26 @@
 package org.jetbrains.plugins.terminal.block.reworked
 
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.editor.EditorCustomElementRenderer
 import com.intellij.openapi.editor.Inlay
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.util.Disposer
-import com.intellij.util.ui.JBUI
+import com.intellij.util.asDisposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.plugins.terminal.block.BlockTerminalOptions
+import org.jetbrains.plugins.terminal.block.BlockTerminalOptionsListener
 import org.jetbrains.plugins.terminal.block.ui.*
 import kotlin.math.max
 
 internal class TerminalBlocksDecorator(
-  private val outputModel: TerminalOutputModel,
+  private val editor: EditorEx,
   private val blocksModel: TerminalBlocksModel,
   coroutineScope: CoroutineScope,
 ) {
-  private val editor: EditorEx
-    get() = outputModel.editor
-
   /** Block ID to decoration */
   private val decorations: MutableMap<Int, BlockDecoration> = HashMap()
 
@@ -35,9 +33,23 @@ internal class TerminalBlocksDecorator(
         }
       }
     }
+
+    BlockTerminalOptions.getInstance().addListener(coroutineScope.asDisposable(), object : BlockTerminalOptionsListener {
+      override fun showSeparatorsBetweenBlocksChanged(shouldShow: Boolean) {
+        if (shouldShow) {
+          createDecorationsForAllBlocks()
+        }
+        else disposeAllDecorations()
+      }
+    })
   }
 
   private fun handleBlocksModelEvent(event: TerminalBlocksModelEvent) {
+    if (!BlockTerminalOptions.getInstance().showSeparatorsBetweenBlocks) {
+      // Do not add decorations if it is disabled in the settings.
+      return
+    }
+
     val block = event.block
     when (event) {
       is TerminalBlockStartedEvent -> {
@@ -61,18 +73,17 @@ internal class TerminalBlocksDecorator(
     val endOffset = block.endOffset
 
     val topInlay = createTopInlay(block)
-    val bottomInlay = createBottomInlay(endOffset)
 
     val bgHighlighter = createBackgroundHighlighter(startOffset, endOffset)
     bgHighlighter.isGreedyToRight = true
 
     val cornersHighlighter = createCornersHighlighter(startOffset, endOffset).also {
       it.isGreedyToRight = true
-      it.customRenderer = TerminalPromptSeparatorRenderer()
+      it.setCustomRenderer(TerminalPromptSeparatorRenderer())
       it.lineMarkerRenderer = TerminalPromptLeftAreaRenderer()
     }
 
-    return BlockDecoration(block.id, bgHighlighter, cornersHighlighter, topInlay, bottomInlay)
+    return BlockDecoration(block.id, bgHighlighter, cornersHighlighter, topInlay, bottomInlay = null)
   }
 
   private fun createFinishedBlockDecoration(block: TerminalOutputBlock): BlockDecoration {
@@ -87,7 +98,7 @@ internal class TerminalBlocksDecorator(
     val bgHighlighter = createBackgroundHighlighter(startOffset, endOffset)
 
     val cornersHighlighter = createCornersHighlighter(startOffset, endOffset)
-    cornersHighlighter.customRenderer = BlockSeparatorRenderer()
+    cornersHighlighter.setCustomRenderer(BlockSeparatorRenderer())
     if (block.exitCode != null && block.exitCode != 0) {
       cornersHighlighter.lineMarkerRenderer = TerminalBlockLeftErrorRenderer()
     }
@@ -95,25 +106,51 @@ internal class TerminalBlocksDecorator(
     return BlockDecoration(block.id, bgHighlighter, cornersHighlighter, topInlay, bottomInlay)
   }
 
+  private fun createDecorationsForAllBlocks() {
+    check(decorations.isEmpty()) { "Decorations map should be empty" }
+
+    val blocks = blocksModel.blocks
+    for (ind in blocks.indices) {
+      val block = blocks[ind]
+      decorations[block.id] = if (ind < blocks.lastIndex) {
+        createFinishedBlockDecoration(block)
+      }
+      else {
+        createPromptDecoration(block)
+      }
+    }
+  }
+
+  private fun disposeAllDecorations() {
+    for (decoration in decorations.values) {
+      disposeDecoration(decoration)
+    }
+    decorations.clear()
+  }
+
   private fun disposeDecoration(decoration: BlockDecoration) {
     decoration.backgroundHighlighter.dispose()
     decoration.cornersHighlighter.dispose()
     Disposer.dispose(decoration.topInlay)
-    Disposer.dispose(decoration.bottomInlay)
+    decoration.bottomInlay?.let { Disposer.dispose(it) }
   }
 
   private fun createTopInlay(block: TerminalOutputBlock): Inlay<*> {
-    val topRenderer = EmptyWidthInlayRenderer {
-      // Reserve the place for the separator if it is not a first block
-      val separatorHeight = if (blocksModel.blocks.firstOrNull()?.id == block.id) 0 else 1
-      TerminalUi.blockTopInset + separatorHeight
+    val topRenderer = VerticalSpaceInlayRenderer {
+      val isFirstBlock = blocksModel.blocks.firstOrNull()?.id == block.id
+      if (isFirstBlock) {
+        0  // Do not add space if it is the first block
+      }
+      else {
+        TerminalUi.blockTopInset + 1 // Add 1 to reserve the place for the separator
+      }
     }
-    return editor.inlayModel.addBlockElement(block.startOffset, false, true, 1, topRenderer)!!
+    return editor.inlayModel.addBlockElement(block.startOffset, false, true, TerminalUi.blockTopInlayPriority, topRenderer)!!
   }
 
   private fun createBottomInlay(offset: Int): Inlay<*> {
-    val bottomRenderer = EmptyWidthInlayRenderer(TerminalUi.blockBottomInset)
-    return editor.inlayModel.addBlockElement(offset, true, false, 0, bottomRenderer)!!
+    val bottomRenderer = VerticalSpaceInlayRenderer(TerminalUi.blockBottomInset)
+    return editor.inlayModel.addBlockElement(offset, true, false, TerminalUi.blockBottomInlayPriority, bottomRenderer)!!
   }
 
   private fun createBackgroundHighlighter(startOffset: Int, endOffset: Int): RangeHighlighter {
@@ -141,15 +178,6 @@ internal class TerminalBlocksDecorator(
     val backgroundHighlighter: RangeHighlighter,
     val cornersHighlighter: RangeHighlighter,
     val topInlay: Inlay<*>,
-    val bottomInlay: Inlay<*>,
+    val bottomInlay: Inlay<*>?,
   )
-
-  /** Inlay to just create the space between lines */
-  private class EmptyWidthInlayRenderer(private val heightSupplier: () -> Int) : EditorCustomElementRenderer {
-    constructor(height: Int) : this({ height })
-
-    override fun calcWidthInPixels(inlay: Inlay<*>): Int = 0
-
-    override fun calcHeightInPixels(inlay: Inlay<*>): Int = JBUI.scale(heightSupplier())
-  }
 }

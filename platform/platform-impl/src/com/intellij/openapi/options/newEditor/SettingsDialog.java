@@ -14,8 +14,6 @@ import com.intellij.openapi.actionSystem.UiCompatibleDataProvider;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurableGroup;
-import com.intellij.openapi.options.advanced.AdvancedSettings;
-import com.intellij.openapi.options.newEditor.settings.SettingsEditorAdvancedSettings;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.Disposer;
@@ -69,13 +67,11 @@ public class SettingsDialog extends DialogWrapper implements UiCompatibleDataPro
     init(configurable, null);
   }
 
-  public SettingsDialog(@NotNull Project project, @NotNull List<? extends ConfigurableGroup> groups, @Nullable Configurable configurable, @Nullable String filter) {
-    super(project, true);
-    dimensionServiceKey = DIMENSION_KEY;
-    editor = new SettingsEditor(myDisposable, project, groups, configurable, filter, this::treeViewFactory, this::spotlightPainterFactory);
-    isApplyButtonNeeded = true;
-    isResetButtonNeeded = false;
-    init(null, project);
+  public SettingsDialog(@NotNull Project project,
+                        @NotNull List<? extends ConfigurableGroup> groups,
+                        @Nullable Configurable configurable,
+                        @Nullable String filter) {
+    this(project, null, groups, configurable, filter);
   }
 
   public SettingsDialog(@NotNull Project project,
@@ -83,7 +79,7 @@ public class SettingsDialog extends DialogWrapper implements UiCompatibleDataPro
                         @NotNull List<? extends ConfigurableGroup> groups,
                         @Nullable Configurable configurable,
                         @Nullable String filter) {
-    super(project, parentComponent, true, IdeModalityType.IDE);
+    super(project, parentComponent, true, IdeModalityType.IDE, true, false);
     dimensionServiceKey = DIMENSION_KEY;
     editor = new SettingsEditor(myDisposable, project, groups, configurable, filter, this::treeViewFactory, this::spotlightPainterFactory);
     isApplyButtonNeeded = true;
@@ -182,8 +178,6 @@ public class SettingsDialog extends DialogWrapper implements UiCompatibleDataPro
 
   @Override
   protected Action @NotNull [] createActions() {
-    if (SettingsEditorAdvancedSettings.INSTANCE.getInstantSettingsApply())
-      return new Action[0];
     ArrayList<Action> actions = new ArrayList<>();
     actions.add(getOKAction());
     actions.add(getCancelAction());

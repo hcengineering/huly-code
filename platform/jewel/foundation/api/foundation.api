@@ -835,8 +835,9 @@ public final class org/jetbrains/jewel/foundation/modifier/ModifierExtensionsKt 
 	public static final fun thenIf (Landroidx/compose/ui/Modifier;ZLkotlin/jvm/functions/Function1;)Landroidx/compose/ui/Modifier;
 }
 
-public final class org/jetbrains/jewel/foundation/modifier/OnHoverModifierKt {
+public final class org/jetbrains/jewel/foundation/modifier/PointerModifiersKt {
 	public static final fun onHover (Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;)Landroidx/compose/ui/Modifier;
+	public static final fun onMove (Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;)Landroidx/compose/ui/Modifier;
 }
 
 public final class org/jetbrains/jewel/foundation/state/CommonStateBitMask {
@@ -1023,3 +1024,4 @@ public final class org/jetbrains/jewel/foundation/util/JewelLogger$Companion {
 	public final fun getInstance (Ljava/lang/Class;)Lorg/jetbrains/jewel/foundation/util/JewelLogger;
 	public final fun getInstance (Ljava/lang/String;)Lorg/jetbrains/jewel/foundation/util/JewelLogger;
 }
+

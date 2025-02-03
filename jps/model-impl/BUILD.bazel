@@ -3,8 +3,8 @@ load("@rules_jvm//:jvm.bzl", "jvm_library", "jvm_resources")
 
 jvm_resources(
   name = "model-impl_resources",
-  files = glob(["src/META-INF/**/*"]),
-  strip_prefix = "src"
+  files = glob(["resources/**/*"]),
+  strip_prefix = "resources"
 )
 
 jvm_library(
@@ -40,8 +40,10 @@ jvm_library(
     "@lib//:kotlin-stdlib",
     "//platform/testFramework",
     "//platform/testFramework:testFramework_test_lib",
+    "@lib//:junit4",
     "@lib//:assert_j",
     "//platform/testFramework/extensions:testExtensions",
+    "//jps/model-test-framework:model-testFramework",
   ]
 )
 

@@ -1,19 +1,14 @@
 package org.jetbrains.bazel.jvm.jps.state
 
 internal enum class TargetConfigurationDigestProperty(@JvmField val description: String) {
+  TOOL_VERSION("bazel builder version or storage version"),
   COMPILER("kotlinc/javac configuration"),
   DEPENDENCY_PATH_LIST("dependency path list"),
   DEPENDENCY_DIGEST_LIST("dependency digest list");
-
-  companion object {
-    val VERSION = versionDigest<TargetConfigurationDigestProperty>()
-  }
 }
 
 private fun emptyContainer(): LongArray {
-  val list = LongArray(TargetConfigurationDigestProperty.entries.size + 1)
-  list[list.lastIndex] = TargetConfigurationDigestProperty.VERSION
-  return list
+  return LongArray(TargetConfigurationDigestProperty.entries.size)
 }
 
 @JvmInline
@@ -26,11 +21,5 @@ internal value class TargetConfigurationDigestContainer(
     list[kind.ordinal] = hash
   }
 
-  fun asArray(): LongArray = list.copyOf()
-
-  val version: Long
-    get() = list.last()
-
-  val rawSize: Int
-    get() = list.size
+  fun asString(): Array<String> = Array(list.size) { java.lang.Long.toUnsignedString(list[it], Character.MAX_RADIX) }
 }

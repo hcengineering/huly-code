@@ -3,22 +3,20 @@ package org.jetbrains.plugins.terminal.block.reworked
 
 import com.google.common.base.Ascii
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.terminal.JBTerminalSystemSettingsProviderBase
 import com.jediterm.terminal.emulator.mouse.MouseButtonCodes
 import com.jediterm.terminal.emulator.mouse.MouseButtonModifierFlags
 import com.jediterm.terminal.emulator.mouse.MouseFormat
 import com.jediterm.terminal.emulator.mouse.MouseMode
 import org.jetbrains.plugins.terminal.block.output.TerminalEventsHandler
-import org.jetbrains.plugins.terminal.block.reworked.session.TerminalSession
-import org.jetbrains.plugins.terminal.block.reworked.session.TerminalWriteBytesEvent
+import org.jetbrains.plugins.terminal.block.reworked.session.TerminalInput
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.CompletableFuture
 import javax.swing.SwingUtilities
 import kotlin.math.abs
 
@@ -29,9 +27,9 @@ import kotlin.math.abs
  */
 internal open class TerminalEventsHandlerImpl(
   private val sessionModel: TerminalSessionModel,
-  private val outputModel: TerminalOutputModel,
+  private val editor: EditorEx,
   private val encodingManager: TerminalKeyEncodingManager,
-  private val terminalSessionFuture: CompletableFuture<TerminalSession>,
+  private val terminalInput: TerminalInput,
   private val settings: JBTerminalSystemSettingsProviderBase,
   private val scrollingModel: TerminalOutputScrollingModel?,
 ) : TerminalEventsHandler {
@@ -42,7 +40,7 @@ internal open class TerminalEventsHandlerImpl(
     get() = sessionModel.terminalState.value
 
   override fun keyTyped(e: KeyEvent) {
-    val selectionModel = outputModel.editor.selectionModel
+    val selectionModel = editor.selectionModel
     if (selectionModel.hasSelection()) {
       selectionModel.removeSelection()
     }
@@ -81,17 +79,17 @@ internal open class TerminalEventsHandlerImpl(
       // numLock does not change the code sent by keypad VK_DELETE,
       // although it send the char '.'
       if (keyCode == KeyEvent.VK_DELETE && keyChar == '.') {
-        sendUserInput(byteArrayOf('.'.code.toByte()))
+        terminalInput.sendBytes(byteArrayOf('.'.code.toByte()))
         return true
       }
       // CTRL + Space is not handled in KeyEvent; handle it manually
       if (keyChar == ' ' && e.modifiersEx and InputEvent.CTRL_DOWN_MASK != 0) {
-        sendUserInput(byteArrayOf(Ascii.NUL))
+        terminalInput.sendBytes(byteArrayOf(Ascii.NUL))
         return true
       }
       val code = encodingManager.getCode(keyCode, e.modifiers)
       if (code != null) {
-        sendUserInput(code)
+        terminalInput.sendBytes(code)
         // TODO
         //if (settings.scrollToBottomOnTyping() && TerminalPanel.isCodeThatScrolls(keyCode)) {
         //  scrollToBottom()
@@ -103,7 +101,7 @@ internal open class TerminalEventsHandlerImpl(
         //  Option+f produces e.getKeyChar()='ƒ' (402), but 'f' (102) is needed.
         //  Option+b produces e.getKeyChar()='∫' (8747), but 'b' (98) is needed.
         val string = String(charArrayOf(Ascii.ESC.toInt().toChar(), simpleMapKeyCodeToChar(e)))
-        sendUserInput(string)
+        terminalInput.sendString(string)
         return true
       }
       if (Character.isISOControl(keyChar)) { // keys filtered out here will be processed in processTerminalKeyTyped
@@ -125,7 +123,7 @@ internal open class TerminalEventsHandlerImpl(
       // Command + backtick is a short-cut on Mac OSX, so we shouldn't type anything
       return false
     }
-    sendUserInput(keyChar.toString())
+    terminalInput.sendString(keyChar.toString())
     // TODO
     //if (settings.scrollToBottomOnTyping()) {
     //scrollToBottom()
@@ -161,7 +159,7 @@ internal open class TerminalEventsHandlerImpl(
           code = code or MouseButtonModifierFlags.MOUSE_BUTTON_SCROLL_FLAG
         }
         code = applyModifierKeys(event, code)
-        sendUserInput(mouseReport(code, x + 1, y + 1))
+        terminalInput.sendBytes(mouseReport(code, x + 1, y + 1))
       }
     }
   }
@@ -179,7 +177,7 @@ internal open class TerminalEventsHandlerImpl(
           MouseButtonCodes.RELEASE
         }
         code = applyModifierKeys(event, code)
-        sendUserInput(mouseReport(code, x + 1, y + 1))
+        terminalInput.sendBytes(mouseReport(code, x + 1, y + 1))
       }
     }
     lastMotionReport = null
@@ -190,7 +188,7 @@ internal open class TerminalEventsHandlerImpl(
       return
     }
     if (shouldSendMouseData(MouseMode.MOUSE_REPORTING_ALL_MOTION)) {
-      sendUserInput(mouseReport(MouseButtonCodes.RELEASE, x + 1, y + 1))
+      terminalInput.sendBytes(mouseReport(MouseButtonCodes.RELEASE, x + 1, y + 1))
     }
     lastMotionReport = Point(x, y)
   }
@@ -205,7 +203,7 @@ internal open class TerminalEventsHandlerImpl(
       if (code != MouseButtonCodes.NONE) {
         code = code or MouseButtonModifierFlags.MOUSE_BUTTON_MOTION_FLAG
         code = applyModifierKeys(event, code)
-        sendUserInput(mouseReport(code, x + 1, y + 1))
+        terminalInput.sendBytes(mouseReport(code, x + 1, y + 1))
       }
     }
     lastMotionReport = Point(x, y)
@@ -213,7 +211,7 @@ internal open class TerminalEventsHandlerImpl(
 
   override fun mouseWheelMoved(x: Int, y: Int, event: MouseWheelEvent) {
     if (settings.enableMouseReporting() && terminalState.mouseMode != MouseMode.MOUSE_REPORTING_NONE && !event.isShiftDown) {
-      outputModel.editor.selectionModel.removeSelection()
+      editor.selectionModel.removeSelection()
       // mousePressed() handles mouse wheel using SCROLLDOWN and SCROLLUP buttons
       mousePressed(x, y, event)
     }
@@ -226,7 +224,7 @@ internal open class TerminalEventsHandlerImpl(
         encodingManager.getCode(KeyEvent.VK_DOWN, 0)
       }
       for (i in 0 until abs(event.unitsToScroll)) {
-        sendUserInput(arrowKeys!!)
+        terminalInput.sendBytes(arrowKeys!!)
       }
       event.consume()
     }
@@ -300,17 +298,6 @@ internal open class TerminalEventsHandlerImpl(
     }
     LOG.debug(mouseFormat.toString() + " (" + charset + ") report : " + button + ", " + x + "x" + y + " = " + command)
     return command.toByteArray(Charset.forName(charset))
-  }
-
-  private fun sendUserInput(data: String) {
-    // TODO: should there always be UTF8?
-    sendUserInput(data.toByteArray(StandardCharsets.UTF_8))
-  }
-
-  private fun sendUserInput(bytes: ByteArray) {
-    terminalSessionFuture.thenAccept { session ->
-      session?.inputChannel?.trySend(TerminalWriteBytesEvent(bytes))
-    }
   }
 
   companion object {

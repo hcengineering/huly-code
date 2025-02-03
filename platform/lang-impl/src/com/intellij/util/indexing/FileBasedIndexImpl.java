@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.util.indexing;
 
 import com.google.common.collect.Iterators;
@@ -110,6 +110,7 @@ import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+@Internal
 public final class FileBasedIndexImpl extends FileBasedIndexEx {
   private static final ThreadLocal<VirtualFile> ourIndexedFile = new ThreadLocal<>();
   private static final ThreadLocal<IndexWritingFile> ourWritingIndexFile = new ThreadLocal<>();
@@ -178,6 +179,9 @@ public final class FileBasedIndexImpl extends FileBasedIndexEx {
     ReadWriteLock lock = new ReentrantReadWriteLock();
     myReadLock = lock.readLock();
     myWriteLock = lock.writeLock();
+
+    // we preload this service, as it may be attempted to initialize latre
+    FileTypeManager.getInstance();
 
     myFileDocumentManager = FileDocumentManager.getInstance();
     myIsUnitTestMode = ApplicationManager.getApplication().isUnitTestMode();
@@ -1239,6 +1243,11 @@ public final class FileBasedIndexImpl extends FileBasedIndexEx {
     }
   };
 
+  @TestOnly
+  public boolean runUpdate(boolean inMemory, StorageUpdate update) {
+    return myStorageBufferingHandler.runUpdate(inMemory, update);
+  }
+
   @Internal
   @Override
   public void runCleanupAction(@NotNull Runnable cleanupAction) {
@@ -1608,7 +1617,8 @@ public final class FileBasedIndexImpl extends FileBasedIndexEx {
   }
 
   @Internal
-  @Nullable("null in case index update is not needed") <FileIndexMetaData> SingleIndexValueApplier<FileIndexMetaData> createSingleIndexValueApplier(
+  @Nullable("null in case index update is not needed")
+  <FileIndexMetaData> SingleIndexValueApplier<FileIndexMetaData> createSingleIndexValueApplier(
     @NotNull ID<?, ?> indexId,
     @NotNull VirtualFile file,
     int inputId,
@@ -1763,7 +1773,7 @@ public final class FileBasedIndexImpl extends FileBasedIndexEx {
 
   private final class VirtualFileUpdateTask extends UpdateTask<FileIndexingRequest> {
     @Override
-    void doProcess(FileIndexingRequest item, Project project) {
+    public void doProcess(FileIndexingRequest item, Project project) {
       // snapshot at the beginning: if file changes while being processed, we can detect this on the following scanning
       IndexingRequestToken indexingRequest = project.getService(ProjectIndexingDependenciesService.class).getLatestIndexingRequestToken();
       var stamp = indexingRequest.getFileIndexingStamp(item.getFile());
@@ -2073,7 +2083,7 @@ public final class FileBasedIndexImpl extends FileBasedIndexEx {
       return f -> true;
     }
 
-    DumbModeAccessType dumbModeAccessType = getCurrentDumbModeAccessType();
+    DumbModeAccessType dumbModeAccessType = getCurrentDumbModeAccessType(project);
     if (dumbModeAccessType == null) {
       //throw new IllegalStateException("index access is not allowed in dumb mode");
       return __ -> true;

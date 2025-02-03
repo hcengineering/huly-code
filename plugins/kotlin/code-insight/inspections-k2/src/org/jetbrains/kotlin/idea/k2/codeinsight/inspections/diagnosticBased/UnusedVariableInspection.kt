@@ -1,4 +1,4 @@
-// Copyright 2000-2023 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 package org.jetbrains.kotlin.idea.k2.codeinsight.inspections.diagnosticBased
 
@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.analysis.api.KaSession
 import org.jetbrains.kotlin.analysis.api.fir.diagnostics.KaFirDiagnostic
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.asUnit
-import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinDiagnosticBasedInspectionBase
+import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinKtDiagnosticBasedInspectionBase
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinModCommandQuickFix
 import org.jetbrains.kotlin.idea.codeinsight.utils.isExplicitTypeReferenceNeededForTypeInference
 import org.jetbrains.kotlin.idea.codeinsight.utils.removeProperty
@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.psi.*
 import kotlin.reflect.KClass
 
 internal class UnusedVariableInspection :
-    KotlinDiagnosticBasedInspectionBase<KtNamedDeclaration, KaFirDiagnostic.UnusedVariable, Unit>() {
+    KotlinKtDiagnosticBasedInspectionBase<KtNamedDeclaration, KaFirDiagnostic.UnusedVariable, Unit>() {
 
     override fun buildVisitor(
         holder: ProblemsHolder,
@@ -62,13 +62,13 @@ internal class UnusedVariableInspection :
             .asUnit
     }
 
-    override fun createQuickFix(
+    override fun createQuickFixes(
         element: KtNamedDeclaration,
         context: Unit,
-    ): KotlinModCommandQuickFix<KtNamedDeclaration> {
+    ): Array<KotlinModCommandQuickFix<KtNamedDeclaration>> {
         val smartPointer = element.createSmartPointer()
 
-        return object : KotlinModCommandQuickFix<KtNamedDeclaration>() {
+        return arrayOf(object : KotlinModCommandQuickFix<KtNamedDeclaration>() {
 
             override fun getFamilyName(): String =
                 KotlinBundle.message("remove.variable")
@@ -89,6 +89,6 @@ internal class UnusedVariableInspection :
                     removeProperty(element)
                 }
             }
-        }
+        })
     }
 }

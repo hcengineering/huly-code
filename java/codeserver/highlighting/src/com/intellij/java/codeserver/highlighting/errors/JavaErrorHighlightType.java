@@ -18,5 +18,16 @@ public enum JavaErrorHighlightType {
   /**
    * Error highlighting for unresolved/unknown reference
    */
-  WRONG_REF
+  WRONG_REF,
+
+  /**
+   * Unresolved/unknown reference in incomplete project mode 
+   * (reference that potentially can be resolved when full project is loaded)
+   */
+  PENDING_REF,
+
+  /**
+   * Error highlighting for unhandled exception
+   */
+  UNHANDLED_EXCEPTION
 }

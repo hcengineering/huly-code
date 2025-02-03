@@ -30,6 +30,7 @@ import com.intellij.xdebugger.impl.ui.tree.ValueMarkup;
 import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree;
 import com.intellij.xdebugger.impl.ui.tree.XRendererDecoratorPresentation;
 import com.intellij.xdebugger.settings.XDebuggerSettingsManager;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +41,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValueNodeEx, XCompositeNode, XValueNodePresentationConfigurator.ConfigurableXValueNode, RestorableStateNode {
   public static final Comparator<XValueNodeImpl> COMPARATOR = (o1, o2) -> StringUtil.naturalCompare(o1.getName(), o2.getName());
@@ -52,6 +54,7 @@ public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValu
   private final @NotNull List<@NotNull XDebuggerTreeNodeHyperlink> myAdditionalHyperLinks = new ArrayList<>();
   private boolean myChanged;
   private XValuePresentation myValuePresentation;
+  private @Nullable Icon myInlayIcon;
 
   //todo annotate 'name' with @NotNull
   public XValueNodeImpl(XDebuggerTree tree, @Nullable XDebuggerTreeNode parent, String name, @NotNull XValue value) {
@@ -102,6 +105,20 @@ public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValu
 
   protected boolean shouldUpdateInlineDebuggerData() {
     return XDebuggerSettingsManager.getInstance().getDataViewSettings().isShowValuesInline();
+  }
+
+  @ApiStatus.Internal
+  protected boolean isChanged() {
+    return myChanged;
+  }
+
+  public void setInlayIcon(@Nullable Icon icon) {
+    myInlayIcon = icon;
+  }
+
+  @Nullable
+  public Icon getInlayIcon() {
+    return myInlayIcon;
   }
 
   private void updateInlineDebuggerData() {
@@ -161,6 +178,9 @@ public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValu
 
   public void addAdditionalHyperlink(@NotNull XDebuggerTreeNodeHyperlink link) {
     invokeNodeUpdate(() -> {
+      if (hasLinks()) {
+        return;
+      }
       myAdditionalHyperLinks.add(link);
       fireNodeChanged();
     });
@@ -170,6 +190,10 @@ public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValu
     invokeNodeUpdate(() -> {
       myAdditionalHyperLinks.clear();
     });
+  }
+
+  public boolean hasLinks() {
+    return myFullValueEvaluator != null && myFullValueEvaluator.isEnabled() || !myAdditionalHyperLinks.isEmpty();
   }
 
   @Override
@@ -197,7 +221,7 @@ public class XValueNodeImpl extends XValueContainerNode<XValue> implements XValu
   private void appendName() {
     if (!StringUtil.isEmpty(myName)) {
       XCustomizableTextRenderer renderer = createTextRenderer(myText, myValuePresentation);
-      SimpleTextAttributes attributes = myChanged ? XDebuggerUIConstants.CHANGED_VALUE_ATTRIBUTES : XDebuggerUIConstants.VALUE_NAME_ATTRIBUTES;
+      SimpleTextAttributes attributes = isChanged() ? XDebuggerUIConstants.CHANGED_VALUE_ATTRIBUTES : XDebuggerUIConstants.VALUE_NAME_ATTRIBUTES;
       XValuePresentationUtil.renderName(myName, MAX_NAME_LENGTH, s -> renderer.renderRaw(s, attributes));
     }
   }

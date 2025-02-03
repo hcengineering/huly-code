@@ -10,8 +10,10 @@ jvm_library(
     "//platform/eel",
     "//platform/util",
     "//platform/core-api:core",
+    "@lib//:kotlinx-coroutines-core",
     "@lib//:kotlin-stdlib",
     "//platform/util/coroutines",
-  ]
+  ],
+  exports = ["//platform/eel"]
 )
 ### auto-generated section `build intellij.platform.eel.provider` end

@@ -1,6 +1,7 @@
 package org.jetbrains.plugins.textmate.bundles;
 
 import com.intellij.openapi.util.io.FileUtilRt;
+import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.textmate.Constants;
@@ -8,9 +9,7 @@ import org.jetbrains.plugins.textmate.language.PreferencesReadUtil;
 import org.jetbrains.plugins.textmate.plist.Plist;
 import org.jetbrains.plugins.textmate.plist.PlistReader;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import static java.util.Collections.emptyList;
@@ -128,8 +127,10 @@ public class Bundle {
    * @deprecated use `TextMateService#readBundle#readPreferences` or `TextMateBundleReader`
    */
   @Deprecated(forRemoval = true)
-  public List<Map.Entry<String, Plist>> loadPreferenceFile(@NotNull File file, @NotNull PlistReader plistReader) throws IOException {
-    return Collections.singletonList(PreferencesReadUtil.retrieveSettingsPlist(plistReader.read(file)));
+  public List<Pair<String, Plist>> loadPreferenceFile(@NotNull File file, @NotNull PlistReader plistReader) throws IOException {
+    try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
+      return Collections.singletonList(PreferencesReadUtil.retrieveSettingsPlist(plistReader.read(in)));
+    }
   }
 
   private static final class BundleFilesFilter implements FileFilter {

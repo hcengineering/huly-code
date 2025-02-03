@@ -32,12 +32,17 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
 
+@Internal
 interface PythonHelpersLocator {
   companion object {
     val LOG: Logger = logger<PythonHelpersLocator>()
     private const val PROPERTY_HELPERS_LOCATION = "idea.python.helpers.path"
-    const val COMMUNITY_HELPERS_MODULE_NAME = "intellij.python.helpers"
+    const val COMMUNITY_HELPERS_MODULE_NAME: String = "intellij.python.helpers"
     private val EP_NAME: ExtensionPointName<PythonHelpersLocator> = ExtensionPointName("com.jetbrains.python.pythonHelpersLocator")
+
+    @TestOnly
+    @Internal
+    val epNameForTests: ExtensionPointName<PythonHelpersLocator> = EP_NAME
 
     /**
      * @return A list of Path objects representing the roots of the Python Helpers.
@@ -98,7 +103,7 @@ interface PythonHelpersLocator {
     @RequiresBackgroundThread
     fun findPathStringInHelpers(@NonNls resourceName: String): String = findPathInHelpers(resourceName)?.absolutePathString() ?: ""
 
-    @Deprecated("Use {@link PythonHelpersLocator#findPathInHelpers}.", ReplaceWith("findPathInHelpers(resourceName)"))
+    @Deprecated("Use {@link PythonHelpersLocator#findPathInHelpers}.", ReplaceWith("findPathInHelpers(resourceName)"), DeprecationLevel.ERROR)
     @JvmStatic
     fun getHelperPath(@NonNls resourceName: String): String = findPathStringInHelpers(resourceName)
   }

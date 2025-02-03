@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.util.ui.update
 
 import com.intellij.concurrency.resetThreadContext
@@ -12,6 +12,7 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.UiNotifyConnector.Companion.doWhenFirstShown
 import com.intellij.util.ui.update.UiNotifyConnector.ContextActivatable.Companion.wrapIfNeeded
 import org.jetbrains.annotations.ApiStatus
+import org.jetbrains.annotations.ApiStatus.Obsolete
 import java.awt.Component
 import java.awt.event.HierarchyEvent
 import java.awt.event.HierarchyListener
@@ -19,6 +20,12 @@ import java.lang.ref.WeakReference
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
+/**
+ * ### Obsolescence notice
+ *
+ * Use [com.intellij.util.ui.launchOnShow]/[com.intellij.util.ui.launchOnceOnShow] instead.
+ */
+@Obsolete
 open class UiNotifyConnector : Disposable, HierarchyListener {
   private val component: WeakReference<Component>
   private var target: Activatable?
@@ -83,6 +90,13 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
   }
 
   companion object {
+
+    /**
+     * ### Obsolescence notice
+     *
+     * Use [com.intellij.util.ui.launchOnShow] instead.
+     */
+    @Obsolete
     @JvmStatic
     fun installOn(component: Component, target: Activatable, deferred: Boolean): UiNotifyConnector {
       val connector = UiNotifyConnector(component, target, deferred, null)
@@ -90,6 +104,12 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
       return connector
     }
 
+    /**
+     * ### Obsolescence notice
+     *
+     * Use [com.intellij.util.ui.launchOnShow] instead.
+     */
+    @Obsolete
     @JvmStatic
     fun installOn(component: Component, target: Activatable): UiNotifyConnector {
       val connector = UiNotifyConnector(component = component, target = target, isDeferred = true, ignored = null)
@@ -97,11 +117,23 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
       return connector
     }
 
+    /**
+     * ### Obsolescence notice
+     *
+     * Use [com.intellij.util.ui.launchOnceOnShow] instead.
+     */
+    @Obsolete
     @JvmStatic
     fun doWhenFirstShown(component: JComponent, runnable: Runnable) {
       doWhenFirstShown(component = component, runnable = runnable, parent = null)
     }
 
+    /**
+     * ### Obsolescence notice
+     *
+     * Use [com.intellij.util.ui.launchOnceOnShow] instead.
+     */
+    @Obsolete
     fun doWhenFirstShown(component: Component, isDeferred: Boolean = true, runnable: () -> Unit) {
       doWhenFirstShown(
         component = component,
@@ -115,6 +147,11 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
       )
     }
 
+    /**
+     * ### Obsolescence notice
+     *
+     * Use [com.intellij.util.ui.launchOnceOnShow] instead.
+     */
     @JvmOverloads
     @JvmStatic
     fun doWhenFirstShown(component: Component, runnable: Runnable, parent: Disposable? = null) {
@@ -143,6 +180,10 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
       }
     }
 
+    /**
+     * Attention! This does not trigger [com.intellij.util.ui.launchOnShow]/[com.intellij.util.ui.launchOnceOnShow].
+     * See IJPL-175524
+     */
     @ApiStatus.Experimental
     fun forceNotifyIsShown(c: Component) {
       for (child in UIUtil.uiTraverser(c)) {
@@ -227,6 +268,12 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
   private val isDisposed: Boolean
     get() = target == null
 
+  /**
+   * ### Obsolescence notice
+   *
+   * Use [com.intellij.util.ui.launchOnceOnShow] instead.
+   */
+  @Obsolete
   class Once : UiNotifyConnector {
     private var isShown = false
     private var isHidden = false
@@ -239,6 +286,13 @@ open class UiNotifyConnector : Disposable, HierarchyListener {
     private constructor(component: Component, target: Activatable, ignored: Any?) : super(component = component, target = target)
 
     companion object {
+
+      /**
+       * ### Obsolescence notice
+       *
+       * Use [com.intellij.util.ui.launchOnceOnShow] instead.
+       */
+      @Obsolete
       @JvmStatic
       fun installOn(component: Component, target: Activatable): Once {
         val once = Once(component = component, target = target, ignored = null)

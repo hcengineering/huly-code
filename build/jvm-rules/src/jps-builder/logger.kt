@@ -5,62 +5,60 @@ package org.jetbrains.bazel.jvm.jps
 import com.intellij.openapi.diagnostic.DefaultLogger
 import com.intellij.openapi.diagnostic.LogLevel
 import com.intellij.openapi.diagnostic.Logger
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
 
+// klogging uses a separate coroutine for log even instead of adding to the channel
 // write to System.err as Bazel expects for worker log
-internal class BazelLogger(private val category: String) : Logger() {
-  private var level = LogLevel.DEBUG
+internal class BazelLogger(category: String, private val span: Span) : Logger() {
+  private val maxLevel = LogLevel.INFO
+  private val sharedAttributes = Attributes.of(AttributeKey.stringKey("category"), category)
 
-  override fun isDebugEnabled(): Boolean = level >= LogLevel.DEBUG
+  override fun isDebugEnabled(): Boolean = maxLevel >= LogLevel.DEBUG
 
-  override fun isTraceEnabled(): Boolean = level >= LogLevel.TRACE
+  override fun isTraceEnabled(): Boolean = maxLevel >= LogLevel.TRACE
 
   override fun trace(message: String) {
-    if (isTraceEnabled()) {
-      System.err.println("TRACE[$category]: $message")
-    }
+    addEvent(LogLevel.TRACE, message, null)
   }
 
   override fun trace(t: Throwable?) {
-    if (t != null && isTraceEnabled()) {
-      System.err.println("TRACE[$category]: ")
-      t.printStackTrace(System.err)
-    }
+    addEvent(LogLevel.TRACE, "", t)
   }
 
   override fun debug(message: String, t: Throwable?) {
-    doPrint(LogLevel.DEBUG, message, t)
+    addEvent(LogLevel.DEBUG, message, t)
   }
 
-  private fun doPrint(level: LogLevel, message: String, t: Throwable?) {
-    if (this.level >= level) {
+  private fun addEvent(level: LogLevel, message: String, t: Throwable?) {
+    if (level > maxLevel) {
       return
     }
 
-    var text = "${level.name}[$category]: $message"
-    if (t != null) {
-      ensureNotControlFlow(t)
-      text += " " + t.stackTraceToString()
+    span.addEvent(message, sharedAttributes)
+    t?.let {
+      span.recordException(it, sharedAttributes)
     }
-    System.err.println(text)
   }
 
   override fun info(message: String, t: Throwable?) {
-    doPrint(LogLevel.INFO, message, t)
+    addEvent(LogLevel.INFO, message, t)
   }
 
   override fun warn(message: String, t: Throwable?) {
-    doPrint(LogLevel.WARNING, message, t)
+    addEvent(LogLevel.WARNING, message, t)
   }
 
-  override fun error(message: String, t: Throwable?, vararg details: String) {
-    var t = t
-    t = ensureNotControlFlow(t)
-    System.err.println("ERROR: " + message + DefaultLogger.detailsToString(*details) + DefaultLogger.attachmentsToString(t))
-    t?.printStackTrace(System.err)
-    throw AssertionError(message, t)
+  override fun error(message: String?, t: Throwable?, vararg details: String) {
+    addEvent(
+      level = LogLevel.ERROR,
+      message = (message ?: "") + DefaultLogger.detailsToString(*details) + DefaultLogger.attachmentsToString(t),
+      t = t,
+    )
   }
 
   override fun setLevel(level: LogLevel) {
-    this.level = level
+    throw UnsupportedOperationException()
   }
 }

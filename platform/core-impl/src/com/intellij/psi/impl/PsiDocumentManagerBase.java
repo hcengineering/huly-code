@@ -1,4 +1,4 @@
-// Copyright 2000-2023 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.psi.impl;
 
 import com.intellij.codeWithMe.ClientId;
@@ -53,7 +53,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class PsiDocumentManagerBase extends PsiDocumentManager implements DocumentListener, Disposable {
-  static final Logger LOG = Logger.getInstance(PsiDocumentManagerBase.class);
+  @ApiStatus.Internal
+  public static final Logger LOG = Logger.getInstance(PsiDocumentManagerBase.class);
   private static final Key<Document> HARD_REF_TO_DOCUMENT = Key.create("HARD_REFERENCE_TO_DOCUMENT");
 
   private boolean isInsideCommitHandler = false; //accessed from EDT only
@@ -62,16 +63,19 @@ public abstract class PsiDocumentManagerBase extends PsiDocumentManager implemen
   private final Map<Object, Runnable> identifiedAllDocumentCommitActions = new LinkedHashMap<>(); //accessed from EDT only
   private final List<Runnable> allDocumentCommitActions = new ArrayList<>(); //accessed from EDT only
 
-  final Project myProject;
+  @ApiStatus.Internal
+  public final Project myProject;
   private final PsiManager myPsiManager;
   private final DocumentCommitProcessor myDocumentCommitProcessor;
 
-  final Set<Document> myUncommittedDocuments = Collections.newSetFromMap(CollectionFactory.createConcurrentWeakMap());
+  @ApiStatus.Internal
+  protected final Set<Document> myUncommittedDocuments = Collections.newSetFromMap(CollectionFactory.createConcurrentWeakMap());
   private final Map<Document, Throwable> myUncommittedDocumentTraces = CollectionFactory.createConcurrentWeakMap();
   private final Map<Document, UncommittedInfo> myUncommittedInfos = new ConcurrentHashMap<>();
   private /*non-static*/ final Key<UncommittedInfo> FREE_THREADED_UNCOMMITTED_INFO = Key.create("FREE_THREADED_UNCOMMITTED_INFO");
 
-  boolean myStopTrackingDocuments;
+  @ApiStatus.Internal
+  protected boolean myStopTrackingDocuments;
   private boolean myPerformBackgroundCommit = true;
 
   @SuppressWarnings("ThreadLocalNotStaticFinal")
@@ -135,7 +139,8 @@ public abstract class PsiDocumentManagerBase extends PsiDocumentManager implemen
   }
 
   @Nullable
-  FileViewProvider getCachedViewProvider(@NotNull Document document) {
+  @ApiStatus.Internal
+  public FileViewProvider getCachedViewProvider(@NotNull Document document) {
     VirtualFile virtualFile = getVirtualFile(document);
     if (virtualFile == null) return null;
     return getFileManager().findCachedViewProvider(virtualFile);
@@ -148,7 +153,8 @@ public abstract class PsiDocumentManagerBase extends PsiDocumentManager implemen
   }
 
   @Nullable
-  PsiFile getCachedPsiFile(@NotNull VirtualFile virtualFile) {
+  @ApiStatus.Internal
+  public PsiFile getCachedPsiFile(@NotNull VirtualFile virtualFile) {
     return getFileManager().getCachedPsiFile(virtualFile);
   }
 
@@ -773,7 +779,8 @@ public abstract class PsiDocumentManagerBase extends PsiDocumentManager implemen
   public void doPostponedOperationsAndUnblockDocument(@NotNull Document doc) {
   }
 
-  void fireDocumentCreated(@NotNull Document document, PsiFile file) {
+  @ApiStatus.Internal
+  public void fireDocumentCreated(@NotNull Document document, PsiFile file) {
     myProject.getMessageBus().syncPublisher(PsiDocumentListener.TOPIC).documentCreated(document, file, myProject);
     for (Listener listener : myListeners) {
       listener.documentCreated(document, file);
@@ -1196,7 +1203,8 @@ public abstract class PsiDocumentManagerBase extends PsiDocumentManager implemen
   }
 
   @NotNull
-  List<BooleanRunnable> reparseChangedInjectedFragments(@NotNull Document hostDocument,
+  @ApiStatus.Internal
+  protected List<BooleanRunnable> reparseChangedInjectedFragments(@NotNull Document hostDocument,
                                                         @NotNull PsiFile hostPsiFile,
                                                         @NotNull TextRange range,
                                                         @NotNull ProgressIndicator indicator,

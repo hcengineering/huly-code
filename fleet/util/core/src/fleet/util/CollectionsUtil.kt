@@ -153,7 +153,7 @@ fun <T : Comparable<T>> Iterable<T>.toSortedSet(): SortedSet<T> {
   return SortedSet<T>(result.forked())
 }
 
-fun <K : Comparable<K>, V> Map<out K, V>.toSortedMap(): SortedMap<out K, V> {
+fun <K : Comparable<K>, V> Map<K, V>.toSortedMap(): SortedMap<K, V> {
   return SortedMap.from(this)
 }
 
@@ -169,6 +169,8 @@ fun <K : Comparable<K>, V> sortedMapOf(vararg pairs: Pair<K, V>): SortedMap<K, V
   return result.forked()
 }
 
+fun <K : Comparable<K>, V> sortedMapOf(comparator: Comparator<K>): SortedMap<K, V> = SortedMap<K, V>(comparator)
+
 inline fun <K, V, R, M : SortedMap<in K, in R>> Map<out K, V>.mapValuesTo(destination: M, transform: (Map.Entry<K, V>) -> R): M {
   return entries.associateByTo(destination, { it.key }, transform)
 }
@@ -182,3 +184,46 @@ inline fun <T, K, V, M : SortedMap<in K, in V>> Iterable<T>.associateByTo(destin
   @Suppress("UNCHECKED_CAST")
   return forked.forked() as M
 }
+
+/**
+ * Replicates java's Unmodifiable set
+ */
+private class UnmodifiableSet<T>(private val set: Set<T>) : MutableSet<T>, Set<T> by set {
+  override fun add(element: T): Boolean {
+    throw UnsupportedOperationException()
+  }
+
+  override fun addAll(elements: Collection<T>): Boolean {
+    throw UnsupportedOperationException()
+  }
+
+  override fun clear() {
+    throw UnsupportedOperationException()
+  }
+
+  override fun iterator(): MutableIterator<T> {
+    val iterator = set.iterator()
+    return object : MutableIterator<T> {
+      override fun remove() {
+        throw UnsupportedOperationException()
+      }
+
+      override fun next(): T = iterator.next()
+      override fun hasNext(): Boolean = iterator.hasNext()
+    }
+  }
+
+  override fun remove(element: T): Boolean {
+    throw UnsupportedOperationException()
+  }
+
+  override fun removeAll(elements: Collection<T>): Boolean {
+    throw UnsupportedOperationException()
+  }
+
+  override fun retainAll(elements: Collection<T>): Boolean {
+    throw UnsupportedOperationException()
+  }
+}
+
+fun <T> Set<T>.toUnmodifiableSet(): MutableSet<T> = UnmodifiableSet(this)

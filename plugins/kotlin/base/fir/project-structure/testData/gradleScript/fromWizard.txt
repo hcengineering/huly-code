@@ -6,7 +6,7 @@ KaScriptModule:
     KaLibraryModule(annotations-13.0.jar (with sources), scriptDependency)
     KaLibraryModule(build.gradle.kts accessors dependencies, scriptDependency)
     KaLibraryModule(build.gradle.kts groovy dependencies, scriptDependency)
-    KaLibraryModule(gradle-api-8.11-rc-1.jar, scriptDependency)
+    KaLibraryModule(gradle-api-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-core-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-core-api-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-installation-beacon-8.11.jar, scriptDependency)
@@ -347,9 +347,9 @@ KaLibraryModule:
     <empty>
 
 KaLibraryModule:
-  description: Library gradle-api-8.11-rc-1.jar
+  description: Library gradle-api-8.11.jar
   targetPlatform: JVM (1.8)
-  libraryName: gradle-api-8.11-rc-1.jar
+  libraryName: gradle-api-8.11.jar
   isSdk: false
   regularDependencies:
     <empty>
@@ -519,8 +519,7 @@ KaScriptModule:
   targetPlatform: JVM (1.8)
   regularDependencies:
     KaLibraryModule(SDK)
-    KaLibraryModule(build.gradle.kts groovy dependencies, scriptDependency)
-    KaLibraryModule(gradle-api-8.11-rc-1.jar, scriptDependency)
+    KaLibraryModule(gradle-api-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-core-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-core-api-8.11.jar, scriptDependency)
     KaLibraryModule(gradle-installation-beacon-8.11.jar, scriptDependency)
@@ -532,6 +531,7 @@ KaScriptModule:
     KaLibraryModule(kotlin-reflect-2.0.20.jar, scriptDependency)
     KaLibraryModule(kotlin-stdlib-2.0.20.jar, scriptDependency)
     KaLibraryModule(settings.gradle.kts accessors dependencies, scriptDependency)
+    KaLibraryModule(settings.gradle.kts groovy dependencies, scriptDependency)
   friendDependencies:
     <empty>
   dependsOnDependencies:
@@ -541,6 +541,18 @@ KaLibraryModule:
   description: Library settings.gradle.kts accessors dependencies
   targetPlatform: JVM (1.8)
   libraryName: settings.gradle.kts accessors dependencies
+  isSdk: false
+  regularDependencies:
+    <empty>
+  friendDependencies:
+    <empty>
+  dependsOnDependencies:
+    <empty>
+
+KaLibraryModule:
+  description: Library settings.gradle.kts groovy dependencies
+  targetPlatform: JVM (1.8)
+  libraryName: settings.gradle.kts groovy dependencies
   isSdk: false
   regularDependencies:
     <empty>

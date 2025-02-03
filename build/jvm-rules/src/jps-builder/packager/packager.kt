@@ -1,175 +1,144 @@
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 @file:Suppress("UnstableApiUsage")
 
 package org.jetbrains.bazel.jvm.jps
 
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.bazel.jvm.abi.JarContentToProcess
+import org.jetbrains.bazel.jvm.abi.writeAbi
 import org.jetbrains.intellij.build.io.*
-import org.jetbrains.jps.incremental.storage.ExperimentalSourceToOutputMapping
-import org.jetbrains.org.objectweb.asm.ClassReader
-import org.jetbrains.org.objectweb.asm.ClassWriter
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.file.*
-import java.nio.file.attribute.DosFileAttributeView
-import java.nio.file.attribute.PosixFileAttributeView
-import java.nio.file.attribute.PosixFilePermission
-import java.util.zip.ZipEntry
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
+val emptyStringArray: Array<String> = emptyArray()
+
+data class SourceDescriptor(
+  // absolute and normalized
+  @JvmField var sourceFile: Path,
+  @JvmField var digest: ByteArray,
+  @JvmField var outputs: Array<String>,
+  @JvmField var isChanged: Boolean,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is SourceDescriptor) return false
+
+    if (sourceFile != other.sourceFile) return false
+    if (!digest.contentEquals(other.digest)) return false
+    if (!outputs.contentEquals(other.outputs)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = sourceFile.hashCode()
+    result = 31 * result + (digest.contentHashCode())
+    result = 31 * result + outputs.contentHashCode()
+    return result
+  }
+}
 
 suspend fun packageToJar(
   outJar: Path,
   abiJar: Path?,
-  sourceToOutputMap: ExperimentalSourceToOutputMapping,
+  sourceDescriptors: Array<SourceDescriptor>,
   classOutDir: Path,
-  messageHandler: ConsoleMessageHandler
+  span: Span,
 ) {
+  //var abiJar = Path.of(outJar.toString() + ".abi.jar")
   if (abiJar == null) {
     withContext(Dispatchers.IO) {
       createJar(
         outJar = outJar,
-        sourceToOutputMap = sourceToOutputMap,
+        sourceDescriptors = sourceDescriptors,
         classOutDir = classOutDir,
         abiChannel = null,
-        messageHandler = messageHandler,
+        span = span,
       )
     }
     return
   }
 
-  val classChannel = Channel<Pair<ByteArray, ByteArray>>(capacity = 8)
+  val classChannel = Channel<JarContentToProcess>(capacity = 8)
   withContext(Dispatchers.IO) {
     launch {
       createJar(
         outJar = outJar,
-        sourceToOutputMap = sourceToOutputMap,
+        sourceDescriptors = sourceDescriptors,
         classOutDir = classOutDir,
         abiChannel = classChannel,
-        messageHandler = messageHandler,
+        span = span,
       )
       classChannel.close()
     }
 
-    writeZipUsingTempFile(abiJar, indexWriter = null) { stream ->
-      val classesToBeDeleted = HashSet<String>()
-      for ((name, classData) in classChannel) {
-        val classWriter = ClassWriter(0)
-        val abiClassVisitor = AbiClassVisitor(classVisitor = classWriter, classesToBeDeleted = classesToBeDeleted)
-        ClassReader(classData).accept(abiClassVisitor, 0)
-        if (!abiClassVisitor.isApiClass) {
-          continue
-        }
-
-        val abiData = classWriter.toByteArray()
-        stream.writeDataRawEntry(ByteBuffer.wrap(abiData), name, abiData.size, abiData.size, ZipEntry.STORED, 0)
-      }
-
-      if (classesToBeDeleted.isNotEmpty()) {
-        messageHandler.debug("Non-abi classes to be deleted: ${classesToBeDeleted.size}")
-      }
-    }
+    writeAbi(abiJar, classChannel)
+    //if (classesToBeDeleted.isNotEmpty()) {
+    //  messageHandler.debug("Non-abi classes to be deleted: ${classesToBeDeleted.size}")
+    //}
   }
 }
 
 private suspend fun createJar(
   outJar: Path,
-  sourceToOutputMap: ExperimentalSourceToOutputMapping,
+  sourceDescriptors: Array<SourceDescriptor>,
   classOutDir: Path,
-  abiChannel: Channel<Pair<ByteArray, ByteArray>>?,
-  messageHandler: ConsoleMessageHandler,
+  abiChannel: Channel<JarContentToProcess>?,
+  span: Span,
 ) {
   val packageIndexBuilder = PackageIndexBuilder()
   writeZipUsingTempFile(outJar, packageIndexBuilder.indexWriter) { stream ->
-    // MVStore like a TreeMap, keys already sorted
-    //val all = sourceToOutputMap.outputs().toList()
-    //val unique = LinkedHashSet(all)
-    //if (unique.size != all.size) {
-    //  messageHandler.out.appendLine("Duplicated outputs: ${all.groupingBy { it }
-    //          .eachCount()
-    //          .filter { it.value > 1 }
-    //          .keys
-    //  }")
-    //}
+    // output file maybe associated with more than one output file
+    val uniqueGuard = hashSet<String>(sourceDescriptors.size + 10)
 
-    for (path in sourceToOutputMap.outputs().toList()) {
-      // duplicated - ignore it
-      if (path.endsWith(".kotlin_module")) {
-        continue
-      }
-
-      packageIndexBuilder.addFile(name = path, addClassDir = false)
-      try {
-        val file = classOutDir.resolve(path)
-        if (abiChannel != null && path.endsWith(".class")) {
-          val name = path.toByteArray()
-          val classData = stream.fileAndGetData(name, file)
-          abiChannel.send(name to classData)
+    for (sourceDescriptor in sourceDescriptors) {
+      val isKotlin = sourceDescriptor.sourceFile.toString().endsWith(".kt")
+      for (path in sourceDescriptor.outputs) {
+        // duplicated - ignore it
+        if (!uniqueGuard.add(path)) {
+          continue
         }
-        else {
+
+        packageIndexBuilder.addFile(name = path, addClassDir = false)
+        try {
+          val file = classOutDir.resolve(path)
+          if (abiChannel != null) {
+            val isClass = path.endsWith(".class")
+            val isKotlinMetadata = !isClass && path.endsWith(".kotlin_module")
+            if (isClass || isKotlinMetadata) {
+              val name = path.toByteArray()
+              val classData = stream.fileAndGetData(name, file)
+              abiChannel.send(JarContentToProcess(
+                name = name,
+                data = classData,
+                isKotlinModuleMetadata = isKotlinMetadata,
+                isKotlin = isKotlin,
+              ))
+              continue
+            }
+          }
+
           stream.file(nameString = path, file = file)
         }
-      }
-      catch (_: NoSuchFileException) {
-        messageHandler.warn("output file exists in src-to-output mapping, but not found on disk: $path")
+        catch (_: NoSuchFileException) {
+          span.addEvent(
+            "output file exists in src-to-output mapping, but not found on disk",
+            Attributes.of(
+              AttributeKey.stringKey("path"), path,
+              AttributeKey.stringKey("classOutDir"), classOutDir.toString()
+            ),
+          )
+        }
       }
     }
     packageIndexBuilder.writePackageIndex(stream = stream, addDirEntriesMode = AddDirEntriesMode.RESOURCE_ONLY)
   }
-}
-
-private inline fun writeZipUsingTempFile(file: Path, indexWriter: IkvIndexBuilder?, task: (ZipArchiveOutputStream) -> Unit) {
-  val tempFile = Files.createTempFile(file.parent, file.fileName.toString(), ".tmp")
-  var moved = false
-  try {
-    ZipArchiveOutputStream(
-      channel = FileChannel.open(tempFile, WRITE),
-      zipIndexWriter = ZipIndexWriter(indexWriter),
-    ).use {
-      task(it)
-    }
-
-    try {
-      moveAtomic(tempFile, file)
-    }
-    catch (e: AccessDeniedException) {
-      makeFileWritable(file, e)
-      moveAtomic(tempFile, file)
-    }
-    moved = true
-  }
-  finally {
-    if (!moved) {
-      Files.deleteIfExists(tempFile)
-    }
-  }
-}
-
-private fun moveAtomic(from: Path, to: Path) {
-  try {
-    Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-  }
-  catch (_: AtomicMoveNotSupportedException) {
-    Files.move(from, to, StandardCopyOption.REPLACE_EXISTING)
-  }
-}
-
-private fun makeFileWritable(file: Path, cause: Throwable) {
-  val posixView = Files.getFileAttributeView<PosixFileAttributeView?>(file, PosixFileAttributeView::class.java)
-  if (posixView != null) {
-    val permissions = posixView.readAttributes().permissions()
-    permissions.add(PosixFilePermission.OWNER_WRITE)
-    posixView.setPermissions(permissions)
-  }
-
-  val dosView = Files.getFileAttributeView<DosFileAttributeView?>(file, DosFileAttributeView::class.java)
-  @Suppress("IfThenToSafeAccess")
-  if (dosView != null) {
-    dosView.setReadOnly(false)
-  }
-
-  throw UnsupportedOperationException("Unable to modify file attributes. Unsupported platform.", cause)
 }
 
 

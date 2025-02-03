@@ -71,8 +71,14 @@ Examples (`./` should be added only for Linux/macOS):
 You may call it directly from IDEA, see run configuration `Build IDEA Community Installers (current OS)` for an example.
 
 #### Dockerized Build Environment
-To build installation packages inside a Docker container with preinstalled dependencies and tools, run the following command in `<IDEA_HOME>` directory (on Windows, use PowerShell):  
-`docker run --rm -it -v ${PWD}:/community $(docker build -q . --target build_env)`
+To build installation packages inside a Docker container with preinstalled dependencies and tools, run the following command in `<IDEA_HOME>` directory (on Windows, use PowerShell):
+`docker run --rm -it --user "$(id -u)" --volume "${PWD}:/community" "$(docker build --quiet . --target intellij_idea)"`
+
+> Please remember to specify the `--user "$(id -u)"` argument for the container's user to match the host's user. 
+> This is required not to affect the permissions of the checked-out repository, the build output and the mounted Maven cache, if any.
+
+To reuse the existing Maven cache from the host system, add the following option to `docker run` command:
+`--volume "$HOME/.m2:/home/ide_builder/.m2"`
 
 ## Running IntelliJ IDEA
 To run the IntelliJ IDEA built from source, choose **Run | Run** from the main menu. This will use the preconfigured run configuration "**IDEA**".

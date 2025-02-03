@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 @file:Suppress("ReplaceGetOrSet")
 
 package com.intellij.execution.impl
@@ -63,8 +63,10 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.DumbService.Companion.getInstance
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.*
-import com.intellij.openapi.util.Pair as OpenApiPair
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.Expirable
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.util.text.Strings
 import com.intellij.pom.Navigatable
@@ -100,6 +102,7 @@ import javax.swing.JPanel
 import javax.swing.event.AncestorEvent
 import kotlin.math.max
 import kotlin.math.min
+import com.intellij.openapi.util.Pair as OpenApiPair
 
 open class ConsoleViewImpl protected constructor(
   project: Project,
@@ -256,7 +259,7 @@ open class ConsoleViewImpl protected constructor(
   override fun clear() {
     synchronized(LOCK) {
       if (editor == null) return
-      // real document content will be cleared on next flush;
+      // real document content will be cleared on the next flush;
       myDeferredBuffer.clear()
     }
     if (!flushAlarm.isDisposed) {
@@ -384,7 +387,7 @@ open class ConsoleViewImpl protected constructor(
 
   /**
    * Adds transparent (actually, non-opaque) component over console.
-   * It will be as big as console. Use it to draw on console because it does not prevent user from console usage.
+   * It will be as big as a console. Use it to draw on console because it does not prevent user from console usage.
    *
    * @param component component to add
    */
@@ -484,7 +487,7 @@ open class ConsoleViewImpl protected constructor(
           flushUserInputAlarm.waitForAllExecuted(10, TimeUnit.SECONDS)
           return@executeOnPooledThread
         }
-        catch (e: CancellationException) {
+        catch (_: CancellationException) {
           //try again
         }
         catch (e: TimeoutException) {
@@ -498,7 +501,7 @@ open class ConsoleViewImpl protected constructor(
           future[10, TimeUnit.MILLISECONDS]
           break
         }
-        catch (ignored: TimeoutException) {
+        catch (_: TimeoutException) {
         }
         EDT.dispatchAllInvocationEvents()
       }
@@ -563,7 +566,7 @@ open class ConsoleViewImpl protected constructor(
                                              // this may block forever, see IDEA-54340
                                              state.sendUserInput(textToSend.toString())
                                            }
-                                           catch (ignored: IOException) {
+                                           catch (_: IOException) {
                                            }
                                          }
                                        }, 0)
@@ -571,8 +574,10 @@ open class ConsoleViewImpl protected constructor(
     }
   }
 
+  internal var useOwnModalityForUpdates: Boolean = false
+
   protected open val stateForUpdate: ModalityState?
-    get() = null
+    get() = if (useOwnModalityForUpdates) ModalityState.stateForComponent(this) else null
 
   private fun requestFlushImmediately() {
     addFlushRequest(0, FLUSH)
@@ -582,7 +587,7 @@ open class ConsoleViewImpl protected constructor(
    * Holds number of symbols managed by the current console.
    *
    *
-   * Total number is assembled as a sum of symbols that are already pushed to the document and number of deferred symbols that
+   * The Total number is assembled as a sum of symbols that are already pushed to the document and number of deferred symbols that
    * are awaiting to be pushed to the document.
    */
   override fun getContentSize(): Int {
@@ -592,7 +597,7 @@ open class ConsoleViewImpl protected constructor(
       length = myDeferredBuffer.length()
       editor = this.editor
     }
-    return (if (editor == null || CLEAR.hasRequested()) 0 else editor!!.document.textLength) + length
+    return (if (editor == null || CLEAR.hasRequested()) 0 else editor.document.textLength) + length
   }
 
   override fun canPause(): Boolean {
@@ -818,7 +823,7 @@ open class ConsoleViewImpl protected constructor(
   private fun getPopupGroup(event: EditorMouseEvent): ActionGroup {
     ThreadingAssertions.assertEventDispatchThread()
     val actionManager = ActionManager.getInstance()
-    val info = if (getHyperlinks() != null) getHyperlinks()!!.getHyperlinkInfoByEvent(event) else null
+    val info = getHyperlinks()?.getHyperlinkInfoByEvent(event)
     var group: ActionGroup? = null
     if (info is HyperlinkWithPopupMenuInfo) {
       group = info.getPopupMenuGroup(event.mouseEvent)
@@ -826,13 +831,18 @@ open class ConsoleViewImpl protected constructor(
     if (group == null) {
       group = actionManager.getAction(CONSOLE_VIEW_POPUP_MENU) as ActionGroup
     }
-    val postProcessors = ConsoleActionsPostProcessor.EP_NAME.extensionList
-    var result = group.getChildren(null)
-
-    for (postProcessor in postProcessors) {
-      result = postProcessor.postProcessPopupActions(this, result)
+    return object : ActionGroupWrapper(group) {
+      override fun getChildren(e: AnActionEvent?): Array<out AnAction?> {
+        val children = super.getChildren(e)
+        val postProcessors = ConsoleActionsPostProcessor.EP_NAME.extensionList
+        if (postProcessors.isEmpty()) return children
+        var result = children
+        for (postProcessor in postProcessors) {
+          result = postProcessor.postProcessPopupActions(this@ConsoleViewImpl, result)
+        }
+        return result
+      }
     }
-    return DefaultActionGroup(*result)
   }
 
   private fun highlightHyperlinksAndFoldings(startLine: Int, expirableToken: Expirable) {
@@ -884,39 +894,46 @@ open class ConsoleViewImpl protected constructor(
 
     layeredPane!!.startUpdating()
     val currentValue = heavyUpdateTicket
-    heavyAlarm.addRequest({
-                            if (!compositeFilter.shouldRunHeavy()) {
-                              return@addRequest
-                            }
+    heavyAlarm.addRequest(
+      request = {
+        if (!compositeFilter.shouldRunHeavy()) {
+          return@addRequest
+        }
 
-                            try {
-                              compositeFilter.applyHeavyFilter(documentCopy, startOffset, startLine) { additionalHighlight ->
-                                addFlushRequest(0, object : FlushRunnable(true) {
-                                  public override fun doRun() {
-                                    if (heavyUpdateTicket != currentValue) {
-                                      return
-                                    }
+        try {
+          compositeFilter.applyHeavyFilter(documentCopy, startOffset, startLine) { additionalHighlight ->
+            addFlushRequest(
+              0,
+              object : FlushRunnable(true) {
+                public override fun doRun() {
+                  if (heavyUpdateTicket != currentValue) {
+                    return
+                  }
 
-                                    val additionalAttributes = additionalHighlight.getTextAttributes(null)
-                                    if (additionalAttributes != null) {
-                                      val item = additionalHighlight.resultItems[0]
-                                      getHyperlinks()!!.addHighlighter(item.highlightStartOffset, item.highlightEndOffset, additionalAttributes)
-                                    }
-                                    else {
-                                      getHyperlinks()!!.highlightHyperlinks(additionalHighlight, 0)
-                                    }
-                                  }
-                                })
-                              }
-                            }
-                            catch (ignore: IndexNotReadyException) {
-                            }
-                            finally {
-                              if (heavyAlarm.activeRequestCount <= 1) { // only the current request
-                                UIUtil.invokeLaterIfNeeded { layeredPane!!.finishUpdating() }
-                              }
-                            }
-                          }, 0)
+                  val additionalAttributes = additionalHighlight.getTextAttributes(null)
+                  val hyperlinks = getHyperlinks()!!
+                  if (additionalAttributes == null) {
+                    hyperlinks.highlightHyperlinks(additionalHighlight, 0)
+                  }
+                  else {
+                    val item = additionalHighlight.resultItems[0]
+                    hyperlinks.addHighlighter(item.highlightStartOffset, item.highlightEndOffset, additionalAttributes)
+                  }
+                }
+              },
+            )
+          }
+        }
+        catch (_: IndexNotReadyException) {
+        }
+        finally {
+          if (heavyAlarm.activeRequestCount <= 1) { // only the current request
+            UIUtil.invokeLaterIfNeeded { layeredPane!!.finishUpdating() }
+          }
+        }
+      },
+      delayMillis = 0,
+    )
   }
 
   private data class FoldingInfo(val folding: ConsoleFolding, val region: FoldRegion?, val startLine: Int, val expanded: Boolean, val attachedToPreviousLine: Boolean)
@@ -958,7 +975,7 @@ open class ConsoleViewImpl protected constructor(
 
       require(startLine <= endLine)
       for (line in startLine..endLine) {
-        // Grep Console plugin allows to fold empty lines. We need to handle this case in a special way.
+        // Grep Console plugin allows folding empty lines. We need to handle this case in a special way.
         //
         // Multiple lines are grouped into one folding, but to know when you can create the folding,
         // you need a line which does not belong to that folding.
@@ -992,7 +1009,7 @@ open class ConsoleViewImpl protected constructor(
               }
             }
             else {
-              // create new region
+              // create a new region
               toAdd += existing to line
             }
             lastFoldingInfos -= existing
@@ -1475,7 +1492,7 @@ open class ConsoleViewImpl protected constructor(
   private val FLUSH = FlushRunnable(false)
 
   private inner class ClearRunnable : FlushRunnable(false) {
-    public override fun doRun() {
+    override fun doRun() {
       doClear()
     }
   }
@@ -1516,7 +1533,7 @@ open class ConsoleViewImpl protected constructor(
     })
     @Suppress("LeakingThis")
     ApplicationManager.getApplication().messageBus.connect(this)
-      .subscribe<EditorColorsListener>(EditorColorsManager.TOPIC, EditorColorsListener { `__`: EditorColorsScheme? ->
+      .subscribe<EditorColorsListener>(EditorColorsManager.TOPIC, EditorColorsListener { _: EditorColorsScheme? ->
         ThreadingAssertions.assertEventDispatchThread()
         if (isDisposed) {
           return@EditorColorsListener

@@ -4,14 +4,13 @@ import com.intellij.icons.AllIcons
 import com.intellij.notebooks.ui.visualization.NotebookEditorAppearanceUtils.isDiffKind
 import com.intellij.notebooks.ui.visualization.NotebookEditorAppearanceUtils.isOrdinaryNotebookEditor
 import com.intellij.notebooks.ui.visualization.NotebookUtil.notebookAppearance
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.impl.ActionButton
+import com.intellij.openapi.actionSystem.toolbarLayout.ToolbarLayoutStrategy
 import com.intellij.openapi.editor.ex.util.EditorUtil
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.util.registry.Registry
-import com.intellij.ui.IdeBorderFactory
-import com.intellij.ui.SideBorder
 import com.intellij.ui.components.JBBox
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -21,6 +20,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Component
 import java.awt.Cursor
 import java.time.ZonedDateTime
 import javax.swing.*
@@ -46,10 +47,12 @@ class NotebookBelowCellDelimiterPanel(
   private var elapsedStartTime: ZonedDateTime? = null
   private val updateElapsedTimeDelay = 100L
   private var elapsedTimeJob: Job? = null
-  private val frameColor = editor.notebookAppearance.codeCellBackgroundColor.get()
 
   init {
-    border = BorderFactory.createEmptyBorder(delimiterHeight, 0, delimiterHeight, 0)
+    border = BorderFactory.createCompoundBorder(
+      BorderFactory.createEmptyBorder(0, 0, 1, 1),
+      BorderFactory.createEmptyBorder(delimiterHeight, 0, delimiterHeight, 0)
+    )
     cursor = Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR)
 
     val addingTagsRow = (cellTags.isNotEmpty() && !isRenderedMarkdown && Registry.`is`("jupyter.cell.metadata.tags", false))
@@ -57,14 +60,17 @@ class NotebookBelowCellDelimiterPanel(
     updateExecutionStatus(initTooltipText, executionCount, initStatusIcon, initExecutionDurationText)
   }
 
-  fun setFrameVisible(isVisible: Boolean) {
+  fun setFrameVisible(isVisible: Boolean, frameColor: Color) {
+    val frameBorder = when (isVisible) {
+      true -> BorderFactory.createMatteBorder(0, 0, 1, 1, frameColor)
+      else -> BorderFactory.createMatteBorder(0, 0, 1, 1, background)
+    }
+
     border = BorderFactory.createCompoundBorder(
-      when (isVisible) {
-        true -> IdeBorderFactory.createBorder(frameColor, SideBorder.BOTTOM or SideBorder.RIGHT)
-        else -> BorderFactory.createEmptyBorder()
-      },
+      frameBorder,
       BorderFactory.createEmptyBorder(delimiterHeight, 0, delimiterHeight, 0)
     )
+
     repaint()
   }
 
@@ -82,23 +88,26 @@ class NotebookBelowCellDelimiterPanel(
     return labelText
   }
 
-  private fun createTagsRow(): Box {
+  private fun createTagsRow(): Component {
     val tagsRow = JBBox.createHorizontalBox()
-    val plusActionToolbar = createAddTagButton()
-    tagsRow.add(plusActionToolbar)
-    tagsRow.add(Box.createHorizontalStrut(tagsSpacing))
+    tagsRow.add(createAddTagButton())
 
     cellTags.forEach { tag ->
-      val tagLabel = NotebookCellTagLabel(tag, cellIndex)
-      tagsRow.add(tagLabel)
+      tagsRow.add(NotebookCellTagLabel(tag, cellIndex))
       tagsRow.add(Box.createHorizontalStrut(tagsSpacing))
     }
     return tagsRow
   }
 
-  private fun createAddTagButton(): JComponent? {
-    val action = ActionManager.getInstance().getAction("JupyterCellAddTagInlayAction")
-    return ActionButton(action, null, "NotebookTagsPanel", JBUI.size(18, 18))
+  private fun createAddTagButton(): JComponent {
+    val actionGroup = ActionManager.getInstance().getAction("JupyterCellAddTagInlayActionGroup") as ActionGroup
+    val toolbar = ActionManager.getInstance().createActionToolbar("NotebookTagsPanel", actionGroup, /*horizontal =*/ true).apply {
+      layoutStrategy = ToolbarLayoutStrategy.NOWRAP_STRATEGY
+      border = BorderFactory.createEmptyBorder()
+      setMinimumButtonSize(JBUI.size(18, 18))
+      targetComponent = this@NotebookBelowCellDelimiterPanel
+    }
+    return toolbar.component
   }
 
   private fun getExecutionCountLabelText(executionCount: Int?) = when {
@@ -126,9 +135,12 @@ class NotebookBelowCellDelimiterPanel(
         toolTipText = tooltipText
       }
     }
-    else {
-      executionLabel?.let { remove(it) }
-      executionLabel = null
+    else {  // temporary measure to fit the drag icon, see PY-65433
+      getOrCreateExecutionLabel().apply {
+        text = ""
+        icon = AllIcons.Empty
+        toolTipText = null
+      }
     }
   }
 

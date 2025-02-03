@@ -11,4 +11,8 @@ abstract class K2CreateVariableFromUsageTest : K2AbstractCreateFromUsageTest("cr
      */
     class LocalVariable : K2CreateVariableFromUsageTest()
     class Parameter : K2CreateVariableFromUsageTest()
+    class PrimaryParameter : K2CreateVariableFromUsageTest()
+    class Property : K2CreateVariableFromUsageTest() {
+        class FieldFromJava: K2CreateVariableFromUsageTest()
+    }
 }

@@ -17,10 +17,12 @@ jvm_library(
     "//platform/platform-impl:ide-impl",
     "//platform/lang-impl",
     "//platform/execution-impl",
+    "//platform/usageView",
     "@lib//:pty4j",
     "@lib//:gson",
     "//spellchecker",
     "//platform/indexing-impl",
+    "//platform/refactoring",
     "//platform/statistics",
     "//platform/xdebugger-api:debugger",
     "//platform/core-ui",
@@ -28,8 +30,14 @@ jvm_library(
     "//platform/code-style-impl:codeStyle-impl",
     "//platform/platform-util-io:ide-util-io",
     "//platform/util/jdom",
+    "//platform/eel",
+    "//platform/eel-provider",
+    "//platform/eel-impl",
   ],
-  runtime_deps = [":core_resources"]
+  runtime_deps = [
+    ":core_resources",
+    "//platform/backend",
+  ]
 )
 ### auto-generated section `build intellij.sh.core` end
 
@@ -54,6 +62,8 @@ jvm_library(
     "//platform/testFramework:testFramework_test_lib",
     "//platform/analysis-impl",
     "//platform/lang-impl",
+    "//platform/eel",
+    "//platform/eel-provider",
   ],
   runtime_deps = ["//plugins/sh"]
 )

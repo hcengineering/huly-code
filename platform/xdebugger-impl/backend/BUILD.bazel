@@ -33,7 +33,11 @@ jvm_library(
     "//platform/core-ui",
     "//platform/statistics",
     "//platform/util/coroutines",
+    "//platform/execution-impl",
   ],
-  runtime_deps = [":debugger-impl-backend_resources"]
+  runtime_deps = [
+    ":debugger-impl-backend_resources",
+    "//platform/backend",
+  ]
 )
 ### auto-generated section `build intellij.platform.debugger.impl.backend` end

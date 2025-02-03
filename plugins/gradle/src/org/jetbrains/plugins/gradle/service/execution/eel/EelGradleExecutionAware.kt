@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.plugins.gradle.service.execution.eel
 
 import com.intellij.execution.wsl.WSLUtil
@@ -10,9 +10,8 @@ import com.intellij.openapi.externalSystem.service.execution.TargetEnvironmentCo
 import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.registry.Registry
-import com.intellij.platform.eel.impl.utils.getEelApi
-import com.intellij.platform.eel.impl.utils.getEelDescriptor
 import com.intellij.platform.eel.provider.LocalEelDescriptor
+import com.intellij.platform.eel.provider.getEelDescriptor
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.plugins.gradle.service.execution.BuildLayoutParameters
 import org.jetbrains.plugins.gradle.service.execution.GradleExecutionAware
@@ -44,7 +43,7 @@ class EelGradleExecutionAware : GradleExecutionAware {
   ): TargetEnvironmentConfigurationProvider? {
     return if (project.isEelSyncAvailable()) {
       runBlockingCancellable {
-        EelTargetEnvironmentConfigurationProvider(project.getEelApi())
+        EelTargetEnvironmentConfigurationProvider(project.getEelDescriptor().upgrade())
       }
     }
     else {
@@ -58,7 +57,7 @@ class EelGradleExecutionAware : GradleExecutionAware {
   ): TargetEnvironmentConfigurationProvider? {
     return if (project.isEelSyncAvailable()) {
       runBlockingCancellable {
-        EelTargetEnvironmentConfigurationProvider(project.getEelApi())
+        EelTargetEnvironmentConfigurationProvider(project.getEelDescriptor().upgrade())
       }
     }
     else {

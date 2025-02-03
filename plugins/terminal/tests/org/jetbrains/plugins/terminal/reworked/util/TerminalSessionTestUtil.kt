@@ -2,12 +2,10 @@
 package org.jetbrains.plugins.terminal.reworked.util
 
 import com.intellij.execution.configurations.PathEnvironmentVariableUtil
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.writeAction
+import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.EditorFactory
-import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.EnvironmentUtil
 import com.intellij.util.asDisposable
@@ -30,6 +28,7 @@ internal object TerminalSessionTestUtil {
     coroutineScope: CoroutineScope,
     size: TermSize = TermSize(80, 24),
   ): TerminalSession {
+    Registry.get(LocalBlockTerminalRunner.BLOCK_TERMINAL_REGISTRY).setValue(true, coroutineScope.asDisposable())
     Registry.get(LocalBlockTerminalRunner.REWORKED_BLOCK_TERMINAL_REGISTRY).setValue(true, coroutineScope.asDisposable())
 
     val runner = LocalBlockTerminalRunner(project)
@@ -52,25 +51,32 @@ internal object TerminalSessionTestUtil {
       "/urs/bin/zsh",
       "/urs/local/bin/zsh",
       "/opt/homebrew/bin/zsh",
+      "/bin/bash",
+      "/opt/homebrew/bin/bash",
     ).mapNotNull {
       val path = Path.of(it)
       if (Files.isRegularFile(path)) path else PathEnvironmentVariableUtil.findInPath(it)?.toPath()
     }
   }
 
-  fun createOutputModel(project: Project, parentDisposable: Disposable, maxLength: Int = 0): TerminalOutputModelImpl {
+  fun createOutputModel(maxLength: Int = 0): TerminalOutputModelImpl {
     val document = EditorFactory.getInstance().createDocument("")
-    val editor = EditorFactory.getInstance().createEditor(document, project) as EditorEx
-    Disposer.register(parentDisposable) {
-      EditorFactory.getInstance().releaseEditor(editor)
-    }
-
-    return TerminalOutputModelImpl(editor, maxLength)
+    return TerminalOutputModelImpl(document, maxLength)
   }
 
   suspend fun TerminalOutputModel.update(absoluteLineIndex: Int, text: String, styles: List<StyleRange> = emptyList()) {
     writeAction {
-      updateContent(absoluteLineIndex, text, styles)
+      CommandProcessor.getInstance().runUndoTransparentAction {
+        updateContent(absoluteLineIndex, text, styles)
+      }
+    }
+  }
+
+  suspend fun TerminalOutputModel.updateCursor(absoluteLineIndex: Int, column: Int) {
+    writeAction {
+      CommandProcessor.getInstance().runUndoTransparentAction {
+        updateCursorPosition(absoluteLineIndex, column)
+      }
     }
   }
 }

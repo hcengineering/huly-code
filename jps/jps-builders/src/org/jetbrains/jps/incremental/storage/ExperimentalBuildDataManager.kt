@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal class ExperimentalBuildDataManager(
   private val storageManager: StorageManager,
   private val relativizer: PathRelativizerService,
-) {
+) : BuildDataProvider {
   private val targetToMapManager = ConcurrentHashMap<BuildTarget<*>, PerTargetMapManager>()
 
   private val typeAwareRelativizer = relativizer.typeAwareRelativizer ?: object : PathTypeAwareRelativizer {
@@ -20,6 +20,8 @@ internal class ExperimentalBuildDataManager(
     override fun toRelative(path: Path, type: RelativePathType) = relativizer.toRelative(path)
 
     override fun toAbsolute(path: String, type: RelativePathType) = relativizer.toFull(path)
+
+    override fun toAbsoluteFile(path: String, type: RelativePathType): Path = Path.of(relativizer.toFull(path))
   }
 
   /**
@@ -31,11 +33,11 @@ internal class ExperimentalBuildDataManager(
     ExperimentalOutputToTargetMapping(storageManager)
   }
 
-  fun clearCache() {
+  override fun clearCache() {
     storageManager.clearCache()
   }
 
-  fun removeStaleTarget(targetId: String, targetTypeId: String) {
+  override fun removeStaleTarget(targetId: String, targetTypeId: String) {
     storageManager.removeMaps(targetId, targetTypeId)
     outputToTargetMapping.value.removeTarget(targetId, targetTypeId)
   }
@@ -51,35 +53,35 @@ internal class ExperimentalBuildDataManager(
     }
   }
 
-  fun getFileStampStorage(target: BuildTarget<*>): StampsStorage<*> {
+  override fun getFileStampStorage(target: BuildTarget<*>): StampsStorage<*> {
     return getPerTargetMapManager(target).stamp
   }
 
-  fun getSourceToOutputMapping(target: BuildTarget<*>): SourceToOutputMapping {
+  override fun getSourceToOutputMapping(target: BuildTarget<*>): SourceToOutputMapping {
     return getPerTargetMapManager(target).sourceToOutputMapping
   }
 
-  fun getOutputToTargetMapping(): OutputToTargetMapping = outputToTargetMapping.value
+  override fun getOutputToTargetMapping(): OutputToTargetMapping = outputToTargetMapping.value
 
-  fun getSourceToForm(target: BuildTarget<*>): ExperimentalOneToManyPathMapping {
+  override fun getSourceToForm(target: BuildTarget<*>): ExperimentalOneToManyPathMapping {
     return getPerTargetMapManager(target).sourceToForm
   }
 
-  fun closeTargetMaps(target: BuildTarget<*>) {
+  override fun closeTargetMaps(target: BuildTarget<*>) {
     targetToMapManager.remove(target)
   }
 
-  fun removeAllMaps() {
+  override fun removeAllMaps() {
     outputToTargetMapping.drop()
     targetToMapManager.clear()
     storageManager.clean()
   }
 
-  fun commit() {
+  override fun commit() {
     storageManager.commit()
   }
 
-  fun close() {
+  override fun close() {
     outputToTargetMapping.drop()
     targetToMapManager.clear()
     storageManager.close()

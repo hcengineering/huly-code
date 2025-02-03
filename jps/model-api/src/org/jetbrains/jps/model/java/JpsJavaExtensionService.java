@@ -13,13 +13,11 @@ import org.jetbrains.jps.model.java.runConfiguration.JpsApplicationRunConfigurat
 import org.jetbrains.jps.model.library.JpsTypedLibrary;
 import org.jetbrains.jps.model.library.sdk.JpsSdk;
 import org.jetbrains.jps.model.library.sdk.JpsSdkReference;
-import org.jetbrains.jps.model.module.JpsDependencyElement;
-import org.jetbrains.jps.model.module.JpsModule;
-import org.jetbrains.jps.model.module.JpsModuleReference;
-import org.jetbrains.jps.model.module.JpsTestModuleProperties;
+import org.jetbrains.jps.model.module.*;
 import org.jetbrains.jps.service.JpsServiceManager;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 
@@ -75,7 +73,27 @@ public abstract class JpsJavaExtensionService {
 
   public abstract @Nullable String getOutputUrl(JpsModule module, boolean forTests);
 
+  /**
+   * Use {@link #getOutputDirectoryPath} instead.
+   */
   public abstract @Nullable File getOutputDirectory(JpsModule module, boolean forTests);
+
+  /**
+   * Returns a path to the directory where class files and resources for the module will be placed after compilation or {@code null} if
+   * the path isn't specified.
+   */
+  public abstract @Nullable Path getOutputDirectoryPath(JpsModule module, boolean forTests);
+
+  /**
+   * Returns the path to an existing file under {@code root} for which the full relative path is equal to {@code relativePath}, 
+   * taking the package prefix into account.
+   * <br/>
+   * E.g., if the package prefix is 'foo', and there is 'bar/Baz.java' file under {@code root}, 
+   * {@code findSourceFile(root, "foo/bar/Baz.java")} will return path to it.
+   * 
+   * @param relativePath relative path to the file with '/' as a separator 
+   */
+  public abstract @Nullable Path findSourceFile(@NotNull JpsModuleSourceRoot root, @NotNull String relativePath);
 
   @ApiStatus.Internal
   public abstract JpsTypedLibrary<JpsSdk<JpsDummyElement>> addJavaSdk(@NotNull JpsGlobal global, @NotNull String name, @NotNull String homePath);

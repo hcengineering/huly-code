@@ -6,6 +6,7 @@ import com.intellij.diagnostic.LoadingState;
 import com.intellij.execution.*;
 import com.intellij.execution.process.LocalPtyOptions;
 import com.intellij.execution.process.ProcessNotCreatedException;
+import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.*;
@@ -15,7 +16,6 @@ import com.intellij.openapi.vfs.encoding.EncodingManager;
 import com.intellij.platform.eel.EelApi;
 import com.intellij.platform.eel.provider.EelNioBridgeService;
 import com.intellij.platform.eel.provider.LocalEelDescriptor;
-import com.intellij.platform.eel.provider.utils.EelPathUtils;
 import com.intellij.util.EnvironmentRestorer;
 import com.intellij.util.EnvironmentUtil;
 import com.intellij.util.containers.CollectionFactory;
@@ -37,8 +37,8 @@ import java.util.*;
 import java.util.function.Function;
 
 import static com.intellij.execution.util.ExecUtil.startProcessBlockingUsingEel;
-import static com.intellij.platform.eel.provider.EelProviderUtil.getEelApiBlocking;
 import static com.intellij.platform.eel.provider.EelProviderUtil.getEelDescriptor;
+import static com.intellij.platform.eel.provider.EelProviderUtil.upgradeBlocking;
 
 /**
  * OS-independent way of executing external processes with complex parameters.
@@ -461,11 +461,11 @@ public class GeneralCommandLine implements UserDataHolder {
     }
 
     if (getEelDescriptor(exePath) != LocalEelDescriptor.INSTANCE) { // fast check
-      eelApi = getEelApiBlocking(exePath);
+      eelApi = upgradeBlocking(getEelDescriptor(exePath));
     }
     else if (workingDirectory != null) {
       if (getEelDescriptor(workingDirectory) != LocalEelDescriptor.INSTANCE) { // also try to compute non-local EelApi from working dir
-        eelApi = getEelApiBlocking(workingDirectory);
+        eelApi = upgradeBlocking(getEelDescriptor(workingDirectory));
       }
       else {
         eelApi = null;
@@ -606,6 +606,20 @@ public class GeneralCommandLine implements UserDataHolder {
     }
 
     EnvironmentRestorer.restoreOverriddenVars(environment);
+    customizeEnv(environment);
+  }
+
+  /**
+   * Allow plugins/modules to define a service that can modify environment variables before process execution.
+   */
+  private void customizeEnv(@NotNull Map<String, String> environment) {
+    Application application = ApplicationManager.getApplication();
+    if (application != null) {
+      ExecutionEnvCustomizerService envCustomizer = application.getService(ExecutionEnvCustomizerService.class);
+      if (envCustomizer != null) {
+        envCustomizer.customizeEnv(this, environment);
+      }
+    }
   }
 
   /**

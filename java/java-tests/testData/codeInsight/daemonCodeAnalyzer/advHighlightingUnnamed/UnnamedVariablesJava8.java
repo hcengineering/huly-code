@@ -6,7 +6,7 @@ public class UnnamedVariables {
   }
   
   int _ = 123;
-  <error descr="Incompatible types. Found: 'int', required: 'java.lang.String'">String s = _;</error>
+  String s = <error descr="Incompatible types. Found: 'int', required: 'java.lang.String'">_</error>;
   
   void testLambda() {
     Consumer<String> consumer = <error descr="Use of '_' as a lambda parameter name is not allowed">_</error> -> System.out.println("Hello");
@@ -14,7 +14,7 @@ public class UnnamedVariables {
     Consumer<String> consumer3 = <error descr="Use of '_' as a lambda parameter name is not allowed">_</error> -> System.out.println(_.trim());
     Consumer<String> consumer4 = <error descr="Use of '_' as a lambda parameter name is not allowed">_</error> -> {
       <error descr="Cannot resolve symbol 'var'" textAttributesKey="WRONG_REFERENCES_ATTRIBUTES">var</error> v = _;
-      System.out.println(v.trim());
+      System.out.println(v.<error descr="Cannot resolve method 'trim()'" textAttributesKey="WRONG_REFERENCES_ATTRIBUTES">trim</error>());
     };
     BiConsumer<String, String> consumer5 = (<error descr="Use of '_' as a lambda parameter name is not allowed"><error descr="Variable '_' is already defined in the scope">_</error></error>,<error descr="Use of '_' as a lambda parameter name is not allowed"><error descr="Variable '_' is already defined in the scope">_</error></error>) -> {};
   }

@@ -58,7 +58,7 @@
       <override-text place="RevealInPopup"/>
       <add-to-group group-id="TouchBarDefault_alt" anchor="last"/>
     </action>
-    <action id="Terminal.CloseTab" class="com.intellij.openapi.actionSystem.EmptyAction" use-shortcut-of="CloseContent"/>
+    <action id="Terminal.CloseTab" class="org.jetbrains.plugins.terminal.action.TerminalCloseTabAction" use-shortcut-of="CloseContent"/>
     <action id="Terminal.RenameSession" class="org.jetbrains.plugins.terminal.action.RenameTerminalSessionAction">
       <add-to-group group-id="ToolWindowContextMenu" anchor="last"/>
     </action>
@@ -105,8 +105,11 @@
       <keyboard-shortcut first-keystroke="control V" keymap="$default"/>
       <keyboard-shortcut first-keystroke="shift INSERT" keymap="$default"/>
     </action>
-    <action id="Terminal.Find" class="com.intellij.openapi.actionSystem.EmptyAction" use-shortcut-of="Find"/>
-    <action id="Terminal.SelectAll" class="com.intellij.openapi.actionSystem.EmptyAction">
+    <action id="Terminal.Find" class="org.jetbrains.plugins.terminal.action.TerminalFindAction" use-shortcut-of="Find">
+      <override-text place="GoToAction"/>
+    </action>
+    <action id="Terminal.SelectAll" class="org.jetbrains.plugins.terminal.action.TerminalSelectAllAction">
+      <override-text place="GoToAction"/>
       <keyboard-shortcut first-keystroke="meta A" keymap="Mac OS X"/>
       <keyboard-shortcut first-keystroke="meta A" keymap="Mac OS X 10.5+"/>
     </action>
@@ -117,7 +120,6 @@
       <keyboard-shortcut first-keystroke="control shift ENTER" keymap="$default"/>
     </action>
     <action id="Terminal.ClearBuffer" class="org.jetbrains.plugins.terminal.action.TerminalClearAction">
-      <keyboard-shortcut first-keystroke="control L" keymap="$default"/>
       <keyboard-shortcut first-keystroke="meta K" keymap="Mac OS X"/>
       <keyboard-shortcut first-keystroke="meta K" keymap="Mac OS X 10.5+"/>
     </action>
@@ -187,6 +189,21 @@
 
     <action id="Terminal.EnableNewUi" class="org.jetbrains.plugins.terminal.action.EnableBlockTerminalUiAction"/>
 
+    <action id="Terminal.LineUp" class="org.jetbrains.plugins.terminal.action.TerminalLineUpAction">
+      <override-text place="GoToAction"/>
+      <keyboard-shortcut first-keystroke="control UP" keymap="$default"/>
+    </action>
+    <action id="Terminal.LineDown" class="org.jetbrains.plugins.terminal.action.TerminalLineDownAction">
+      <override-text place="GoToAction"/>
+      <keyboard-shortcut first-keystroke="control DOWN" keymap="$default"/>
+    </action>
+    <action id="Terminal.PageUp" class="org.jetbrains.plugins.terminal.action.TerminalPageUpAction" use-shortcut-of="EditorPageUp">
+      <override-text place="GoToAction"/>
+    </action>
+    <action id="Terminal.PageDown" class="org.jetbrains.plugins.terminal.action.TerminalPageDownAction" use-shortcut-of="EditorPageDown">
+      <override-text place="GoToAction"/>
+    </action>
+
     <group id="Terminal.ToolWindowActions">
       <reference ref="Terminal.EnableNewUi"/>
     </group>
@@ -209,6 +226,31 @@
       <reference ref="Terminal.CopySelectedText"/>
       <reference ref="Terminal.Paste"/>
       <reference ref="Terminal.PromptStyle"/>
+    </group>
+
+    <group id="Terminal.ReworkedTerminalContextMenu">
+      <reference ref="Terminal.Find"/>
+      <reference ref="Terminal.NewTab"/>
+      <reference ref="Terminal.CloseTab"/>
+      <separator/>
+      <reference ref="Terminal.SplitVertically"/>
+      <reference ref="Terminal.SplitHorizontally"/>
+      <reference ref="PreviousTab"/>
+      <reference ref="NextTab"/>
+      <reference ref="Terminal.MoveToolWindowTabRight"/>
+      <reference ref="Terminal.MoveToolWindowTabLeft"/>
+      <reference ref="ShowContent"/>
+      <separator/>
+      <reference ref="Terminal.CopySelectedText"/>
+      <reference ref="Terminal.Paste"/>
+      <reference ref="Terminal.SelectAll"/>
+      <separator/>
+      <reference ref="Terminal.ClearBuffer"/>
+      <reference ref="Terminal.PageUp"/>
+      <reference ref="Terminal.PageDown"/>
+      <separator/>
+      <reference ref="Terminal.LineUp"/>
+      <reference ref="Terminal.LineDown"/>
     </group>
 
     <group id="Terminal.PromptToolbar"/>

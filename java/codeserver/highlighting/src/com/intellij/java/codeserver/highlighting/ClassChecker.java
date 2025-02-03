@@ -2,16 +2,20 @@
 package com.intellij.java.codeserver.highlighting;
 
 import com.intellij.codeInsight.ClassUtil;
+import com.intellij.codeInsight.ExceptionUtil;
 import com.intellij.java.codeserver.highlighting.errors.JavaErrorKind;
 import com.intellij.java.codeserver.highlighting.errors.JavaErrorKinds;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtilCore;
+import com.intellij.openapi.projectRoots.JavaSdkVersion;
 import com.intellij.openapi.roots.ModuleFileIndex;
 import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.util.Comparing;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.java.JavaFeature;
 import com.intellij.psi.*;
+import com.intellij.psi.impl.source.resolve.JavaResolveUtil;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.DirectClassInheritorsSearch;
 import com.intellij.psi.search.searches.ImplicitClassSearch;
@@ -336,21 +340,6 @@ final class ClassChecker {
     myVisitor.report(JavaErrorKinds.CLASS_WRONG_FILE_NAME.create(aClass));
   }
 
-  void checkWellFormedRecord(@NotNull PsiClass psiClass) {
-    PsiRecordHeader header = psiClass.getRecordHeader();
-    if (!psiClass.isRecord()) {
-      if (header != null) {
-        myVisitor.report(JavaErrorKinds.RECORD_HEADER_REGULAR_CLASS.create(header));
-      }
-      return;
-    }
-    PsiIdentifier identifier = psiClass.getNameIdentifier();
-    if (identifier == null) return;
-    if (header == null) {
-      myVisitor.report(JavaErrorKinds.RECORD_NO_HEADER.create(psiClass));
-    }
-  }
-
   void checkSealedClassInheritors(@NotNull PsiClass psiClass) {
     if (psiClass.hasModifierProperty(PsiModifier.SEALED)) {
       PsiIdentifier nameIdentifier = psiClass.getNameIdentifier();
@@ -610,6 +599,165 @@ final class ClassChecker {
     }
   }
 
+  void checkAnonymousInheritFinal(@NotNull PsiNewExpression expression) {
+    PsiAnonymousClass aClass = PsiTreeUtil.getChildOfType(expression, PsiAnonymousClass.class);
+    if (aClass == null) return;
+    PsiClassType baseClassReference = aClass.getBaseClassType();
+    PsiClass baseClass = baseClassReference.resolve();
+    if (baseClass == null) return;
+    checkCannotInheritFromFinal(baseClass, aClass.getBaseClassReference());
+  }
+
+  void checkAnonymousInheritProhibited(@NotNull PsiNewExpression expression) {
+    PsiAnonymousClass aClass = expression.getAnonymousClass();
+    if (aClass != null) {
+      PsiClass superClass = aClass.getSuperClass();
+      PsiJavaCodeReferenceElement reference = expression.getClassOrAnonymousClassReference();
+      if (superClass != null && reference != null) {
+        checkExtendsProhibitedClass(superClass, aClass, reference);
+      }
+    }
+  }
+
+  void checkAnonymousSealedProhibited(@NotNull PsiNewExpression newExpression) {
+    PsiAnonymousClass aClass = newExpression.getAnonymousClass();
+    if (aClass != null) {
+      PsiClass superClass = aClass.getBaseClassType().resolve();
+      if (superClass != null && superClass.hasModifierProperty(PsiModifier.SEALED)) {
+        myVisitor.report(JavaErrorKinds.CLASS_ANONYMOUS_EXTENDS_SEALED.create(aClass));
+      }
+    }
+  }
+
+  void checkClassAlreadyImported(@NotNull PsiClass aClass) {
+    PsiFile file = aClass.getContainingFile();
+    if (!(file instanceof PsiJavaFile javaFile)) return;
+    // check only top-level classes conflicts
+    if (aClass.getParent() != javaFile) return;
+    PsiImportList importList = javaFile.getImportList();
+    if (importList == null) return;
+    PsiImportStatementBase[] importStatements = importList.getAllImportStatements();
+    for (PsiImportStatementBase importStatement : importStatements) {
+      if (importStatement.isOnDemand()) continue;
+      PsiElement resolved = importStatement.resolve();
+      if (resolved instanceof PsiClass psiClass && !resolved.equals(aClass) && Comparing.equal(aClass.getName(), psiClass.getName(), true)) {
+        myVisitor.report(JavaErrorKinds.CLASS_ALREADY_IMPORTED.create(aClass));
+      }
+    }
+  }
+
+  void checkClassDoesNotCallSuperConstructorOrHandleExceptions(PsiClass aClass) {
+    if (aClass.isEnum()) return;
+    // check only no-ctr classes. Problem with specific constructor will be highlighted inside it
+    if (aClass.getConstructors().length != 0) return;
+    // find no-args base class ctr
+    checkBaseClassDefaultConstructorProblem(aClass, aClass, PsiClassType.EMPTY_ARRAY);
+  }
+
+  void checkBaseClassDefaultConstructorProblem(@NotNull PsiClass aClass,
+                                               @NotNull PsiMember anchor,
+                                               PsiClassType @NotNull [] handledExceptions) {
+    if (aClass instanceof PsiAnonymousClass) return;
+    PsiClass baseClass = aClass.getSuperClass();
+    if (baseClass == null) return;
+    PsiMethod[] constructors = baseClass.getConstructors();
+    if (constructors.length == 0) return;
+
+    PsiElement resolved = JavaResolveUtil.resolveImaginarySuperCallInThisPlace(aClass, aClass.getProject(), baseClass);
+    List<PsiMethod> constructorCandidates = (resolved != null ? Collections.singletonList((PsiMethod)resolved)
+                                                              : Arrays.asList(constructors))
+      .stream()
+      .filter(constructor -> {
+        PsiParameter[] parameters = constructor.getParameterList().getParameters();
+        return (parameters.length == 0 || parameters.length == 1 && parameters[0].isVarArgs()) &&
+               PsiResolveHelper.getInstance(aClass.getProject()).isAccessible(constructor, aClass, null);
+      })
+      .limit(2).toList();
+
+    if (constructorCandidates.size() >= 2) {// two ambiguous var-args-only constructors
+      var context =
+        new JavaErrorKinds.AmbiguousImplicitConstructorCallContext(aClass, constructorCandidates.get(0), constructorCandidates.get(1));
+      myVisitor.report(JavaErrorKinds.CONSTRUCTOR_AMBIGUOUS_IMPLICIT_CALL.create(anchor, context));
+    } else if (!constructorCandidates.isEmpty()) {
+      checkDefaultConstructorThrowsException(constructorCandidates.get(0), anchor, handledExceptions);
+    } else {
+      // no need to distract with missing constructor error when there is already a "Cannot inherit from final class" error message
+      if (baseClass.hasModifierProperty(PsiModifier.FINAL)) return;
+      myVisitor.report(JavaErrorKinds.CONSTRUCTOR_NO_DEFAULT.create(anchor, baseClass));
+    }
+  }
+
+  private void checkDefaultConstructorThrowsException(@NotNull PsiMethod constructor, @NotNull PsiMember anchor, PsiClassType[] handledExceptions) {
+    PsiClassType[] referencedTypes = constructor.getThrowsList().getReferencedTypes();
+    List<PsiClassType> exceptions = new ArrayList<>();
+    for (PsiClassType referencedType : referencedTypes) {
+      if (!ExceptionUtil.isUncheckedException(referencedType) && !ExceptionUtil.isHandledBy(referencedType, handledExceptions)) {
+        exceptions.add(referencedType);
+      }
+    }
+    if (!exceptions.isEmpty()) {
+      myVisitor.report(JavaErrorKinds.EXCEPTION_UNHANDLED.create(anchor, exceptions));
+    }
+  }
+
+  void checkConstructorCallsBaseClassConstructor(@NotNull PsiMethod constructor) {
+    if (!constructor.isConstructor()) return;
+    PsiClass aClass = constructor.getContainingClass();
+    if (aClass == null) return;
+    if (aClass.isEnum()) return;
+    PsiCodeBlock body = constructor.getBody();
+    if (body == null) return;
+
+    if (JavaPsiConstructorUtil.findThisOrSuperCallInConstructor(constructor) != null) return;
+    PsiClassType[] handledExceptions = constructor.getThrowsList().getReferencedTypes();
+    checkBaseClassDefaultConstructorProblem(aClass, constructor, handledExceptions);
+  }
+
+  void checkEnumSuperConstructorCall(@NotNull PsiMethodCallExpression expr) {
+    PsiReferenceExpression methodExpression = expr.getMethodExpression();
+    PsiElement refNameElement = methodExpression.getReferenceNameElement();
+    if (refNameElement != null && PsiKeyword.SUPER.equals(refNameElement.getText())) {
+      PsiMember constructor = PsiUtil.findEnclosingConstructorOrInitializer(expr);
+      if (constructor instanceof PsiMethod) {
+        PsiClass aClass = constructor.getContainingClass();
+        if (aClass != null && aClass.isEnum()) {
+          myVisitor.report(JavaErrorKinds.CALL_SUPER_ENUM_CONSTRUCTOR.create(expr));
+        }
+      }
+    }
+  }
+
+  void checkSuperQualifierType(@NotNull PsiMethodCallExpression superCall) {
+    if (!JavaPsiConstructorUtil.isSuperConstructorCall(superCall)) return;
+    PsiMethod ctr = PsiTreeUtil.getParentOfType(superCall, PsiMethod.class, true, PsiMember.class);
+    if (ctr == null) return;
+    PsiClass aClass = ctr.getContainingClass();
+    if (aClass == null) return;
+    PsiClass targetClass = aClass.getSuperClass();
+    if (targetClass == null) return;
+    PsiExpression qualifier = superCall.getMethodExpression().getQualifierExpression();
+    if (qualifier != null) {
+      if (isRealInnerClass(targetClass)) {
+        PsiClass outerClass = targetClass.getContainingClass();
+        if (outerClass != null) {
+          PsiClassType outerType = myVisitor.factory().createType(outerClass);
+          myVisitor.myExpressionChecker.checkAssignability(outerType, null, qualifier, qualifier);
+        }
+      } else {
+        myVisitor.report(JavaErrorKinds.CALL_SUPER_QUALIFIER_NOT_INNER_CLASS.create(qualifier, targetClass));
+      }
+    }
+  }
+
+  /** JLS 8.1.3. Inner Classes and Enclosing Instances */
+  private static boolean isRealInnerClass(PsiClass aClass) {
+    if (PsiUtil.isInnerClass(aClass)) return true;
+    if (!PsiUtil.isLocalOrAnonymousClass(aClass)) return false;
+    if (aClass.hasModifierProperty(PsiModifier.STATIC)) return false; // check for implicit staticness
+    PsiMember member = PsiTreeUtil.getParentOfType(aClass, PsiMember.class, true);
+    return member != null && !member.hasModifierProperty(PsiModifier.STATIC);
+  }
+
   private static @Unmodifiable @NotNull Map<PsiJavaCodeReferenceElement, PsiClass> getPermittedClassesRefs(@NotNull PsiClass psiClass) {
     PsiReferenceList permitsList = psiClass.getPermitsList();
     if (permitsList == null) return Collections.emptyMap();
@@ -648,5 +796,27 @@ final class ClassChecker {
       }
       return new CachedValueProvider.Result<>(false, PsiModificationTracker.MODIFICATION_COUNT);
     });
+  }
+
+  void checkImplicitThisReferenceBeforeSuper(@NotNull PsiClass aClass) {
+    if (myVisitor.sdkVersion().isAtLeast(JavaSdkVersion.JDK_1_7)) return;
+    if (aClass instanceof PsiAnonymousClass || aClass instanceof PsiTypeParameter) return;
+    PsiClass superClass = aClass.getSuperClass();
+    if (superClass == null || !PsiUtil.isInnerClass(superClass)) return;
+    PsiClass outerClass = superClass.getContainingClass();
+    if (!InheritanceUtil.isInheritorOrSelf(aClass, outerClass, true)) return;
+    // 'this' can be used as an (implicit) super() qualifier
+    PsiMethod[] constructors = aClass.getConstructors();
+    if (constructors.length == 0) {
+      myVisitor.report(JavaErrorKinds.REFERENCE_MEMBER_BEFORE_CONSTRUCTOR.create(aClass, aClass));
+      return;
+    }
+    for (PsiMethod constructor : constructors) {
+      PsiMethodCallExpression call = JavaPsiConstructorUtil.findThisOrSuperCallInConstructor(constructor);
+      if (!JavaPsiConstructorUtil.isSuperConstructorCall(call)) {
+        myVisitor.report(JavaErrorKinds.REFERENCE_MEMBER_BEFORE_CONSTRUCTOR.create(constructor, aClass));
+        return;
+      }
+    }
   }
 }

@@ -913,6 +913,10 @@ public class AbstractPopup implements JBPopup, ScreenAreaConsumer, AlignedPopup 
     myRequestFocus = requestFocus;
   }
 
+  public boolean shouldRequestFocus() {
+    return myRequestFocus;
+  }
+
   @Override
   public void cancel(InputEvent e) {
     if (myState == State.CANCEL || myState == State.DISPOSE) {
@@ -1088,7 +1092,7 @@ public class AbstractPopup implements JBPopup, ScreenAreaConsumer, AlignedPopup 
         cornerType = PopupCornerType.RoundedWindow;
       }
       if (cornerType != PopupCornerType.None) {
-        if ((SystemInfoRt.isMac && myPopupBorderColor != null && UIUtil.isUnderDarcula()) || SystemInfoRt.isWindows) {
+        if ((SystemInfoRt.isMac && myPopupBorderColor != null) || SystemInfoRt.isWindows) {
           roundedCornerParams = new Object[]{cornerType,
             myPopupBorderColor == null ? JBUI.CurrentTheme.Popup.borderColor(true) : myPopupBorderColor};
           // must set the border before calculating the size below

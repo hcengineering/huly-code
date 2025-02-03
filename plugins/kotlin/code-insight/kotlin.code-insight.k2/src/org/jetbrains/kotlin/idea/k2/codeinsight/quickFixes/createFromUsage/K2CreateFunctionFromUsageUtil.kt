@@ -81,7 +81,12 @@ object K2CreateFunctionFromUsageUtil {
     internal fun KtElement.getExpectedKotlinType(): ExpectedKotlinType? {
         var expectedType = expectedType
         if (expectedType == null) {
-            val parent = this.parent
+            var parent = this.parent
+            var current = this
+            if (parent is KtDotQualifiedExpression && parent.selectorExpression == this) {
+                current = parent
+                parent = parent.parent
+            }
             expectedType = when {
                 parent is KtPrefixExpression && parent.operationToken == KtTokens.EXCL -> builtinTypes.boolean
                 parent is KtStringTemplateEntryWithExpression -> builtinTypes.string
@@ -97,8 +102,11 @@ object K2CreateFunctionFromUsageUtil {
                         argument(ktType)
                     }
                 }
-                parent is KtNamedFunction && parent.nameIdentifier == null && parent.bodyExpression == this && parent.parent is KtValueArgument -> {
+                parent is KtNamedFunction && parent.nameIdentifier == null && parent.bodyExpression == current && parent.parent is KtValueArgument -> {
                     (parent.expectedType as? KaFunctionType)?.returnType
+                }
+                parent is KtBinaryExpression && parent.operationToken == KtTokens.EQ && parent.left == current -> {
+                    parent.right?.expressionType
                 }
                 else -> null
             }
@@ -110,6 +118,13 @@ object K2CreateFunctionFromUsageUtil {
             }
         }
         if (expectedType == null) return null
+
+        val receiverExpression = (parent as? KtDotQualifiedExpression)?.receiverExpression
+        val receiverType = receiverExpression?.expressionType
+        if (receiverType is KaClassType) {
+            expectedType = guessAccessibleTypeByArguments(receiverType, expectedType)
+        }
+
         expectedType = makeAccessibleInCreationPlace(expectedType, this) ?: return null
         val jvmType = expectedType.convertToJvmType(this) ?: return null
         return ExpectedKotlinType(expectedType, jvmType)
@@ -161,16 +176,49 @@ object K2CreateFunctionFromUsageUtil {
     }?.psi
 
     context (KaSession)
-    internal fun ValueArgument.getExpectedParameterInfo(defaultParameterName: String, isTheOnlyAnnotationParameter:Boolean): ExpectedParameter {
+    @OptIn(KaExperimentalApi::class)
+    internal fun ValueArgument.getExpectedParameterInfo(
+        defaultParameterName: String,
+        isTheOnlyAnnotationParameter: Boolean,
+        receiverType: KaType?
+    ): ExpectedParameter {
         val parameterNameAsString = getArgumentName()?.asName?.asString()
         val argumentExpression = getArgumentExpression()
-        val expectedArgumentType = argumentExpression?.expressionType
+        var expectedArgumentType = argumentExpression?.expressionType
         val parameterNames = parameterNameAsString?.let { sequenceOf(it) } ?: expectedArgumentType?.let { NAME_SUGGESTER.suggestTypeNames(it) }
-        val jvmParameterType = expectedArgumentType?.convertToJvmType(argumentExpression)
+        if (expectedArgumentType != null && receiverType is KaClassType) {
+            expectedArgumentType = guessAccessibleTypeByArguments(receiverType, expectedArgumentType)
+        }
+        val jvmParameterType = expectedArgumentType?.convertToJvmType(argumentExpression!!)
         val expectedType = if (jvmParameterType == null) ExpectedTypeWithNullability.INVALID_TYPE else ExpectedKotlinType(expectedArgumentType, jvmParameterType)
         val names = parameterNames?.toList() ?: listOf(defaultParameterName)
         val nameArray = (if (isTheOnlyAnnotationParameter && parameterNameAsString==null) listOf("value") + names else names).toTypedArray()
         return expectedParameter(expectedType, *nameArray)
+    }
+
+    @OptIn(KaExperimentalApi::class)
+    private fun KaSession.guessAccessibleTypeByArguments(
+        receiverType: KaClassType, expectedArgumentType: KaType
+    ): KaType {
+        val classLikeSymbol = receiverType.symbol
+        val typeArguments = receiverType.typeArguments
+        if (expectedArgumentType is KaTypeParameterType) {
+            classLikeSymbol.typeParameters.zip(typeArguments).forEach { (typeParameter, typeArgument) ->
+                val argType = typeArgument.type
+                if (argType != null && expectedArgumentType.semanticallyEquals(argType)) {
+                    return buildTypeParameterType(typeParameter)
+                }
+            }
+        }
+        if (expectedArgumentType is KaClassType && expectedArgumentType.symbol == classLikeSymbol &&
+            expectedArgumentType.typeArguments.any { it.type is KaTypeParameterType }) {
+            return buildClassType(classLikeSymbol) {
+                classLikeSymbol.typeParameters.forEach {
+                    argument(buildTypeParameterType(it))
+                }
+            }
+        }
+        return expectedArgumentType
     }
 
     context (KaSession)
@@ -375,9 +423,12 @@ object K2CreateFunctionFromUsageUtil {
     }
 
     context(KaSession)
+    @OptIn(KaExperimentalApi::class)
     fun computeExpectedParams(call: KtCallElement, isAnnotation:Boolean=false): List<ExpectedParameter> {
+        val receiverExpression = (call.parent as? KtDotQualifiedExpression)?.receiverExpression
+        val receiverType = receiverExpression?.expressionType
         return call.valueArguments.mapIndexed { index, valueArgument ->
-            valueArgument.getExpectedParameterInfo("p$index", isAnnotation && call.valueArguments.size == 1)
+            valueArgument.getExpectedParameterInfo("p$index", isAnnotation && call.valueArguments.size == 1, receiverType)
         }
     }
 }

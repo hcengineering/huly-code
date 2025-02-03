@@ -233,13 +233,13 @@ abstract class BaseCompletionGolfFileReportGenerator(
 
   private fun FlowContent.prepareLine(session: Session, evaluationIndex: Int, maxLineLength: Int) {
     val expectedText = session.expectedText
-    val lookups = session.lookups
+    val lookups = session.lookups.filter { lookup -> lookup.offset < expectedText.length }
     var offset = 0
 
     div("line-code") {
       style = "min-width: calc(7.8 * ${maxLineLength}px);"
       lookups.forEachIndexed { i, lookup ->
-        if (lookup.offset != offset) {
+        if (offset < lookup.offset) {
           span("code-span") { +expectedText.substring(offset, lookup.offset) }
           offset = lookup.offset
         }

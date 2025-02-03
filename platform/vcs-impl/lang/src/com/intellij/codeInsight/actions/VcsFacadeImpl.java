@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.codeInsight.actions;
 
 import com.intellij.diff.comparison.iterables.FairDiffIterable;
@@ -183,6 +183,81 @@ public final class VcsFacadeImpl extends VcsFacade {
 
     BitSet changedLines = createChangedLinesBitSet(ranges);
     return ContainerUtil.filter(elements, element -> isElementChanged(element, document, changedLines));
+  }
+
+  /**
+   * creates light files for before and after contents and returns changed elements
+   */
+  public @NotNull @Unmodifiable <T extends PsiElement> List<T> getCommitChangedElements(@NotNull Change change,
+                                                                                        @NotNull PsiCollector<T> elementExtractor) {
+    ContentRevision beforeRevision = change.getBeforeRevision();
+    ContentRevision afterRevision = change.getAfterRevision();
+
+    // todo do we care about /r here
+    String contentBefore = getRevisionedContentFrom(beforeRevision);
+    String contentAfter = getRevisionedContentFrom(afterRevision);
+
+    List<T> elementsBefore = contentBefore != null ? elementExtractor.collectTargetPsi(contentBefore, beforeRevision.getFile().getFileType()) : emptyList();
+    List<T> elementsAfter = contentAfter != null ? elementExtractor.collectTargetPsi(contentAfter, afterRevision.getFile().getFileType()) : emptyList();
+
+    if (elementsBefore.isEmpty() && elementsAfter.isEmpty()) return emptyList();
+
+    if (change.getType() == Change.Type.NEW) {
+      return elementsAfter;
+    }
+    if (change.getType() == Change.Type.DELETED) {
+      return elementsBefore;
+    }
+
+    assert contentBefore != null && contentAfter != null;
+
+    List<? extends Range> ranges = getChangedRangesForCommit(contentBefore, contentAfter);
+    BitSet changedLinesBefore = createLinesBitSetBefore(ranges);
+    BitSet changedLinesAfter = createLinesBitSetAfter(ranges);
+
+    List<T> changedPsiBefore = filterChanged(elementsBefore, changedLinesBefore);
+    List<T> changedPsiAfter = filterChanged(elementsAfter, changedLinesAfter);
+
+    return ContainerUtil.concat(changedPsiBefore, changedPsiAfter);
+  }
+
+  private static <T extends PsiElement> @NotNull List<T> filterChanged(@NotNull List<T> elements,
+                                                                       @NotNull BitSet changedLines) {
+    if (elements.isEmpty()) return elements;
+    Document document = elements.get(0).getContainingFile().getFileDocument();
+    return ContainerUtil.filter(elements, element -> isElementChanged(element, document, changedLines));
+  }
+
+  private static @NotNull List<Range> getChangedRangesForCommit(@NotNull String contentBefore, @NotNull String contentAfter) {
+    CharSequence beforeText = fixLineSeparators(contentBefore);
+    CharSequence afterText = fixLineSeparators(contentAfter);
+
+    LineOffsets beforeLineOffsets = LineOffsetsUtil.create(beforeText);
+    LineOffsets afterLineOffsets = LineOffsetsUtil.create(afterText);
+
+    FairDiffIterable committedLines = RangesBuilder.compareLines(beforeText, afterText, beforeLineOffsets, afterLineOffsets);
+
+    return ContainerUtil.map(committedLines.changes(), it -> new Range(it.start2, it.end2, it.start1, it.end1, null));
+  }
+
+  private static @NotNull BitSet createLinesBitSetAfter(@NotNull List<? extends Range> ranges) {
+    BitSet changedLines = new BitSet();
+    for (Range range : ranges) {
+      if (range.hasLines()) {
+        changedLines.set(range.getLine1(), range.getLine2());
+      }
+    }
+    return changedLines;
+  }
+
+  private static @NotNull BitSet createLinesBitSetBefore(@NotNull List<? extends Range> ranges) {
+    BitSet changedLines = new BitSet();
+    for (Range range : ranges) {
+      if (range.hasLines()) {
+        changedLines.set(range.getVcsLine1(), range.getVcsLine2());
+      }
+    }
+    return changedLines;
   }
 
   private static @Nullable @Unmodifiable List<? extends Range> getChangedRangesFromLineStatusTracker(@NotNull Project project,

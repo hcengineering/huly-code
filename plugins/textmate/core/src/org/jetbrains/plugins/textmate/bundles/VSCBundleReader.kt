@@ -90,15 +90,15 @@ private class VSCBundleReader(private val extension: VSCodeExtension,
           val valuePlist = value.plist
           val bodyValue = valuePlist.getPlistValue("body", "")
           val body = when (bodyValue.type) {
-            PlistValueType.STRING -> bodyValue.string
-            PlistValueType.ARRAY -> bodyValue.array.joinToString(separator = "\n") { it.string }
+            PlistValueType.STRING -> bodyValue.string!!
+            PlistValueType.ARRAY -> bodyValue.array.mapNotNull { it.string }.joinToString(separator = "\n")
             else -> error("Can't parse body: $bodyValue")
           }
           valuePlist.getPlistValue("prefix")?.string?.let { key ->
-            val description = valuePlist.getPlistValue(Constants.DESCRIPTION_KEY, "").string
-            val snippetScopeName = valuePlist.getPlistValue(Constants.SCOPE_KEY)
+            val description = valuePlist.getPlistValue(Constants.DESCRIPTION_KEY, "").string!!
+            val snippetScopeName = valuePlist.getPlistValue(Constants.SCOPE_KEY)?.string
             if (snippetScopeName != null) {
-              sequenceOf(TextMateSnippet(key, body, snippetScopeName.string, name, description, name))
+              sequenceOf(TextMateSnippet(key, body, snippetScopeName, name, description, name))
             }
             else {
               scopesForLanguage(snippetConfiguration.language).map { scopeName ->
@@ -239,7 +239,7 @@ class VSCodeExtensionSurroundingPairsDeserializer : KSerializer<VSCodeExtensionS
 internal data class VSCodeExtensionAutoClosingPairs(
   val open: String,
   val close: String,
-  val notIn: EnumSet<TextMateStandardTokenType>? = null,
+  val notIn: Int,
 )
 
 internal class VSCodeExtensionAutoClosingPairsDeserializer : KSerializer<VSCodeExtensionAutoClosingPairs> {
@@ -248,17 +248,17 @@ internal class VSCodeExtensionAutoClosingPairsDeserializer : KSerializer<VSCodeE
   override fun deserialize(decoder: Decoder): VSCodeExtensionAutoClosingPairs {
     require(decoder is JsonDecoder)
     return when (val json = decoder.decodeJsonElement()) {
-      is JsonArray -> VSCodeExtensionAutoClosingPairs(json[0].jsonPrimitive.content, json[1].jsonPrimitive.content, null)
+      is JsonArray -> VSCodeExtensionAutoClosingPairs(json[0].jsonPrimitive.content, json[1].jsonPrimitive.content, 0)
       is JsonObject -> VSCodeExtensionAutoClosingPairs(
         open = json["open"]!!.jsonPrimitive.content,
         close = json["close"]!!.jsonPrimitive.content,
-        notIn = (json["notIn"] as? JsonArray)?.mapNotNull {
-          when (it.jsonPrimitive.content) {
-            "string" -> TextMateStandardTokenType.STRING
-            "comment" -> TextMateStandardTokenType.COMMENT
-            else -> null
+        notIn = (json["notIn"] as? JsonArray)?.fold(0) { acc, element ->
+          when (element.jsonPrimitive.content) {
+            "string" -> acc or  TextMateStandardTokenType.STRING.mask()
+            "comment" -> acc or TextMateStandardTokenType.COMMENT.mask()
+            else -> acc
           }
-        }?.let { EnumSet.copyOf(it) })
+        } ?: 0)
       else -> error("cannot deserialize $json")
     }
   }
@@ -267,7 +267,7 @@ internal class VSCodeExtensionAutoClosingPairsDeserializer : KSerializer<VSCodeE
     val json = JsonObject(mapOf(
       "open" to JsonPrimitive(value.open),
       "close" to JsonPrimitive(value.close),
-      "notIn" to JsonArray(value.notIn?.map { JsonPrimitive(it.name.lowercase()) } ?: emptyList())
+      "notIn" to JsonArray(TextMateStandardTokenType.entries.filter { value.notIn and it.mask() != 0 }.map { JsonPrimitive(it.name.lowercase()) })
     ))
     (encoder as JsonEncoder).encodeJsonElement(json)
   }

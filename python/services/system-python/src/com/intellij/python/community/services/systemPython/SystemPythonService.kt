@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.python.community.services.systemPython
 
 import com.intellij.openapi.application.ApplicationManager
@@ -7,20 +7,20 @@ import com.intellij.openapi.components.*
 import com.intellij.openapi.components.Service.Level.APP
 import com.intellij.openapi.diagnostic.fileLogger
 import com.intellij.platform.eel.EelApi
-import com.intellij.platform.eel.provider.getEelApi
+import com.intellij.platform.eel.provider.getEelDescriptor
 import com.intellij.platform.eel.provider.localEel
+import com.intellij.python.community.impl.installer.PySdkToInstallManager
 import com.intellij.python.community.services.internal.impl.PythonWithLanguageLevelImpl
 import com.intellij.python.community.services.systemPython.SystemPythonServiceImpl.MyServiceState
-import com.intellij.python.community.services.systemPython.spi.SystemPythonProvider
-import com.jetbrains.python.LocalizedErrorString
 import com.jetbrains.python.PythonBinary
 import com.jetbrains.python.Result
-import com.jetbrains.python.sdk.PySdkToInstallManager
 import com.jetbrains.python.sdk.flavors.PythonSdkFlavor
 import com.jetbrains.python.sdk.installer.installBinary
+import com.jetbrains.python.systemPythonSpi.SystemPythonProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.annotations.ApiStatus
+import org.jetbrains.annotations.Nls
 
 /**
  * Service to register and obtain [SystemPython]s
@@ -29,7 +29,7 @@ import org.jetbrains.annotations.ApiStatus
 sealed interface SystemPythonService {
   /**
    * System pythons installed on OS.
-   * Sort pythons by [SystemPython.languageLevel] to find the highest one.
+   * Sort pythons by [SystemPython.languageLevel] to find the highest one
    */
   suspend fun findSystemPythons(eelApi: EelApi = localEel): Set<SystemPython>
 
@@ -37,7 +37,7 @@ sealed interface SystemPythonService {
    * When user provides a path to the python binary, use this method to the [SystemPython].
    * @return either [SystemPython] or an error if python is broken.
    */
-  suspend fun registerSystemPython(pythonPath: PythonBinary): Result<SystemPython, LocalizedErrorString>
+  suspend fun registerSystemPython(pythonPath: PythonBinary): Result<SystemPython, @Nls String>
 
   /**
    * @return tool to install python on OS If [eelApi] supports python installation
@@ -53,10 +53,10 @@ fun SystemPythonService(): SystemPythonService = ApplicationManager.getApplicati
 // Implementation
 
 @Service(APP)
-@State(name = "SystemPythonService")
+@State(name = "SystemPythonService", storages = [Storage("systemPythonService.xml", roamingType = RoamingType.LOCAL)], allowLoadInTests = true)
 private class SystemPythonServiceImpl : SystemPythonService, SimplePersistentStateComponent<MyServiceState>(MyServiceState()) {
 
-  override suspend fun registerSystemPython(pythonPath: PythonBinary): Result<SystemPython, LocalizedErrorString> {
+  override suspend fun registerSystemPython(pythonPath: PythonBinary): Result<SystemPython, @Nls String> {
     val impl = PythonWithLanguageLevelImpl.createByPythonBinary(pythonPath).getOr { return it }
     state.userProvidedPythons.add(pythonPath)
     return Result.success(SystemPython(impl))
@@ -76,10 +76,10 @@ private class SystemPythonServiceImpl : SystemPythonService, SimplePersistentSta
 
     val pythonsFromExtensions = SystemPythonProvider.EP
       .extensionList
-      .flatMap { it.findSystemPythons(eelApi) }.filter { it.getEelApi() == eelApi }
+      .flatMap { it.findSystemPythons(eelApi) }.filter { it.getEelDescriptor().upgrade() == eelApi }
 
     val badPythons = mutableSetOf<PythonBinary>()
-    val pythons = corePythons + pythonsFromExtensions + state.userProvidedPythons.filter { it.getEelApi() == eelApi }
+    val pythons = corePythons + pythonsFromExtensions + state.userProvidedPythons.filter { it.getEelDescriptor() == eelApi.descriptor }
 
     val result = pythons.toSet()
       .mapNotNull { python ->
@@ -93,13 +93,14 @@ private class SystemPythonServiceImpl : SystemPythonService, SimplePersistentSta
         }
 
       }.toSet()
-    state.userProvidedPythons.removeAll(badPythons) // TODO: Doc remove
+    // Remove stale pythons from cache
+    state.userProvidedPythons.removeAll(badPythons)
     return@withContext result
   }
 
 
   class MyServiceState : BaseState() {
-    val userProvidedPythons: MutableCollection<PythonBinary> = mutableSetOf()
+    val userProvidedPythons: MutableCollection<PythonBinary> by list()
   }
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.intellij.build
 
 import com.intellij.platform.ijent.community.buildConstants.IJENT_BOOT_CLASSPATH_MODULE
@@ -17,7 +17,7 @@ import java.nio.file.Path
 import java.util.function.BiPredicate
 
 /**
- * Describes distribution of an in-house IntelliJ-based IDE hosted in IntelliJ repository.
+ * Describes a distribution of an IntelliJ-based IDE hosted in the IntelliJ repository.
  */
 abstract class JetBrainsProductProperties : ProductProperties() {
   init {
@@ -26,24 +26,17 @@ abstract class JetBrainsProductProperties : ProductProperties() {
     sbomOptions.creator = "Organization: ${Suppliers.JETBRAINS}"
     sbomOptions.license = SoftwareBillOfMaterials.Options.DistributionLicense.JETBRAINS
 
-    productLayout.addPlatformSpec { layout, _ ->
-      layout.withModule(IJENT_BOOT_CLASSPATH_MODULE, PLATFORM_CORE_NIO_FS)
-      xBootClassPathJarNames += PLATFORM_CORE_NIO_FS
-    }
+    productLayout.addPlatformSpec { layout, _ -> layout.withModule(IJENT_BOOT_CLASSPATH_MODULE, PLATFORM_CORE_NIO_FS) }
   }
 
-  protected fun isCommunityModule(module: JpsModule, context: BuildContext): Boolean {
-    return module.contentRootsList.urls.all { url ->
+  protected fun isCommunityModule(module: JpsModule, context: BuildContext): Boolean =
+    module.contentRootsList.urls.all { url ->
       Path.of(JpsPathUtil.urlToPath(url)).startsWith(context.paths.communityHomeDir)
     }
-  }
 
-  override suspend fun copyAdditionalFiles(context: BuildContext, targetDir: Path) {
-  }
+  override suspend fun copyAdditionalFiles(context: BuildContext, targetDir: Path) { }
 
-  private class InvalidPluginDescriptorError(message: String) : InvalidDescriptorProblem(
-    detailedMessage = message, descriptorPath = "",
-  ) {
+  private class InvalidPluginDescriptorError(message: String) : InvalidDescriptorProblem(detailedMessage = message, descriptorPath = "") {
     override val level = Level.ERROR
   }
 
@@ -95,9 +88,7 @@ abstract class JetBrainsProductProperties : ProductProperties() {
   }
 
   /**
-   * 🌲
-   * see KTIJ-30761
-   * @see org.jetbrains.intellij.build.sharedIndexes.PreSharedIndexesGenerator
+   * See KTIJ-30761, `org.jetbrains.intellij.build.sharedIndexes.PreSharedIndexesGenerator`.
    */
   protected fun enableKotlinPluginK2ByDefault() {
     additionalVmOptions += "-Didea.kotlin.plugin.use.k2=true"

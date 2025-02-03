@@ -1,5 +1,6 @@
 // WITH_STDLIB
 // IGNORE_K1
+// COMPILER_ARGUMENTS: -Xwhen-guards
 
 private sealed class MySealed {
     object A : MySealed()

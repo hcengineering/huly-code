@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 @file:JvmName("EelProviderUtil")
 
 package com.intellij.platform.eel.provider
@@ -13,7 +13,6 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.platform.eel.*
 import com.intellij.platform.eel.path.EelPath
 import com.intellij.platform.util.coroutines.forEachConcurrent
-import com.intellij.util.concurrency.annotations.RequiresBlockingContext
 import com.intellij.util.system.OS
 import kotlinx.coroutines.CancellationException
 import org.jetbrains.annotations.ApiStatus
@@ -21,10 +20,6 @@ import java.nio.file.Path
 
 interface LocalWindowsEelApi : LocalEelApi, EelWindowsApi
 interface LocalPosixEelApi : LocalEelApi, EelPosixApi
-
-suspend fun Path.getEelApi(): EelApi {
-  return getEelDescriptor().upgrade()
-}
 
 object EelInitialization {
   private val logger = logger<EelInitialization>()
@@ -57,11 +52,34 @@ object EelInitialization {
 }
 
 fun Path.getEelDescriptor(): EelDescriptor {
-  return ApplicationManager.getApplication().service<EelNioBridgeService>().tryGetEelDescriptor(this) ?: LocalEelDescriptor
+  return EelNioBridgeService.getInstanceSync().tryGetEelDescriptor(this) ?: LocalEelDescriptor
+}
+
+/**
+ * Retrieves [EelDescriptor] for the environment where [this] is located.
+ * If the project is not the real one (i.e., it is default or not backed by a real file), then [LocalEelDescriptor] will be returned.
+ */
+fun Project.getEelDescriptor(): EelDescriptor {
+  val filePath = projectFilePath
+  if (filePath == null) {
+    // The path to project file can be null if the project is default or used in tests.
+    // While the latter is acceptable, the former can give rise to problems:
+    // It is possible to "preconfigure" some settings for projects, such as default SDK or libraries.
+    // This preconfiguration appears to be tricky in case of non-local projects: it would require UI changes if we want to configure WSL,
+    // and in the case of Docker it is simply impossible to preconfigure a container with UI.
+    // So we shall limit this preconfiguration to local projects only, which implies that the default project will be associated with the local eel descriptor.
+    return LocalEelDescriptor
+  }
+  return Path.of(filePath).getEelDescriptor()
 }
 
 val localEel: LocalEelApi by lazy {
   if (SystemInfo.isWindows) ApplicationManager.getApplication().service<LocalWindowsEelApi>() else ApplicationManager.getApplication().service<LocalPosixEelApi>()
+}
+
+fun EelDescriptor.upgradeBlocking(): EelApi {
+  if (this === LocalEelDescriptor) return localEel
+  return runBlockingMaybeCancellable { upgrade() }
 }
 
 data object LocalEelDescriptor : EelDescriptor {
@@ -77,13 +95,6 @@ data object LocalEelDescriptor : EelDescriptor {
     return localEel
   }
 }
-
-fun EelDescriptor.upgradeBlocking(): EelApi {
-  return runBlockingMaybeCancellable { upgrade() }
-}
-
-@RequiresBlockingContext
-fun Path.getEelApiBlocking(): EelApi = runBlockingMaybeCancellable { getEelApi() }
 
 @ApiStatus.Internal
 interface EelProvider {
@@ -106,5 +117,6 @@ fun EelApi.systemOs(): OS {
     is EelPlatform.Linux -> OS.Linux
     is EelPlatform.Darwin -> OS.macOS
     is EelPlatform.Windows -> OS.Windows
+    is EelPlatform.FreeBSD -> OS.FreeBSD
   }
 }

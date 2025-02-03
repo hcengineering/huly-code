@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 @file:Suppress("ReplaceGetOrSet", "ReplacePutWithAssignment", "OverridingDeprecatedMember", "ReplaceNegatedIsEmptyWithIsNotEmpty",
                "PrivatePropertyName")
 @file:OptIn(FlowPreview::class)
@@ -276,10 +276,11 @@ open class ToolWindowManagerImpl @NonInjectable @TestOnly internal constructor(
         }
 
         // let's check that tool window actually loses focus
-        if (getToolWindowIdForComponent(focusedComponent) != toolWindowId) {
-          // a toolwindow lost focus
+        val focusedToolWindowId = getToolWindowIdForComponent(focusedComponent)
+        if (focusedToolWindowId != toolWindowId) {
           val focusGoesToPopup = JBPopupFactory.getInstance().getParentBalloonFor(focusedComponent) != null
-          if (!focusGoesToPopup) {
+          val focusGoesToDialog = focusedToolWindowId == null && ComponentUtil.getWindow(focusedComponent) is Dialog
+          if (!focusGoesToPopup && !focusGoesToDialog) {
             val info = toolWindowManager.getRegisteredMutableInfoOrLogError(toolWindowId)
             toolWindowManager.deactivateToolWindow(info, activeEntry)
           }
@@ -364,8 +365,12 @@ open class ToolWindowManagerImpl @NonInjectable @TestOnly internal constructor(
             if (Registry.`is`("auto.hide.all.tool.windows.on.any.action", true)) {
               val focusedComponent = IdeFocusManager.getInstance(manager.project).focusOwner
               val actionComponent = event.getData(PlatformCoreDataKeys.CONTEXT_COMPONENT) ?: event.inputEvent?.component
+              val actionComponentWindow = ComponentUtil.getWindow(actionComponent)
+              // Not the best heuristics, but there seems to be no easy way to check "Is this a popup?".
+              // So we check for something like "javax.swing.Popup$HeavyweightWindow...".
+              val actionInvokedFromPopup = actionComponentWindow?.javaClass?.name?.startsWith("javax.swing.Popup") == true
               val actionToolWindowId = getToolWindowIdForComponent(actionComponent)
-              if (focusedComponent != null) {
+              if (focusedComponent != null && !actionInvokedFromPopup) {
                 hideAllUnfocusedAutoHideToolWindows(manager, focusedComponent) { id -> id != actionToolWindowId }
               }
             }

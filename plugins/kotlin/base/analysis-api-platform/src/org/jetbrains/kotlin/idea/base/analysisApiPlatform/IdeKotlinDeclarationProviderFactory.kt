@@ -13,8 +13,6 @@ import com.intellij.psi.stubs.StubIndexKey
 import org.jetbrains.kotlin.analysis.api.platform.declarations.*
 import org.jetbrains.kotlin.analysis.api.platform.mergeSpecificProviders
 import org.jetbrains.kotlin.analysis.api.platform.projectStructure.KotlinGlobalSearchScopeMerger
-import org.jetbrains.kotlin.analysis.api.projectStructure.KaBuiltinsModule
-import org.jetbrains.kotlin.analysis.api.projectStructure.KaLibraryModule
 import org.jetbrains.kotlin.analysis.api.projectStructure.KaModule
 import org.jetbrains.kotlin.idea.base.indices.names.KotlinTopLevelCallableByPackageShortNameIndex
 import org.jetbrains.kotlin.idea.base.indices.names.KotlinTopLevelClassLikeDeclarationByPackageShortNameIndex
@@ -125,7 +123,7 @@ private class IdeKotlinDeclarationProvider(
     override val hasSpecificCallablePackageNamesComputation: Boolean get() = false
 
     override fun computePackageNames(): Set<String>? =
-        contextualModule?.let { IdeKotlinModulePackageNamesProvider.getInstance(project).computePackageNames(it) }
+        contextualModule?.let { KotlinModulePackageNamesProvider.getInstance(project).computePackageNames(it) }
 
     override fun findFilesForFacade(facadeFqName: FqName): Collection<KtFile> {
         //TODO original LC has platformSourcesFirst()

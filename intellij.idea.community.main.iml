@@ -150,9 +150,8 @@
     <orderEntry type="module" module-name="intellij.space.java.jps" scope="TEST" />
     <orderEntry type="module" module-name="intellij.emojipicker" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.gradle.dependencyUpdater" scope="RUNTIME" />
+    <orderEntry type="module" module-name="intellij.settingsSync.core" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.settingsSync" scope="RUNTIME" />
-    <orderEntry type="module" module-name="intellij.settingsSync.git" scope="RUNTIME" />
-    <orderEntry type="module" module-name="intellij.settingsSync.jba" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.java.featuresTrainer" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.idea.community.build.tasks" scope="TEST" />
     <orderEntry type="module" module-name="intellij.junit.v5.rt.tests" scope="TEST" />
@@ -238,6 +237,8 @@
     <orderEntry type="module" module-name="intellij.searchEverywhereMl.typos" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.grazie" scope="RUNTIME" />
     <orderEntry type="module" module-name="intellij.community.wintools" scope="TEST" />
+    <orderEntry type="module" module-name="intellij.compose.ide.plugin" scope="RUNTIME" />
+    <orderEntry type="module" module-name="intellij.python.community.execService" scope="TEST" />
     <orderEntry type="module" module-name="redhat.lsp4ij" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.langconfigurator" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.intellij.customization" scope="RUNTIME" />

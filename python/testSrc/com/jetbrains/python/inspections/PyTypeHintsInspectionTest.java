@@ -147,7 +147,7 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
                        pass
 
                    my_t = T
-                   class C3(Generic[my_t]):
+                   class C3(Generic[<error descr="Parameters to 'Generic[...]' must all be type variables">my_t</error>]):
                        pass
 
                    class D1:
@@ -182,7 +182,7 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
                        pass
 
                    T1 = T
-                   class D(Generic[T1, <error descr="Parameters to 'Generic[...]' must all be unique">T</error>]):
+                   class D(Generic[<error descr="Parameters to 'Generic[...]' must all be type variables">T1</error>, T]):
                        pass""");
   }
 
@@ -219,15 +219,15 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
 
                    B = Generic
                    D = T
-                   class A<error descr="Some type variables (S) are not listed in 'Generic[T]'">(B[D], Iterable[S])</error>:
+                   class A<error descr="Some type variables (S) are not listed in 'Generic[T]'">(B[<error descr="Parameters to 'Generic[...]' must all be type variables">D</error>], Iterable[S])</error>:
                        pass
 
                    class E(Generic[T], Iterable[T]):
                        pass
 
-                   class F(B[D], Iterable[<warning descr="Invalid type argument">D</warning>]):
+                   class F(B[<error descr="Parameters to 'Generic[...]' must all be type variables">D</error>]):
                        pass
-                      \s
+                   
                    class G(Iterable[T]):
                        pass""");
   }
@@ -241,6 +241,19 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
 
                    class C(Generic[T], Dict[int, T]):
                        pass""");
+  }
+
+  // PY-78767
+  public void testGenericMetaClassesAreNotSupported() {
+    doTestByText("""
+                   from typing import Any, Generic, TypeVar
+                   
+                   T = TypeVar("T")
+                   
+                   class MyMetaClass(type, Generic[T]): ...
+                   
+                   class MyClass1(Generic[T], metaclass=<warning descr="Metaclass cannot be generic">MyMetaClass[T]</warning>): ...
+                   class MyClass2(metaclass=MyMetaClass[Any]): ...""");
   }
 
   // PY-28249
@@ -737,14 +750,14 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
                        # type: (<error descr="Generics should be specified through square brackets">Union()</error>) -> None
                        pass
                       \s
-                   v1 = <error descr="Generics should be specified through square brackets">Union(int, str)</error>
+                   v1 = Union(int, str)
                    v2 = None  # type: <error descr="Generics should be specified through square brackets">Union(int, str)</error>
-
+                   
                    U = Union
                    def i(j: <error descr="Generics should be specified through square brackets">U(int, str)</error>):
                        pass
                       \s
-                   v3 = <error descr="Generics should be specified through square brackets">U(int, str)</error>
+                   v3 = U(int, str)
 
                    with foo() as bar:  # type: <error descr="Generics should be specified through square brackets">Union(int,str)</error>
                        pass
@@ -756,6 +769,44 @@ public class PyTypeHintsInspectionTest extends PyInspectionTestCase {
                    A2: TypeAlias = '<error descr="Generics should be specified through square brackets">Union(int, str)</error>'
                    A3 = <error descr="Generics should be specified through square brackets">Union(int, str)</error>  # type: TypeAlias
                    A3 = '<error descr="Generics should be specified through square brackets">Union(int, str)</error>'  # type: TypeAlias""");
+  }
+
+  // PY-57155
+  public void testParenthesesInAnnotated() {
+    doTestByText("""
+                   from typing import Annotated
+                   from typing_extensions import Annotated as AnnotatedExt
+
+                   def a(x: Annotated[str, dict(key="value")]):
+                       pass
+
+                   def b(x: Annotated[Annotated[str, dict(key="value")], ""]):
+                       pass
+
+                   def c(x: AnnotatedExt[str, dict(key="value")]):
+                       pass
+
+                   def d(x: AnnotatedExt[AnnotatedExt[str, dict(key="value")], ""]):
+                       pass
+                   
+                   def e(x: Annotated[str, list[<warning descr="Invalid type argument">dict(key="value")</warning>]]):
+                      pass
+                   
+                   def f(x: Annotated[<warning descr="Generics should be specified through square brackets">dict(key="value")</warning>, ""]):
+                      pass""");
+  }
+
+  // PY-32634
+  public void testParenthesesInAssignment() {
+    doTestByText("""
+                  from typing import DefaultDict, TypeAlias
+                  
+                  example = DefaultDict(int)
+                  
+                  ExampleAlias: TypeAlias = <error descr="Generics should be specified through square brackets">DefaultDict(int)</error>
+                  
+                  type ExampleType = <error descr="Generics should be specified through square brackets">DefaultDict(int)</error>
+                  """);
   }
 
   // PY-16853

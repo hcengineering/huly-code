@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.psi.impl.file.impl;
 
 import com.intellij.injected.editor.VirtualFileWindow;
@@ -301,7 +301,8 @@ public final class FileManagerImpl implements FileManager {
 
   private boolean myProcessingFileTypesChange;
 
-  void processFileTypesChanged(boolean clearViewProviders) {
+  @ApiStatus.Internal
+  public void processFileTypesChanged(boolean clearViewProviders) {
     if (myProcessingFileTypesChange) return;
     myProcessingFileTypesChange = true;
     DebugUtil.performPsiModification(null, () -> {
@@ -326,14 +327,16 @@ public final class FileManagerImpl implements FileManager {
   }
 
   @RequiresWriteLock
-  void possiblyInvalidatePhysicalPsi() {
+  @ApiStatus.Internal
+  public void possiblyInvalidatePhysicalPsi() {
     removeInvalidDirs();
     for (FileViewProvider viewProvider : getVFileToViewProviderMap().values()) {
       markPossiblyInvalidated(viewProvider);
     }
   }
 
-  void dispatchPendingEvents() {
+  @ApiStatus.Internal
+  public void dispatchPendingEvents() {
     Project project = myManager.getProject();
     if (project.isDisposed()) {
       LOG.error("Project is already disposed: " + project);
@@ -459,7 +462,8 @@ public final class FileManagerImpl implements FileManager {
     return getVFileToPsiDirMap().get(vFile);
   }
 
-  void removeFilesAndDirsRecursively(@NotNull VirtualFile vFile) {
+  @ApiStatus.Internal
+  public void removeFilesAndDirsRecursively(@NotNull VirtualFile vFile) {
     DebugUtil.performPsiModification("removeFilesAndDirsRecursively", () -> {
       VfsUtilCore.visitChildrenRecursively(vFile, new VirtualFileVisitor<Void>() {
         @Override
@@ -493,7 +497,8 @@ public final class FileManagerImpl implements FileManager {
   }
 
   @Nullable
-  PsiFile getCachedPsiFileInner(@NotNull VirtualFile file) {
+  @ApiStatus.Internal
+  public PsiFile getCachedPsiFileInner(@NotNull VirtualFile file) {
     FileViewProvider viewProvider = findCachedViewProvider(file);
     return viewProvider == null ? null : ((AbstractFileViewProvider)viewProvider).getCachedPsi(viewProvider.getBaseLanguage());
   }
@@ -516,7 +521,8 @@ public final class FileManagerImpl implements FileManager {
   }
 
   @RequiresWriteLock
-  void removeInvalidFilesAndDirs(boolean useFind) {
+  @ApiStatus.Internal
+  public void removeInvalidFilesAndDirs(boolean useFind) {
     removeInvalidDirs();
 
     // note: important to update directories the map first - findFile uses findDirectory!
@@ -562,7 +568,8 @@ public final class FileManagerImpl implements FileManager {
     markInvalidations(originalFileToPsiFileMap);
   }
 
-  static boolean areViewProvidersEquivalent(@NotNull FileViewProvider view1, @NotNull FileViewProvider view2) {
+  @ApiStatus.Internal
+  public static boolean areViewProvidersEquivalent(@NotNull FileViewProvider view1, @NotNull FileViewProvider view2) {
     if (view1.getClass() != view2.getClass() || view1.getFileType() != view2.getFileType()) return false;
 
     Language baseLanguage = view1.getBaseLanguage();
@@ -603,7 +610,8 @@ public final class FileManagerImpl implements FileManager {
     }
   }
 
-  void reloadPsiAfterTextChange(@NotNull FileViewProvider viewProvider, @NotNull VirtualFile vFile) {
+  @ApiStatus.Internal
+  public void reloadPsiAfterTextChange(@NotNull FileViewProvider viewProvider, @NotNull VirtualFile vFile) {
     if (!areViewProvidersEquivalent(viewProvider, createFileViewProvider(vFile, false))) {
       forceReload(vFile);
       return;

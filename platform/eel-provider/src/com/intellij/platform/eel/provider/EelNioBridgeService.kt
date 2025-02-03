@@ -2,18 +2,28 @@
 package com.intellij.platform.eel.provider
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.components.serviceAsync
 import com.intellij.platform.eel.EelDescriptor
 import com.intellij.platform.eel.path.EelPath
+import org.jetbrains.annotations.NonNls
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.spi.FileSystemProvider
-import kotlin.jvm.Throws
 
 /**
  * A service that is responsible for mapping between instances of [EelPath] and [Path]
  */
 interface EelNioBridgeService {
+
+  companion object {
+    @JvmStatic
+    fun getInstanceSync(): EelNioBridgeService = ApplicationManager.getApplication().service()
+
+    @JvmStatic
+    suspend fun getInstance(): EelNioBridgeService = ApplicationManager.getApplication().serviceAsync()
+  }
 
   /**
    * @return `null` if [nioPath] belongs to a [java.nio.file.FileSystem] that was not registered as a backend of `MultiRoutingFileSystemProvider`
@@ -26,12 +36,23 @@ interface EelNioBridgeService {
   fun tryGetNioRoot(eelDescriptor: EelDescriptor): Path?
 
   /**
-   * Registers custom eel as a nio file system
+   * @return The `internalName` from [register] that was provided alongside [eelDescriptor].
    */
-  fun register(localRoot: String, descriptor: EelDescriptor, prefix: Boolean, caseSensitive: Boolean, fsProvider: (underlyingProvider: FileSystemProvider, previousFs: FileSystem?) -> FileSystem?)
+  fun tryGetId(eelDescriptor: EelDescriptor): String?
 
   /**
-   * Deregisters custom eel as a nio file system
+   * @return the descriptor that was provided alongside `internalName` during [register].
+   */
+  fun tryGetDescriptorByName(name: String): EelDescriptor?
+
+  /**
+   * Registers custom eel as a nio file system
+   * @param internalName An ascii name of the descriptor that can be used as internal ID of the registered environment.
+   */
+  fun register(localRoot: String, descriptor: EelDescriptor, internalName: @NonNls String, prefix: Boolean, caseSensitive: Boolean, fsProvider: (underlyingProvider: FileSystemProvider, previousFs: FileSystem?) -> FileSystem?)
+
+  /**
+   * Removes the registered NIO File System associated with [descriptor]
    */
   fun deregister(descriptor: EelDescriptor)
 }
@@ -51,7 +72,7 @@ fun EelPath.asNioPathOrNull(): Path? {
   if (descriptor === LocalEelDescriptor) {
     return Path.of(toString())
   }
-  val service = ApplicationManager.getApplication().getService(EelNioBridgeService::class.java)
+  val service = EelNioBridgeService.getInstanceSync()
   val root = service.tryGetNioRoot(descriptor) ?: return null
   return parts.fold(root, Path::resolve)
 }
@@ -65,9 +86,9 @@ fun EelPath.asNioPathOrNull(): Path? {
 @Throws(IllegalArgumentException::class)
 fun Path.asEelPath(): EelPath {
   if (fileSystem != FileSystems.getDefault()) {
-    return throw IllegalArgumentException("Could not convert $this to EelPath: the path does not belong to the default NIO FileSystem")
+    throw IllegalArgumentException("Could not convert $this to EelPath: the path does not belong to the default NIO FileSystem")
   }
-  val service = ApplicationManager.getApplication().getService(EelNioBridgeService::class.java)
+  val service = EelNioBridgeService.getInstanceSync()
   val descriptor = service.tryGetEelDescriptor(this) ?: return EelPath.parse(toString(), LocalEelDescriptor)
   val root = service.tryGetNioRoot(descriptor) ?: error("unreachable") // since the descriptor is not null, the root should be as well
   val relative = root.relativize(this)
@@ -80,6 +101,6 @@ fun Path.asEelPath(): EelPath {
 }
 
 fun EelDescriptor.routingPrefix(): Path {
-  return ApplicationManager.getApplication().getService(EelNioBridgeService::class.java).tryGetNioRoot(this)
-         ?: throw IllegalArgumentException("Could not convert $this to EelPath: the path does not belong to the default NIO FileSystem")
+  return EelNioBridgeService.getInstanceSync().tryGetNioRoot(this)
+         ?: throw IllegalArgumentException("Failure of obtaining prefix: could not convert $this to EelPath. The path does not belong to the default NIO FileSystem")
 }

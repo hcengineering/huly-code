@@ -25,12 +25,16 @@ jvm_library(
     "@lib//:stream_ex",
     "//platform/ide-core-impl",
     "@lib//:fastutil-min",
+    "//platform/refactoring",
     "//platform/core-ui",
     "//platform/code-style-impl:codeStyle-impl",
     "//platform/statistics",
     "//plugins/yaml/editing",
   ],
-  runtime_deps = [":yaml_resources"]
+  runtime_deps = [
+    ":yaml_resources",
+    "//platform/backend",
+  ]
 )
 
 jvm_library(
@@ -56,6 +60,7 @@ jvm_library(
     "@lib//:stream_ex",
     "//platform/ide-core-impl",
     "@lib//:fastutil-min",
+    "//platform/refactoring",
     "//platform/core-ui",
     "//platform/code-style-impl:codeStyle-impl",
     "//plugins/IntelliLang:langInjection",

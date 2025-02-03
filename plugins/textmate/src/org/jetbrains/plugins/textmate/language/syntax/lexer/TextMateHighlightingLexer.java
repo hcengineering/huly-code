@@ -1,20 +1,27 @@
 package org.jetbrains.plugins.textmate.language.syntax.lexer;
 
 import com.intellij.lexer.LexerBase;
+import com.intellij.openapi.application.Application;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.psi.TokenType;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.textmate.language.TextMateLanguageDescriptor;
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorCachingWeigher;
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorWeigherImpl;
+import org.jetbrains.plugins.textmate.regex.CachingRegexFactory;
 import org.jetbrains.plugins.textmate.regex.RegexFactory;
+import org.jetbrains.plugins.textmate.regex.RememberingLastMatchRegexFactory;
 import org.jetbrains.plugins.textmate.regex.joni.JoniRegexFactory;
 
 import java.util.LinkedList;
 import java.util.Queue;
 
 public class TextMateHighlightingLexer extends LexerBase {
-  private final TextMateLexer myLexer;
-  private final Queue<TextMateLexer.Token> currentLineTokens = new LinkedList<>();
+  private final TextMateLexerCore myLexer;
+  private final Queue<TextmateToken> currentLineTokens = new LinkedList<>();
 
   private CharSequence myBuffer;
   private int myEndOffset;
@@ -26,17 +33,20 @@ public class TextMateHighlightingLexer extends LexerBase {
   private boolean myRestartable;
 
   /**
-   * @deprecated pass regex factory to a constructor
+   * @deprecated pass syntax matcher to a constructor
    */
   public TextMateHighlightingLexer(@NotNull TextMateLanguageDescriptor languageDescriptor,
                                    int lineLimit) {
-    myLexer = new TextMateLexer(languageDescriptor, new JoniRegexFactory(), lineLimit);
+    RegexFactory regexFactory = new CachingRegexFactory(new RememberingLastMatchRegexFactory(new JoniRegexFactory()));
+    TextMateSelectorCachingWeigher weigher = new TextMateSelectorCachingWeigher(new TextMateSelectorWeigherImpl());
+    TextMateCachingSyntaxMatcher syntaxMatcher = new TextMateCachingSyntaxMatcher(new TextMateSyntaxMatcherImpl(regexFactory, weigher));
+    myLexer = new TextMateLexerCore(languageDescriptor, syntaxMatcher, lineLimit, false);
   }
   
   public TextMateHighlightingLexer(@NotNull TextMateLanguageDescriptor languageDescriptor,
-                                   @NotNull RegexFactory regexFactory,
+                                   @NotNull TextMateSyntaxMatcher syntaxMatcher,
                                    int lineLimit) {
-    myLexer = new TextMateLexer(languageDescriptor, regexFactory, lineLimit);
+    myLexer = new TextMateLexerCore(languageDescriptor, syntaxMatcher, lineLimit, false);
   }
 
   @Override
@@ -88,18 +98,20 @@ public class TextMateHighlightingLexer extends LexerBase {
     }
 
     if (currentLineTokens.isEmpty()) {
-      myLexer.advanceLine(currentLineTokens);
+      Application app = ApplicationManager.getApplication();
+      Runnable checkCancelledCallback = app == null || app.isUnitTestMode() ? null : () -> ProgressManager.checkCanceled();
+      currentLineTokens.addAll(myLexer.advanceLine(checkCancelledCallback));
     }
     updateState(currentLineTokens.poll(), myLexer.getCurrentOffset());
   }
 
-  protected void updateState(@Nullable TextMateLexer.Token token, int fallbackOffset) {
+  protected void updateState(@Nullable TextmateToken token, int fallbackOffset) {
     if (token != null) {
-      myTokenType = token.scope == TextMateScope.WHITESPACE ? TokenType.WHITE_SPACE : new TextMateElementType(token.scope);
-      myTokenStart = token.startOffset;
-      myTokenEnd = Math.min(token.endOffset, myEndOffset);
-      myCurrentOffset = token.endOffset;
-      myRestartable = token.restartable;
+      myTokenType = token.getScope() == TextMateScope.WHITESPACE ? TokenType.WHITE_SPACE : new TextMateElementType(token.getScope());
+      myTokenStart = token.getStartOffset();
+      myTokenEnd = Math.min(token.getEndOffset(), myEndOffset);
+      myCurrentOffset = token.getEndOffset();
+      myRestartable = token.getRestartable();
     }
     else {
       myTokenType = null;

@@ -6,6 +6,7 @@ import com.intellij.concurrency.ConcurrentCollectionFactory;
 import com.intellij.debugger.JavaDebuggerBundle;
 import com.intellij.debugger.engine.evaluation.EvaluateException;
 import com.intellij.debugger.engine.evaluation.EvaluationContextImpl;
+import com.intellij.debugger.engine.events.DebuggerCommandImpl;
 import com.intellij.debugger.engine.events.SuspendContextCommandImpl;
 import com.intellij.debugger.engine.requests.RequestManagerImpl;
 import com.intellij.debugger.impl.DebuggerUtilsAsync;
@@ -114,7 +115,7 @@ public abstract class SuspendContextImpl extends XSuspendContext implements Susp
     myDebugId = debugId;
 
     CoroutineScope dmtScope = myDebuggerManagerThread.getCoroutineScope();
-    myCoroutineScope = CoroutineScopeKt.childScope(dmtScope, "Suspend context " + this, EmptyCoroutineContext.INSTANCE, true);
+    myCoroutineScope = CoroutineScopeKt.childScope(dmtScope, "SuspendContextImpl " + debugId, EmptyCoroutineContext.INSTANCE, true);
     CheckedDisposable disposable = debugProcess.disposable;
     if (disposable.isDisposed()) {
       // could be due to VM death
@@ -499,10 +500,18 @@ public abstract class SuspendContextImpl extends XSuspendContext implements Susp
     for (SuspendContextCommandImpl postponed = pollPostponedCommand(); postponed != null; postponed = pollPostponedCommand()) {
       postponed.notifyCancelled();
     }
-    for (SuspendContextCommandImpl command : myUnfinishedCommands) {
-      command.notifyCancelled();
+    DebuggerCommandImpl currentCommand = DebuggerManagerThreadImpl.getCurrentCommand();
+    for (var it = myUnfinishedCommands.iterator(); it.hasNext(); ) {
+      SuspendContextCommandImpl command = it.next();
+      if (currentCommand != command) {
+        command.cancelCommandScope();
+        it.remove();
+      }
+      else {
+        command.cancelCommandScopeOnSuspend();
+        // do not remove itself
+      }
     }
-    myUnfinishedCommands.clear();
   }
 
   public final SuspendContextCommandImpl pollPostponedCommand() {
@@ -521,6 +530,9 @@ public abstract class SuspendContextImpl extends XSuspendContext implements Susp
       setThread(activeThread);
     }
     if (activeThread != null) {
+      if (mySuspendPolicy == EventRequest.SUSPEND_EVENT_THREAD && activeThread != myThread) {
+        logError("Thread " + activeThread + " was set as active into " + this);
+      }
       myActiveExecutionStack = new JavaExecutionStack(activeThread, myDebugProcess, myThread == activeThread);
       myActiveExecutionStack.initTopFrame();
     }

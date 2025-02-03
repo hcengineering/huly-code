@@ -30,6 +30,7 @@ jvm_library(
     "//java/debugger/impl:java-debugger-impl",
     "//platform/testRunner",
     "//platform/vcs-api:vcs",
+    "//platform/usageView",
     "//platform/ide-core-impl",
     "//java/compiler/openapi:java-compiler",
     "//java/debugger/openapi:java-debugger",
@@ -57,7 +58,6 @@ jvm_library(
     "//platform/util/jdom",
     "//platform/threadDumpParser",
     "//platform/eel-provider",
-    "//platform/eel",
     "//java/debugger/shared:java-debugger-impl-shared",
   ],
   exports = [

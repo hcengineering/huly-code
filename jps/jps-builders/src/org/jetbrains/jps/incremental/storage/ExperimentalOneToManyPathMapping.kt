@@ -3,47 +3,14 @@
 
 package org.jetbrains.jps.incremental.storage
 
-import com.intellij.openapi.util.io.FileUtilRt
+import org.h2.mvstore.MVMap
 import org.jetbrains.annotations.ApiStatus.Internal
-import org.jetbrains.annotations.TestOnly
 import org.jetbrains.jps.incremental.storage.dataTypes.stringTo128BitHash
 import java.nio.file.Path
-import kotlin.io.path.invariantSeparatorsPathString
-
-@Internal
-enum class RelativePathType {
-  SOURCE,
-  OUTPUT,
-}
-
-@TestOnly
-@Internal
-object TestPathTypeAwareRelativizer : PathTypeAwareRelativizer {
-  override fun toRelative(path: String, type: RelativePathType): String {
-    return FileUtilRt.toSystemIndependentName(path)
-  }
-
-  override fun toRelative(path: Path, type: RelativePathType): String {
-    return path.invariantSeparatorsPathString
-  }
-
-  override fun toAbsolute(path: String, type: RelativePathType): String {
-    return FileUtilRt.toSystemIndependentName(path)
-  }
-}
-
-@Internal
-interface PathTypeAwareRelativizer {
-  fun toRelative(path: String, type: RelativePathType): String
-
-  fun toRelative(path: Path, type: RelativePathType): String
-
-  fun toAbsolute(path: String, type: RelativePathType): String
-}
 
 @Internal
 open class ExperimentalOneToManyPathMapping(
-  @JvmField val mapHandle: MapHandle<LongArray, Array<String>>,
+  @JvmField val map: MVMap<LongArray, Array<String>>,
   @JvmField internal val relativizer: PathTypeAwareRelativizer,
   private val valueOffset: Int = 0,
   private val keyKind: RelativePathType,
@@ -55,40 +22,35 @@ open class ExperimentalOneToManyPathMapping(
 
   final override fun getOutputs(path: String): List<String>? = doGetValuesByRawKey(getKey(path))
 
-  final override fun getOutputs(file: Path): List<String>? = doGetValuesByRawKey(getKey(file))
+  final override fun getOutputs(file: Path): List<Path>? {
+    val key = getKey(file)
+    val list = map.get(key) ?: return null
+    return Array<Path>(list.size - valueOffset) { relativizer.toAbsoluteFile(list.get(it + valueOffset), valueKind) }.asList()
+  }
 
   private fun doGetValuesByRawKey(key: LongArray): List<String>? {
-    val list = mapHandle.map.get(key) ?: return null
+    val list = map.get(key) ?: return null
     return Array<String>(list.size - valueOffset) { relativizer.toAbsolute(list.get(it + valueOffset), valueKind) }.asList()
   }
 
-  fun normalizeOutputPaths(outPaths: List<String>, relativeSourcePath: String?): Array<String>? {
-    return when {
-      outPaths.isEmpty() -> null
-      relativeSourcePath != null -> {
-        Array(outPaths.size + 1) {
-          if (it == 0) relativeSourcePath else relativizer.toRelative(outPaths.get(it - 1), valueKind)
-        }
-      }
-      else -> {
-        Array(outPaths.size) {
-          relativizer.toRelative(outPaths.get(it), valueKind)
-        }
-      }
-    }
-  }
-
-  override fun setOutputs(path: String, outPaths: List<String>) {
-    val normalizedOutputPaths = normalizeOutputPaths(outPaths, null)
-    if (normalizedOutputPaths == null) {
-      mapHandle.map.remove(getKey(path))
+  override fun setOutputs(path: Path, outPaths: List<Path>) {
+    val normalizedOutputPaths = if (outPaths.isEmpty()) {
+      null
     }
     else {
-      mapHandle.map.put(getKey(path), normalizedOutputPaths)
+      Array(outPaths.size) {
+        relativizer.toRelative(outPaths.get(it), valueKind)
+      }
+    }
+    if (normalizedOutputPaths == null) {
+      map.remove(getKey(path))
+    }
+    else {
+      map.put(getKey(path), normalizedOutputPaths)
     }
   }
 
-  final override fun remove(path: String) {
-    mapHandle.map.remove(getKey(path))
+  final override fun remove(key: Path) {
+    map.remove(getKey(key))
   }
 }

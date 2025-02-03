@@ -60,7 +60,6 @@ jvm_library(
     "//platform/eel-provider",
     "//platform/ijent",
     "//platform/core-api:core",
-    "//platform/eel-impl",
   ],
   exports = [
     "//platform/external-system-api:externalSystem",
@@ -101,7 +100,7 @@ java_library(
 jvm_library(
   name = "gradle-tests_test_lib",
   visibility = ["//visibility:public"],
-  srcs = glob(["testData/**/*.kt", "testData/**/*.java", "testSources/**/*.kt", "testSources/**/*.java"], allow_empty = True),
+  srcs = glob(["testSources/**/*.kt", "testSources/**/*.java"], allow_empty = True),
   deps = [
     "@lib//:jmock",
     "@lib//:jmock-junit4",

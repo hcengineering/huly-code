@@ -1,7 +1,6 @@
 // Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.plugins.gradle.service.project.data;
 
-import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.externalSystem.ExternalSystemManager;
 import com.intellij.openapi.externalSystem.model.DataNode;
@@ -11,9 +10,10 @@ import com.intellij.openapi.externalSystem.model.project.ExternalModuleBuildClas
 import com.intellij.openapi.externalSystem.model.project.ExternalProjectBuildClasspathPojo;
 import com.intellij.openapi.externalSystem.model.project.ModuleData;
 import com.intellij.openapi.externalSystem.model.project.ProjectData;
+import com.intellij.openapi.externalSystem.service.project.IdeModelsProvider;
 import com.intellij.openapi.externalSystem.service.project.IdeModifiableModelsProvider;
 import com.intellij.openapi.externalSystem.service.project.manage.AbstractProjectDataService;
-import com.intellij.openapi.externalSystem.settings.AbstractExternalSystemLocalSettings;
+import com.intellij.openapi.externalSystem.settings.ProjectBuildClasspathManager;
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil;
 import com.intellij.openapi.externalSystem.util.ExternalSystemConstants;
 import com.intellij.openapi.externalSystem.util.Order;
@@ -61,7 +61,7 @@ public final class BuildClasspathModuleGradleDataService extends AbstractProject
 
     ExternalSystemManager<?, ?, ?, ?, ?> manager = ExternalSystemApiUtil.getManager(GradleConstants.SYSTEM_ID);
     assert manager != null;
-    AbstractExternalSystemLocalSettings<?> localSettings = manager.getLocalSettingsProvider().fun(project);
+    ProjectBuildClasspathManager buildClasspathManager = project.getService(ProjectBuildClasspathManager.class);
 
     final String linkedExternalProjectPath = projectData.getLinkedExternalProjectPath();
     final File gradleHomeDir = toImport.iterator().next().getData().getGradleHomeDir();
@@ -87,7 +87,7 @@ public final class BuildClasspathModuleGradleDataService extends AbstractProject
     });
 
     final Map<String, ExternalProjectBuildClasspathPojo> localProjectBuildClasspath =
-      new HashMap<>(localSettings.getProjectBuildClasspath());
+      new HashMap<>(buildClasspathManager.getProjectBuildClasspath());
 
     for (final DataNode<BuildScriptClasspathData> node : toImport) {
       if (GradleConstants.SYSTEM_ID.equals(node.getData().getOwner())) {
@@ -142,9 +142,16 @@ public final class BuildClasspathModuleGradleDataService extends AbstractProject
       }
     }
 
-    WriteAction.runAndWait(() -> localSettings.setProjectBuildClasspath(localProjectBuildClasspath));
+    buildClasspathManager.setProjectBuildClasspathSync(localProjectBuildClasspath);
+  }
 
+  @Override
+  public void onSuccessImport(@NotNull Collection<DataNode<BuildScriptClasspathData>> imported,
+                              @Nullable ProjectData projectData,
+                              @NotNull Project project,
+                              @NotNull IdeModelsProvider modelsProvider) {
     if (!project.isDisposed()) {
+      project.getService(ProjectBuildClasspathManager.class).removeUnavailableClasspaths();
       GradleBuildClasspathManager.getInstance(project).reload();
     }
   }

@@ -1,7 +1,8 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 
 package org.jetbrains.kotlin.idea.debugger.coroutine.util
 
+import com.intellij.debugger.engine.DebuggerManagerThreadImpl
 import com.intellij.debugger.engine.SuspendContextImpl
 import com.intellij.debugger.jdi.StackFrameProxyImpl
 import com.intellij.debugger.jdi.ThreadReferenceProxyImpl
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.VisibleForTesting
 import org.jetbrains.kotlin.idea.debugger.base.util.evaluate.DefaultExecutionContext
 import org.jetbrains.kotlin.idea.debugger.coroutine.data.*
-import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.ContinuationHolder
+import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.fetchCoroutineStacksInfoData
 import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.safeSkipCoroutineStackFrameProxy
 
 class CoroutineFrameBuilder {
@@ -19,15 +20,17 @@ class CoroutineFrameBuilder {
         val log by logger
         private const val PRE_FETCH_FRAME_COUNT = 5
 
-        fun build(coroutine: CoroutineInfoData, suspendContext: SuspendContextImpl): CoroutineFrameItemLists? =
-            when {
-                coroutine.isRunning() -> buildStackFrameForActive(coroutine, suspendContext)
-                coroutine.isSuspended() -> CoroutineFrameItemLists(coroutine.continuationStackFrames, coroutine.creationStackFrames)
+        fun build(coroutine: CoroutineInfoData, suspendContext: SuspendContextImpl): CoroutineFrameItemLists? {
+            DebuggerManagerThreadImpl.assertIsManagerThread()
+            return when {
+                coroutine.isRunning -> buildStackFrameForActive(coroutine, suspendContext)
+                coroutine.isSuspended -> CoroutineFrameItemLists(coroutine.continuationStackFrames, coroutine.creationStackFrames)
                 else -> null
             }
+        }
 
         private fun buildStackFrameForActive(coroutine: CoroutineInfoData, suspendContext: SuspendContextImpl): CoroutineFrameItemLists? {
-            val activeThread = coroutine.activeThread ?: return null
+            val activeThread = coroutine.lastObservedThread ?: return null
 
             val coroutineStackFrameList = mutableListOf<CoroutineStackFrameItem>()
             val threadReferenceProxyImpl = ThreadReferenceProxyImpl(suspendContext.virtualMachineProxy, activeThread)
@@ -66,10 +69,7 @@ class CoroutineFrameBuilder {
 
             if (withPreFrames) {
                 // @TODO perhaps we need to merge the dropped variables with the frame below...
-                val framesLeft = preflightFrame.threadPreCoroutineFrames
-                stackFrames.addAll(framesLeft.mapNotNull { stackFrameProxyImpl ->
-                    suspendContext.invokeInManagerThread { buildRealStackFrameItem(stackFrameProxyImpl) }
-                })
+                stackFrames.addAll(preflightFrame.threadPreCoroutineFrames.mapNotNull(::buildRealStackFrameItem))
             }
 
             return CoroutineFrameItemLists(stackFrames, preflightFrame.coroutineStacksInfoData.creationStackFrames)
@@ -123,11 +123,7 @@ class CoroutineFrameBuilder {
         internal fun coroutineExitFrame(
             frame: StackFrameProxyImpl,
             suspendContext: SuspendContextImpl
-        ): CoroutinePreflightFrame? {
-            return suspendContext.invokeInManagerThread {
-                lookupContinuation(suspendContext, frame)
-            }
-        }
+        ): CoroutinePreflightFrame? = lookupContinuation(suspendContext, frame)
 
         // Fast check to get the whole coroutine information only for the first suspend frame
         internal fun isFirstSuspendFrame(frame: StackFrameProxyImpl): Pair<Boolean, Boolean> {
@@ -141,6 +137,7 @@ class CoroutineFrameBuilder {
         @ApiStatus.Internal
         @VisibleForTesting
         fun lookupContinuation(suspendContext: SuspendContextImpl, frame: StackFrameProxyImpl): CoroutinePreflightFrame? {
+            DebuggerManagerThreadImpl.assertIsManagerThread()
             val mode = frame.getSuspendExitMode()
             if (!mode.isCoroutineFound()) return null
 
@@ -148,8 +145,7 @@ class CoroutineFrameBuilder {
             if (!threadAndContextSupportsEvaluation(suspendContext, frame)) return null
             val (theFollowingFrames, _) = theFollowingFrames(frame)
             val context = DefaultExecutionContext(suspendContext, frame)
-            val continuationHolder = ContinuationHolder.instance(context)
-            val coroutineStacksInfo = continuationHolder.extractCoroutineStacksInfoData(continuation) ?: return null
+            val coroutineStacksInfo = fetchCoroutineStacksInfoData(context, continuation) ?: return null
             return CoroutinePreflightFrame(
                 coroutineStacksInfo,
                 frame,

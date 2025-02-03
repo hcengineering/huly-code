@@ -234,6 +234,25 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
         }
 
         @RunWith(JUnit3RunnerWithInners.class)
+        @TestMetadata("testData/quickfix/autoImports/callablesDeclaredInClasses")
+        public static class CallablesDeclaredInClasses extends AbstractQuickFixMultiFileTest {
+            @java.lang.Override
+            @org.jetbrains.annotations.NotNull
+            public final KotlinPluginMode getPluginMode() {
+                return KotlinPluginMode.K1;
+            }
+
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest(this::doTestWithExtraFile, this, testDataFilePath);
+            }
+
+            @TestMetadata("noImportOfPartiallyPrivateCallables.test")
+            public void testNoImportOfPartiallyPrivateCallables() throws Exception {
+                runTest("testData/quickfix/autoImports/callablesDeclaredInClasses/noImportOfPartiallyPrivateCallables.test");
+            }
+        }
+
+        @RunWith(JUnit3RunnerWithInners.class)
         @TestMetadata("testData/quickfix/autoImports/innerClass")
         public static class InnerClass extends AbstractQuickFixMultiFileTest {
             @java.lang.Override
@@ -1954,6 +1973,40 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
             @TestMetadata("testData/quickfix/createFromUsage/createVariable/property")
             public abstract static class Property extends AbstractQuickFixMultiFileTest {
                 @RunWith(JUnit3RunnerWithInners.class)
+                @TestMetadata("testData/quickfix/createFromUsage/createVariable/property/extension")
+                public static class Extension extends AbstractQuickFixMultiFileTest {
+                    @java.lang.Override
+                    @org.jetbrains.annotations.NotNull
+                    public final KotlinPluginMode getPluginMode() {
+                        return KotlinPluginMode.K1;
+                    }
+
+                    private void runTest(String testDataFilePath) throws Exception {
+                        KotlinTestUtils.runTest(this::doTestWithExtraFile, this, testDataFilePath);
+                    }
+
+                    @TestMetadata("extensionPropertyOnTypeFromAnotherPackage.before.Main.kt")
+                    public void testExtensionPropertyOnTypeFromAnotherPackage() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/extension/extensionPropertyOnTypeFromAnotherPackage.before.Main.kt");
+                    }
+
+                    @TestMetadata("extensionValOnGroovyType.before.Main.kt")
+                    public void testExtensionValOnGroovyType() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/extension/extensionValOnGroovyType.before.Main.kt");
+                    }
+
+                    @TestMetadata("extensionValOnJavaType.before.Main.kt")
+                    public void testExtensionValOnJavaType() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/extension/extensionValOnJavaType.before.Main.kt");
+                    }
+
+                    @TestMetadata("staticExtensionValOnJavaType.before.Main.kt")
+                    public void testStaticExtensionValOnJavaType() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/extension/staticExtensionValOnJavaType.before.Main.kt");
+                    }
+                }
+
+                @RunWith(JUnit3RunnerWithInners.class)
                 @TestMetadata("testData/quickfix/createFromUsage/createVariable/property/fieldFromJava")
                 public static class FieldFromJava extends AbstractQuickFixMultiFileTest {
                     @java.lang.Override
@@ -1998,26 +2051,6 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
 
                     private void runTest(String testDataFilePath) throws Exception {
                         KotlinTestUtils.runTest(this::doTestWithExtraFile, this, testDataFilePath);
-                    }
-
-                    @TestMetadata("extensionPropertyOnTypeFromAnotherPackage.before.Main.kt")
-                    public void testExtensionPropertyOnTypeFromAnotherPackage() throws Exception {
-                        runTest("testData/quickfix/createFromUsage/createVariable/property/extensionPropertyOnTypeFromAnotherPackage.before.Main.kt");
-                    }
-
-                    @TestMetadata("extensionValOnGroovyType.before.Main.kt")
-                    public void testExtensionValOnGroovyType() throws Exception {
-                        runTest("testData/quickfix/createFromUsage/createVariable/property/extensionValOnGroovyType.before.Main.kt");
-                    }
-
-                    @TestMetadata("extensionValOnJavaType.before.Main.kt")
-                    public void testExtensionValOnJavaType() throws Exception {
-                        runTest("testData/quickfix/createFromUsage/createVariable/property/extensionValOnJavaType.before.Main.kt");
-                    }
-
-                    @TestMetadata("staticExtensionValOnJavaType.before.Main.kt")
-                    public void testStaticExtensionValOnJavaType() throws Exception {
-                        runTest("testData/quickfix/createFromUsage/createVariable/property/staticExtensionValOnJavaType.before.Main.kt");
                     }
 
                     @TestMetadata("staticValOnJavaClass.before.Main.kt")
@@ -2658,6 +2691,11 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
             @TestMetadata("notAGetterSignature.test")
             public void testNotAGetterSignature() throws Exception {
                 runTest("testData/quickfix/override/overriddenJavaAccessor/notAGetterSignature.test");
+            }
+
+            @TestMetadata("nothingToOverride.test")
+            public void testNothingToOverride() throws Exception {
+                runTest("testData/quickfix/override/overriddenJavaAccessor/nothingToOverride.test");
             }
 
             @TestMetadata("simpleGetter.test")

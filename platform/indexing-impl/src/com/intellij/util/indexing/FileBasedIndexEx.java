@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.util.indexing;
 
 import com.intellij.ide.lightEdit.LightEditCompatible;
@@ -13,7 +13,6 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectLocator;
-import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.roots.ContentIterator;
 import com.intellij.openapi.util.*;
 import com.intellij.openapi.util.registry.Registry;
@@ -74,7 +73,7 @@ public abstract class FileBasedIndexEx extends FileBasedIndex {
   private static final RecursionGuard<Object> ourIgnoranceGuard = RecursionManager.createGuard("ignoreDumbMode");
 
   @ApiStatus.Internal
-  static boolean doTraceIndexUpdates() {
+  public static boolean doTraceIndexUpdates() {
     return TRACE_INDEX_UPDATES;
   }
 
@@ -648,17 +647,18 @@ public abstract class FileBasedIndexEx extends FileBasedIndex {
   }
 
   @Override
-  public @Nullable DumbModeAccessType getCurrentDumbModeAccessType() {
+  public @Nullable DumbModeAccessType getCurrentDumbModeAccessType(@Nullable Project project) {
     DumbModeAccessType result = getCurrentDumbModeAccessType_NoDumbChecks();
-    if (result != null) {
-      getLogger().assertTrue(ContainerUtil.exists(ProjectManager.getInstance().getOpenProjects(), p -> DumbService.isDumb(p)),
-                             "getCurrentDumbModeAccessType may only be called during indexing");
+    if (result != null && project != null) {
+      getLogger().assertTrue(DumbService.isDumb(project), "getCurrentDumbModeAccessType may only be called during indexing. " +
+                                                          "Project " + project.getName() + " is not in dumb mode.");
     }
     return result;
   }
 
   @Nullable
-  DumbModeAccessType getCurrentDumbModeAccessType_NoDumbChecks() {
+  @ApiStatus.Internal
+  public DumbModeAccessType getCurrentDumbModeAccessType_NoDumbChecks() {
     Stack<DumbModeAccessType> dumbModeAccessTypeStack = ourDumbModeAccessTypeStack.get();
     if (dumbModeAccessTypeStack.isEmpty()) {
       if (!Registry.is("ide.dumb.mode.check.awareness")) {

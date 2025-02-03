@@ -451,7 +451,8 @@ public abstract class ExternalSystemImportingTestCase extends ExternalSystemTest
     for (DataNode<?> node : nodes) {
       node.visit(dataNode -> dataNode.setIgnored(ignored));
     }
-    ProjectDataManager.getInstance().importData(projectDataNode, myProject);
+
+    ExternalSystemTestUtilKt.importData(projectDataNode, myProject);
   }
 
   protected void importProject(@NotNull String config, @Nullable Boolean skipIndexing) throws IOException {

@@ -530,7 +530,7 @@
                      groupKey="advanced.settings.git"/>
     <advancedSetting id="git.use.push.force.with.lease" default="true" groupKey="advanced.settings.git"/>
     <advancedSetting id="git.update.incoming.outgoing.info" default="true" groupKey="advanced.settings.git"/>
-    <advancedSetting id="git.commit.do.not.run.hooks" default="false"  groupKey="advanced.settings.git"/>
+    <advancedSetting id="git.commit.do.not.run.commit.hooks" default="false"  groupKey="advanced.settings.git"/>
     <advancedSetting id="git.use.schannel.on.windows" default="false" groupKey="advanced.settings.git" os="windows"/>
     <advancedSetting id="git.branch.cleanup.symbol" default="-" groupKey="advanced.settings.git"/>
     <registryKey key="git.execute.with.mediator" defaultValue="true"
@@ -700,6 +700,10 @@
 
     <applicationService serviceImplementation="git4idea.index.ui.GitStageUiApplicationSettings"/>
 
+    <applicationService serviceInterface="git4idea.commit.signing.GpgAgentPathsLocatorFactory"
+                        serviceImplementation="git4idea.commit.signing.GpgAgentPathsLocatorFactoryImpl"
+                        testServiceImplementation="git4idea.commit.signing.GpgAgentPathsLocatorTestFactory"/>
+
     <recentProjectsBranchesProvider implementation="git4idea.repo.GitRecentProjectsBranchesProvider"/>
 
     <vcs.taskHandler implementation="git4idea.GitTaskHandler"/>
@@ -736,6 +740,7 @@
     <!--END Git exclude lang-->
 
     <backgroundPostStartupActivity implementation="git4idea.ignore.GitIgnoreInStoreDirGeneratorActivity"/>
+    <vcsSharedChecker implementation="git4idea.ignore.GitIgnoreInStoreDirSharedChecker"/>
     <backgroundPostStartupActivity implementation="git4idea.config.GitSetupProjectConfig"/>
     <backgroundPostStartupActivity implementation="git4idea.repo.GitShallowRepositoryCheck"/>
 

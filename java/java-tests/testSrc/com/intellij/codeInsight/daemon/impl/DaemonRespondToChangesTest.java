@@ -3,6 +3,7 @@ package com.intellij.codeInsight.daemon.impl;
 
 import com.intellij.application.options.editor.CodeFoldingConfigurable;
 import com.intellij.codeHighlighting.*;
+import com.intellij.codeHighlighting.Pass;
 import com.intellij.codeInsight.EditorInfo;
 import com.intellij.codeInsight.daemon.DaemonAnalyzerTestCase;
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
@@ -59,10 +60,7 @@ import com.intellij.openapi.editor.impl.EditorImpl;
 import com.intellij.openapi.editor.impl.event.MarkupModelListener;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
-import com.intellij.openapi.fileEditor.FileDocumentManager;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.OpenFileDescriptor;
-import com.intellij.openapi.fileEditor.TextEditor;
+import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.fileEditor.impl.text.PsiAwareTextEditorProvider;
 import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider;
 import com.intellij.openapi.fileTypes.PlainTextFileType;
@@ -72,10 +70,7 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.*;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.projectRoots.impl.JavaAwareProjectJdkTableImpl;
-import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.util.ProperTextRange;
-import com.intellij.openapi.util.Segment;
-import com.intellij.openapi.util.TextRange;
+import com.intellij.openapi.util.*;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.pom.java.LanguageLevel;
@@ -1204,7 +1199,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
       collected.clear();
       setActiveEditors(editor1, editor2);
       type("/* xxx */");
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
 
       assertSameElements(collected, Arrays.asList(editor1, editor2));
       assertSameElements(applied, Arrays.asList(editor1, editor2));
@@ -1444,17 +1439,17 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
         }""";
       configureByText(JavaFileType.INSTANCE, text);
       EditorTestUtil.buildInitialFoldingsInBackground(myEditor);
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
       EditorTestUtil.executeAction(myEditor, IdeActions.ACTION_COLLAPSE_ALL_REGIONS);
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
       checkFoldingState("[FoldRegion +(25:33), placeholder='{}']");
 
       WriteCommandAction.runWriteCommandAction(myProject, () -> myEditor.getDocument().insertString(0, "/*"));
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
       checkFoldingState("[FoldRegion -(0:37), placeholder='/.../', FoldRegion +(27:35), placeholder='{}']");
 
       EditorTestUtil.executeAction(myEditor, IdeActions.ACTION_EXPAND_ALL_REGIONS);
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
       checkFoldingState("[FoldRegion -(0:37), placeholder='/.../']");
     });
   }
@@ -1469,7 +1464,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
         }""";
       configureByText(JavaFileType.INSTANCE, text);
       EditorTestUtil.buildInitialFoldingsInBackground(myEditor);
-      waitForDaemon(myProject, myEditor.getDocument());
+      waitForDaemonToFinish(myProject, myEditor.getDocument());
       checkFoldingState("[FoldRegion -(22:27), placeholder='{}']");
 
       JavaCodeFoldingSettings settings = JavaCodeFoldingSettings.getInstance();
@@ -1477,7 +1472,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
       try {
         settings.setCollapseMethods(true);
         CodeFoldingConfigurable.Util.applyCodeFoldingSettingsChanges();
-        waitForDaemon(myProject, myEditor.getDocument());
+        waitForDaemonToFinish(myProject, myEditor.getDocument());
         checkFoldingState("[FoldRegion +(22:27), placeholder='{}']");
       }
       finally {
@@ -1491,16 +1486,11 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
   }
 
   // return elapsed time in ms
-  static long waitForDaemon(@NotNull Project project, @NotNull Document document) {
+  static long waitForDaemonToFinish(@NotNull Project project, @NotNull Document document) {
     ThreadingAssertions.assertEventDispatchThread();
     long start = System.currentTimeMillis();
     long deadline = start + 60_000;
-    while (!daemonIsWorkingOrPending(project, document)) {
-      PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue();
-      if (System.currentTimeMillis() > deadline) {
-        fail("Too long waiting for daemon to start");
-      }
-    }
+    waitForDaemonToStart(project, document, 60_000);
     while (daemonIsWorkingOrPending(project, document)) {
       if (System.currentTimeMillis() > deadline) {
         DaemonRespondToChangesPerformanceTest.dumpThreadsToConsole();
@@ -1509,6 +1499,21 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
       PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue();
     }
     return System.currentTimeMillis()-start;
+  }
+
+  private static void waitForDaemonToStart(@NotNull Project project, @NotNull Document document, long timeoutMs) {
+    PsiFile psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document);
+    long deadline = System.currentTimeMillis() + timeoutMs;
+    DaemonCodeAnalyzerImpl myDaemonCodeAnalyzer = (DaemonCodeAnalyzerImpl)DaemonCodeAnalyzer.getInstance(project);
+    while (!myDaemonCodeAnalyzer.isRunning() && !myDaemonCodeAnalyzer.isAllAnalysisFinished(psiFile)) {
+      PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue();
+      if (System.currentTimeMillis() > deadline) {
+        fail("Too long waiting for daemon to start. " +
+             "daemonIsWorkingOrPending="+daemonIsWorkingOrPending(project, document)+
+             "; allFinished="+myDaemonCodeAnalyzer.isAllAnalysisFinished(psiFile)+
+             "; thread dump:\n------"+ThreadDumper.dumpThreadsToString()+"\n======");
+      }
+    }
   }
 
   static boolean daemonIsWorkingOrPending(@NotNull Project project, @NotNull Document document) {
@@ -1643,7 +1648,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
     assertTrue(PsiDocumentManager.getInstance(myProject).hasUncommitedDocuments());
 
     type("String i=0;");
-    waitForDaemon(myProject, myEditor.getDocument());
+    waitForDaemonToFinish(myProject, myEditor.getDocument());
     assertNotEmpty(DaemonCodeAnalyzerImpl.getHighlights(getEditor().getDocument(), HighlightSeverity.ERROR, getProject()));
     assertEquals(text, document.getText());  // retain non-phys document until after highlighting
     assertFalse(PsiDocumentManager.getInstance(myProject).isCommitted(document));
@@ -1798,7 +1803,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
     makeEditorWindowVisible(new Point(0, 1000), myEditor);
 
     type("/");
-    waitForDaemon(myProject, myEditor.getDocument());
+    waitForDaemonToFinish(myProject, myEditor.getDocument());
     List<HighlightInfo> errors = DaemonCodeAnalyzerImpl.getHighlights(getEditor().getDocument(), HighlightSeverity.ERROR, getProject());
     assertNotEmpty(errors);
     assertTrue(errors.toString().contains("'class' or 'interface' expected"));
@@ -2086,7 +2091,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
           LOG.debug("All typing completed. " +
                     "\neditor text:-----------\n"+myEditor.getDocument().getText()+"\n-------\n"+
                     "errors in markup: " + StringUtil.join(getErrorsFromMarkup(markupModel), "\n") + "\n-----\n");
-          waitForDaemon(getProject(), myEditor.getDocument());
+          waitForDaemonToFinish(getProject(), myEditor.getDocument());
           assertEmpty(myEditor.getDocument().getText(), getErrorsFromMarkup(markupModel));
         }
       });
@@ -2200,7 +2205,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
       // warmup highlighting first, calibrating before that would make little sense
       for (int i = 0; i < 10; i++) {
         type("x");
-        waitForDaemon(getProject(), document);
+        waitForDaemonToFinish(getProject(), document);
         backspace();
         PsiDocumentManager.getInstance(getProject()).commitAllDocuments();
       }
@@ -2209,7 +2214,7 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
       // compute time the highlighting takes to highlight this file completely
       for (int i = 0; i < CALIBRATE_N; i++) {
         type("x");
-        long elapsed = waitForDaemon(getProject(), document);
+        long elapsed = waitForDaemonToFinish(getProject(), document);
         avgElapsedTime += elapsed;
         backspace();
         PsiDocumentManager.getInstance(getProject()).commitAllDocuments();
@@ -2238,16 +2243,86 @@ public class DaemonRespondToChangesTest extends DaemonAnalyzerTestCase {
           throw new AssertionError(e);
         }
 
-        long deadline = System.currentTimeMillis() + 60_000;
-        while (!daemonIsWorkingOrPending(getProject(), document) && !myDaemonCodeAnalyzer.isAllAnalysisFinished(myFile)) {
-          PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue();
-          if (System.currentTimeMillis() > deadline) {
-            fail("Too long waiting for daemon to start");
-          }
-        }
+        waitForDaemonToStart(getProject(), document, 60_000);
         backspace();
         PsiDocumentManager.getInstance(getProject()).commitAllDocuments();
       }
     });
+  }
+
+  enum DEvent { STARTED, FINISHED, CANCELED }
+  public void testDaemonListenerEventsMustBePairedEvenWhenModalitySuddenlyChangedHalfRoad() {
+    configureByText(JavaFileType.INSTANCE, """
+      class AClass<caret> {
+    
+      }
+    """);
+    Document document = getDocument(getFile());
+    assertEmpty(highlightErrors());
+    List<Pair<DEvent,String>> eventLog = Collections.synchronizedList(new ArrayList<>());
+    getProject().getMessageBus().connect(getTestRootDisposable()).subscribe(DaemonCodeAnalyzer.DAEMON_EVENT_TOPIC,
+            new DaemonCodeAnalyzer.DaemonListener() {
+              @Override
+              public void daemonStarting(@NotNull Collection<? extends @NotNull FileEditor> fileEditors) {
+                eventLog.add(Pair.create(DEvent.STARTED,""));
+              }
+
+              @Override
+              public void daemonFinished(@NotNull Collection<? extends @NotNull FileEditor> fileEditors) {
+                eventLog.add(Pair.create(DEvent.FINISHED, ""));
+              }
+
+              @Override
+              public void daemonCancelEventOccurred(@NotNull String reason) {
+                eventLog.add(Pair.create(DEvent.CANCELED, reason));
+              }
+            });
+    runWithReparseDelay(0, () -> {
+      for (int i=0; i<100; i++) {
+        waitForDaemonToFinish(getProject(), document);
+        eventLog.clear();
+        Disposable disposable = Disposer.newDisposable();
+        type("x");
+        waitForDaemonToStart(getProject(), document, 10_000);
+        myDaemonCodeAnalyzer.disableUpdateByTimer(disposable);
+        {
+          long deadline = System.currentTimeMillis() + 10; // do something for awhile
+          while (System.currentTimeMillis() < deadline) {
+            UIUtil.dispatchAllInvocationEvents();
+          }
+        }
+
+        type("y");
+        Disposer.dispose(disposable); //reenable DCA
+        waitForDaemonToFinish(getProject(), document);
+
+        assertEventsArePaired(eventLog);
+        backspace();
+        backspace();
+      }
+    });
+  }
+
+  private static void assertEventsArePaired(List<Pair<DEvent,String>> log) {
+    String toString = log.toString();
+    int starts = 0;
+    int ends = 0;
+    for (Pair<DEvent,String> e : log) {
+      switch(e.getFirst()) {
+        case STARTED:
+          assertEquals(toString, ends,starts);
+          starts++;
+          break;
+        case CANCELED:
+        case FINISHED:
+          assertTrue(toString, starts > 0);
+          assertTrue(toString, starts >= ends);
+          ends++;
+          break;
+        default:
+          fail(toString);
+      }
+    }
+    assertEquals(toString, starts, ends);
   }
 }

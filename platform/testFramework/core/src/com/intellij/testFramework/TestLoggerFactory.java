@@ -9,7 +9,6 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.LineTokenizer;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.ExceptionUtil;
-import com.intellij.util.containers.ContainerUtil;
 import org.jetbrains.annotations.ApiStatus.Internal;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -81,22 +80,7 @@ public final class TestLoggerFactory implements Logger.Factory {
       myInitialized = true;
     }
 
-    java.util.logging.Logger julLogger = java.util.logging.Logger.getLogger(category);
-    if (myEchoDebugToStdout) {
-      configureLogToStdoutIfDebug(julLogger);
-    }
-    return new TestLogger(julLogger, this);
-  }
-
-  /**
-   * If the logger has the "FINE" level, add a LogToStdoutJulHandler that streams its log records
-   * to STDOUT with a timestamp relative to the test start time.
-   */
-  private static void configureLogToStdoutIfDebug(@NotNull java.util.logging.Logger julLogger) {
-    if (julLogger.isLoggable(Level.FINE) &&
-        ContainerUtil.findInstance(julLogger.getHandlers(), LogToStdoutJulHandler.class) == null) {
-      julLogger.addHandler(new LogToStdoutJulHandler());
-    }
+    return new TestLogger(java.util.logging.Logger.getLogger(category), this);
   }
 
   public static int getRethrowErrorNumber() {
@@ -124,6 +108,11 @@ public final class TestLoggerFactory implements Logger.Factory {
       Path logFile = logDir.resolve(LOG_FILE_NAME);
       JulLogger.clearHandlers();
       JulLogger.configureLogFileAndConsole(logFile, false, true, false, null, null, null);
+
+      if (myEchoDebugToStdout) {
+        addConsoleAppenderForDebugRecords();
+      }
+
       System.out.printf("Test log file: %s%n", logFile);
 
       if (Files.exists(logFile) && Files.size(logFile) >= LOG_SIZE_LIMIT) {
@@ -136,6 +125,13 @@ public final class TestLoggerFactory implements Logger.Factory {
       e.printStackTrace();
       return false;
     }
+  }
+
+  private static void addConsoleAppenderForDebugRecords() {
+    java.util.logging.Logger rootLogger = java.util.logging.Logger.getLogger("");
+
+    // just add a single console appender instead of multiple handlers, but for the root logger
+    rootLogger.addHandler(new FilteringLogToStdoutJulHandler(Level.FINE));
   }
 
   public static @NotNull Path getTestLogDir() {
@@ -543,10 +539,10 @@ public final class TestLoggerFactory implements Logger.Factory {
 
   // Cannot extend from ConsoleHandler since it is hard-coded to System.err,
   // and calling setOutputStream(System.out) after the constructor would close System.err.
-  private static class LogToStdoutJulHandler extends StreamHandler {
+  public static class LogToStdoutJulHandler extends StreamHandler {
     private boolean initialized;
 
-    LogToStdoutJulHandler() {
+    public LogToStdoutJulHandler() {
       super(System.out, new WithTimeSinceTestStartedJulFormatter());
       setLevel(Level.ALL);
     }
@@ -574,6 +570,16 @@ public final class TestLoggerFactory implements Logger.Factory {
     public synchronized void close() {
       // Prevent closing System.out.
       flush();
+    }
+  }
+
+  private static class FilteringLogToStdoutJulHandler extends LogToStdoutJulHandler {
+    FilteringLogToStdoutJulHandler(Level level) {
+      super();
+
+      // we'd like to capture all records with level or finer than the level
+      // so we set level to all and do actual level filtering with the filter
+      setFilter(record -> record.getLevel().intValue() <= level.intValue());
     }
   }
 

@@ -1,4 +1,6 @@
 // Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+@file:Suppress("ReplaceGetOrSet")
+
 package org.jetbrains.jps.incremental.storage
 
 import org.h2.mvstore.MVMap
@@ -11,16 +13,17 @@ import org.jetbrains.jps.builders.storage.SourceToOutputMapping
 import org.jetbrains.jps.incremental.storage.dataTypes.LongPairKeyDataType
 import org.jetbrains.jps.incremental.storage.dataTypes.StringListDataType
 import org.jetbrains.jps.incremental.storage.dataTypes.stringTo128BitHash
+import java.nio.file.Path
 
 @Internal
 class ExperimentalSourceToOutputMapping private constructor(
-  mapHandle: MapHandle<LongArray, Array<String>>,
+  map: MVMap<LongArray, Array<String>>,
   @JvmField internal val relativizer: PathTypeAwareRelativizer,
   private val outputToTargetMapping: ExperimentalOutputToTargetMapping?,
   @JvmField internal val targetHashId: Long,
 ) : SourceToOutputMapping {
   private val impl = ExperimentalOneToManyPathMapping(
-    mapHandle = mapHandle,
+    map = map,
     relativizer = relativizer,
     valueOffset = 1,
     keyKind = RelativePathType.SOURCE,
@@ -48,7 +51,7 @@ class ExperimentalSourceToOutputMapping private constructor(
       // * avoid a huge B-tree and reduce rebalancing time due to contention.
       val mapName = storageManager.getMapName(targetId = targetId, targetTypeId = targetTypeId, suffix = "src-to-out-v1")
       return ExperimentalSourceToOutputMapping(
-        mapHandle = storageManager.openMap(mapName, mapBuilder),
+        map = storageManager.openMap(mapName, mapBuilder),
         relativizer = relativizer,
         outputToTargetMapping = outputToTargetMapping,
         targetHashId = targetToHash(targetId, targetTypeId),
@@ -56,36 +59,38 @@ class ExperimentalSourceToOutputMapping private constructor(
     }
   }
 
-  override fun remove(srcPath: String) {
-    impl.remove(srcPath)
+  override fun remove(sourceFile: Path) {
+    impl.remove(sourceFile)
   }
 
-  override fun getOutputs(srcPath: String): List<String>? = impl.getOutputs(srcPath)
+  override fun getOutputs(sourcePath: String): List<String>? = impl.getOutputs(sourcePath)
 
-  override fun setOutputs(path: String, outPaths: List<String>) {
-    val relativeSourcePath = relativizer.toRelative(path, RelativePathType.SOURCE)
+  override fun getOutputs(sourceFile: Path): List<Path>? = impl.getOutputs(sourceFile)
+
+  override fun setOutputs(sourceFile: Path, outputPaths: List<Path>) {
+    val relativeSourcePath = relativizer.toRelative(sourceFile, RelativePathType.SOURCE)
     val key = stringTo128BitHash(relativeSourcePath)
-    val normalizeOutputPaths = impl.normalizeOutputPaths(outPaths, relativeSourcePath)
-    if (normalizeOutputPaths == null) {
-      impl.mapHandle.map.remove(key)
+    val normalizeOutputPaths = if (outputPaths.isEmpty()) {
+      null
     }
     else {
-      impl.mapHandle.map.put(key, normalizeOutputPaths)
+      Array(outputPaths.size + 1) {
+        if (it == 0) relativeSourcePath else impl.relativizer.toRelative(outputPaths.get(it - 1), RelativePathType.OUTPUT)
+      }
+    }
+    if (normalizeOutputPaths == null) {
+      impl.map.remove(key)
+    }
+    else {
+      impl.map.put(key, normalizeOutputPaths)
       outputToTargetMapping?.addMappings(normalizeOutputPaths, targetHashId)
     }
-  }
-
-  override fun setOutput(sourcePath: String, outputPath: String) {
-    val relativeSourcePath = relativizer.toRelative(sourcePath, RelativePathType.SOURCE)
-    val relativeOutputPath = relativizer.toRelative(outputPath, RelativePathType.OUTPUT)
-    impl.mapHandle.map.put(stringTo128BitHash(relativeSourcePath), arrayOf(relativeSourcePath, relativeOutputPath))
-    outputToTargetMapping?.addMapping(relativeOutputPath, targetHashId)
   }
 
   override fun appendOutput(sourcePath: String, outputPath: String) {
     val relativeSourcePath = relativizer.toRelative(sourcePath, RelativePathType.SOURCE)
     val relativeOutputPath = relativizer.toRelative(outputPath, RelativePathType.OUTPUT)
-    impl.mapHandle.map.operate(
+    impl.map.operate(
       stringTo128BitHash(relativeSourcePath),
       null,
       AddItemDecisionMaker(sourcePath = relativeSourcePath, toAdd = relativeOutputPath),
@@ -94,7 +99,7 @@ class ExperimentalSourceToOutputMapping private constructor(
   }
 
   override fun removeOutput(sourcePath: String, outputPath: String) {
-    impl.mapHandle.map.operate(
+    impl.map.operate(
       impl.getKey(sourcePath),
       null,
       RemoveItemDecisionMaker(relativizer.toRelative(outputPath, RelativePathType.OUTPUT)),
@@ -103,7 +108,7 @@ class ExperimentalSourceToOutputMapping private constructor(
 
   fun outputs(): Sequence<String> {
     return sequence {
-      val cursor = impl.mapHandle.map.cursor(null)
+      val cursor = impl.map.cursor(null)
       while (cursor.hasNext()) {
         cursor.next()
         val list = cursor.value
@@ -115,13 +120,14 @@ class ExperimentalSourceToOutputMapping private constructor(
   }
 
   override fun cursor(): SourceToOutputMappingCursor {
-    val cursor = impl.mapHandle.map.cursor(null)
     return object : SourceToOutputMappingCursor {
+      private val cursor = impl.map.cursor(null)
+
       override fun hasNext(): Boolean = cursor.hasNext()
 
       override fun next(): String {
         cursor.next()
-        return relativizer.toAbsolute(cursor.value.first<String>(), RelativePathType.SOURCE)
+        return relativizer.toAbsolute(cursor.value[0], RelativePathType.SOURCE)
       }
 
       override val outputPaths: Array<String>
@@ -134,9 +140,22 @@ class ExperimentalSourceToOutputMapping private constructor(
 
   override fun getSourcesIterator(): Iterator<String> = cursor()
 
+  override fun getSourceFileIterator(): Iterator<Path> {
+    return object : Iterator<Path> {
+      private val cursor = impl.map.cursor(null)
+
+      override fun hasNext(): Boolean = cursor.hasNext()
+
+      override fun next(): Path {
+        cursor.next()
+        return relativizer.toAbsoluteFile(cursor.value[0], RelativePathType.SOURCE)
+      }
+    }
+  }
+
   @TestOnly
   fun clear() {
-    impl.mapHandle.map.clear()
+    impl.map.clear()
   }
 }
 

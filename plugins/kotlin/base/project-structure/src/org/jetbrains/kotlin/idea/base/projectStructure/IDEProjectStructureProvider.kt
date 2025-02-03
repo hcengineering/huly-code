@@ -21,6 +21,13 @@ import com.intellij.openapi.module.Module as OpenapiModule
 
 @ApiStatus.Internal
 abstract class IDEProjectStructureProvider : KotlinProjectStructureProviderBase() {
+    /**
+     * Needed for [org.jetbrains.kotlin.idea.base.fir.projectStructure.DelegatingIDEProjectStructureProvider] to know the real provider.
+     *
+     * It's a temporary variable needed until we have [DelegatingIDEProjectStructureProvider]
+     */
+    abstract val self: IDEProjectStructureProvider
+
     abstract fun getKaSourceModule(moduleId: ModuleId, type: KaSourceModuleKind): KaSourceModule?
 
     abstract fun getKaSourceModule(moduleEntity: ModuleEntity, kind: KaSourceModuleKind): KaSourceModule?
@@ -49,7 +56,7 @@ abstract class IDEProjectStructureProvider : KotlinProjectStructureProviderBase(
 
     abstract fun getKotlinLibraries(module: KaLibraryModule): List<KotlinLibrary>
 
-    abstract fun getContainingKaModules(virtualFile: VirtualFile): List<KaModule>
+    abstract fun getAssociatedKaModules(virtualFile: VirtualFile): List<KaModule>
 
     abstract fun getForcedKaModule(file: PsiFile): KaModule?
 
@@ -57,5 +64,6 @@ abstract class IDEProjectStructureProvider : KotlinProjectStructureProviderBase(
 }
 
 
-internal val Project.ideProjectStructureProvider: IDEProjectStructureProvider
+@get:ApiStatus.Internal
+val Project.ideProjectStructureProvider: IDEProjectStructureProvider
     get() = KotlinProjectStructureProvider.getInstance(this) as IDEProjectStructureProvider

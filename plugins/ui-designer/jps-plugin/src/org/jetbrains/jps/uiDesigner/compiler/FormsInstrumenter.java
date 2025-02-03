@@ -16,6 +16,7 @@ import com.intellij.uiDesigner.lw.LwRootContainer;
 import com.intellij.util.containers.FileCollectionFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.jetbrains.jps.ModuleChunk;
 import org.jetbrains.jps.ProjectPaths;
 import org.jetbrains.jps.builders.DirtyFilesHolder;
@@ -59,14 +60,13 @@ public final class FormsInstrumenter extends ModuleLevelBuilder {
       return ExitCode.NOTHING_DONE;
     }
 
-    final Map<Path, Collection<Path>> srcToForms = FormBindings.getAndClearFormsToCompile(context);
-
-    if (srcToForms == null || srcToForms.isEmpty()) {
+    Map<Path, List<Path>> sourceToForms = FormBindings.getAndClearFormsToCompile(context);
+    if (sourceToForms == null || sourceToForms.isEmpty()) {
       return ExitCode.NOTHING_DONE;
     }
 
     Set<Path> formsToCompile = FileCollectionFactory.createCanonicalPathSet();
-    for (Collection<Path> files : srcToForms.values()) {
+    for (Collection<Path> files : sourceToForms.values()) {
       formsToCompile.addAll(files);
     }
 
@@ -88,22 +88,17 @@ public final class FormsInstrumenter extends ModuleLevelBuilder {
       final InstrumentationClassFinder finder = ClassProcessingBuilder.createInstrumentationClassFinder(sdk, platformCp, classpath, outputConsumer);
 
       try {
-        Map<Path, Collection<Path>> processed = instrumentForms(context, chunk, chunkSourcePath, finder, formsToCompile, outputConsumer, config.isUseDynamicBundles());
+        Map<Path, List<Path>> processed = instrumentForms(context, chunk, chunkSourcePath, finder, formsToCompile, outputConsumer, config.isUseDynamicBundles());
         OneToManyPathMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap(chunk.representativeTarget());
-        for (Map.Entry<Path, Collection<Path>> entry : processed.entrySet()) {
-          final Path src = entry.getKey();
-          final Collection<Path> forms = entry.getValue();
-
-          List<String> formPaths = new ArrayList<>(forms.size());
-          for (Path form : forms) {
-            formPaths.add(form.toString());
-          }
-          sourceToFormMap.setOutputs(src.toString(), formPaths);
-          srcToForms.remove(src);
+        for (Map.Entry<Path, List<Path>> entry : processed.entrySet()) {
+          Path sourceFile = entry.getKey();
+          sourceToFormMap.setOutputs(sourceFile, entry.getValue());
+          sourceToForms.remove(sourceFile);
         }
+
         // clean mapping
-        for (Path srcFile : srcToForms.keySet()) {
-          sourceToFormMap.remove(srcFile.toString());
+        for (Path sourceFile : sourceToForms.keySet()) {
+          sourceToFormMap.remove(sourceFile);
         }
       }
       finally {
@@ -122,7 +117,7 @@ public final class FormsInstrumenter extends ModuleLevelBuilder {
     return Collections.emptyList();
   }
 
-  private Map<Path, Collection<Path>> instrumentForms(
+  private @NotNull @Unmodifiable Map<Path, List<Path>> instrumentForms(
     CompileContext context,
     ModuleChunk chunk,
     final Map<File, String> chunkSourcePath,
@@ -131,11 +126,10 @@ public final class FormsInstrumenter extends ModuleLevelBuilder {
     OutputConsumer outConsumer,
     boolean useDynamicBundles) throws ProjectBuildException {
 
-    final Map<Path, Collection<Path>> instrumented = FileCollectionFactory.createCanonicalPathMap();
-    final Map<String, File> class2form = new HashMap<>();
+    Map<Path, List<Path>> instrumented = FileCollectionFactory.createCanonicalPathMap();
+    Map<String, File> class2form = new HashMap<>();
 
-    final MyNestedFormLoader nestedFormsLoader = new MyNestedFormLoader(chunkSourcePath, ProjectPaths.getOutputPathsWithDependents(chunk), finder);
-
+    MyNestedFormLoader nestedFormsLoader = new MyNestedFormLoader(chunkSourcePath, ProjectPaths.getOutputPathsWithDependents(chunk), finder);
     for (Path formFile : forms) {
       final LwRootContainer rootContainer;
       try {
@@ -184,7 +178,6 @@ public final class FormsInstrumenter extends ModuleLevelBuilder {
       for (File file : compiled.getSourceFiles()) {
         FormBindings.addBinding(file.toPath(), formFile, instrumented);
       }
-
 
       try {
         context.processMessage(new ProgressMessage(FormBundle.message("progress.message", chunk.getPresentableShortName())));

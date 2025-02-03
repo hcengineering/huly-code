@@ -8,7 +8,6 @@ import com.intellij.ide.projectWizard.NewProjectWizardCollector.Base.logAddSampl
 import com.intellij.ide.projectWizard.NewProjectWizardConstants.BuildSystem.GRADLE
 import com.intellij.ide.projectWizard.generators.*
 import com.intellij.ide.projectWizard.generators.AssetsOnboardingTips.proposeToGenerateOnboardingTipsByDefault
-import com.intellij.ide.starters.local.StandardAssetsProvider
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardStep.Companion.ADD_SAMPLE_CODE_PROPERTY_NAME
@@ -18,7 +17,6 @@ import com.intellij.ui.UIBundle
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.whenStateChangedFromUi
-import org.jetbrains.plugins.gradle.frameworkSupport.buildscript.GradleBuildScriptBuilder
 
 internal class GradleJavaNewProjectWizard : BuildSystemJavaNewProjectWizard {
 
@@ -77,28 +75,17 @@ internal class GradleJavaNewProjectWizard : BuildSystemJavaNewProjectWizard {
       setupArtifactIdUI(builder)
     }
 
-    override fun setupProject(project: Project) {
-      val builder = GradleJavaModuleBuilder()
-      setupBuilder(builder)
-      builder.configureBuildScript(fun GradleBuildScriptBuilder<*>.() {
-        withJavaPlugin()
-        withJUnit()
-      })
-      setupProject(project, builder)
-    }
-
     init {
       data.putUserData(GradleJavaNewProjectWizardData.KEY, this)
     }
   }
 
-  private class AssetsStep(
-    private val parent: Step
-  ) : AssetsNewProjectWizardStep(parent) {
+  private class AssetsStep(parent: Step) : GradleAssetsNewProjectWizardStep<Step>(parent) {
 
     override fun setupAssets(project: Project) {
       if (context.isCreatingNewProject) {
-        addAssets(StandardAssetsProvider().getGradleIgnoreAssets())
+        addGradleGitIgnoreAsset()
+        addGradleWrapperAsset(parent.gradleVersionToUse)
       }
 
       addEmptyDirectoryAsset("src/main/java")
@@ -111,6 +98,20 @@ internal class GradleJavaNewProjectWizard : BuildSystemJavaNewProjectWizard {
           prepareJavaSampleOnboardingTips(project)
         }
         withJavaSampleCodeAsset("src/main/java", parent.groupId, parent.generateOnboardingTips)
+      }
+
+      addOrConfigureSettingsScript {
+        if (parent.isCreatingDaemonToolchain) {
+          withFoojayPlugin()
+        }
+      }
+      addBuildScript {
+
+        addGroup(parent.groupId)
+        addVersion(parent.version)
+
+        withJavaPlugin()
+        withJUnit()
       }
     }
   }

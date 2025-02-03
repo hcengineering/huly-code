@@ -106,6 +106,7 @@ open class MavenArtifactsBuilder(protected val context: BuildContext) {
     }
 
     private val FLEET_MODULES_IN_COMMUNITY = setOf(
+      "fleet.andel",
       "fleet.kernel",
       "fleet.preferences",
       "fleet.reporting.api",
@@ -117,6 +118,7 @@ open class MavenArtifactsBuilder(protected val context: BuildContext) {
       "fleet.util.multiplatform",
       "fleet.util.os",
       "fleet.util.multiplatform",
+      "fleet.fastutil",
     )
   }
 

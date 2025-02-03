@@ -3,6 +3,7 @@ package org.jetbrains.plugins.terminal.block.reworked
 
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.writeAction
+import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.terminal.JBTerminalSystemSettingsProviderBase
 import kotlinx.coroutines.CoroutineScope
@@ -46,8 +47,16 @@ internal class TerminalSessionController(
 
   private suspend fun handleEvent(event: TerminalOutputEvent) {
     when (event) {
-      is TerminalContentUpdatedEvent -> updateOutputContent(event)
-      is TerminalCursorPositionChangedEvent -> updateCursorPosition(event)
+      is TerminalContentUpdatedEvent -> {
+        updateOutputModel { model ->
+          model.updateContent(event.startLineLogicalIndex, event.text, event.styles)
+        }
+      }
+      is TerminalCursorPositionChangedEvent -> {
+        updateOutputModel { model ->
+          model.updateCursorPosition(event.logicalLineIndex, event.columnIndex)
+        }
+      }
       is TerminalStateChangedEvent -> {
         val state = event.state.toTerminalState(settings.cursorShape)
         sessionModel.updateTerminalState(state)
@@ -83,18 +92,14 @@ internal class TerminalSessionController(
     }
   }
 
-  private suspend fun updateOutputContent(event: TerminalContentUpdatedEvent) {
+  private suspend fun updateOutputModel(block: (TerminalOutputModel) -> Unit) {
     withContext(Dispatchers.EDT) {
       writeAction {
-        val model = getCurrentOutputModel()
-        model.updateContent(event.startLineLogicalIndex, event.text, event.styles)
+        CommandProcessor.getInstance().runUndoTransparentAction {
+          block(getCurrentOutputModel())
+        }
       }
     }
-  }
-
-  private fun updateCursorPosition(event: TerminalCursorPositionChangedEvent) {
-    val model = getCurrentOutputModel()
-    model.updateCursorPosition(event.logicalLineIndex, event.columnIndex)
   }
 
   private fun getCurrentOutputModel(): TerminalOutputModel {

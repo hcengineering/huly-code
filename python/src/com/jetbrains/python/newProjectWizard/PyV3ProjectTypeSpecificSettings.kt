@@ -1,9 +1,11 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.python.newProjectWizard
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.vfs.VirtualFile
+import com.jetbrains.python.Result
+import com.jetbrains.python.errorProcessing.PyError
 import org.jetbrains.annotations.CheckReturnValue
 
 /**
@@ -24,5 +26,5 @@ fun interface PyV3ProjectTypeSpecificSettings {
    * Returns error if generation failed due to execution error
    */
   @CheckReturnValue
-  suspend fun generateProject(module: Module, baseDir: VirtualFile, sdk: Sdk): Result<Unit>
+  suspend fun generateProject(module: Module, baseDir: VirtualFile, sdk: Sdk): Result<Unit, PyError>
 }

@@ -1,7 +1,7 @@
 package com.intellij.settingsSync.jba.auth
 
 import com.intellij.ide.gdpr.Version
-import com.intellij.settingsSync.SettingsSyncEvents
+import com.intellij.settingsSync.core.SettingsSyncEvents
 import com.intellij.ui.JBAccountInfoService
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
@@ -22,7 +22,15 @@ object DummyJBAccountInfoService : JBAccountInfoService {
   }
 
   override fun startLoginSession(loginMode: JBAccountInfoService.LoginMode, authProviderId: String?, clientMetadata: Map<String, String>): JBAccountInfoService.LoginSession {
-    TODO("Not yet implemented")
+    return object : JBAccountInfoService.LoginSession {
+      override fun close() {
+
+      }
+
+      override fun onCompleted(): CompletableFuture<JBAccountInfoService.LoginResult> {
+        return CompletableFuture.completedFuture(JBAccountInfoService.LoginResult.LoginSuccessful(dummyUserData))
+      }
+    }
   }
 
   override fun getAvailableLicenses(productCode: String): CompletableFuture<JBAccountInfoService.LicenseListResult> {

@@ -173,7 +173,7 @@
             icon="AllIcons.Actions.Find"
             use-shortcut-of="Find"/>
 
-    <action id="RunAnything" icon="AllIcons.Actions.Run_anything" class="com.intellij.ide.actions.runAnything.RunAnythingAction"/>
+    <action id="RunAnything" icon="AllIcons.Actions.RunAnything" class="com.intellij.ide.actions.runAnything.RunAnythingAction"/>
 
     <action id="SmartSelect" class="com.intellij.ide.actions.SmartSelect" use-shortcut-of="EditorSelectWord"/>
     <action id="SmartUnSelect" class="com.intellij.ide.actions.SmartUnSelect" use-shortcut-of="EditorUnSelectWord"/>
@@ -445,6 +445,8 @@
       <action id="OpenInAssociatedApplication" class="com.intellij.ide.actions.OpenInAssociatedApplicationAction"/>
     </group>
 
+    <action id="CloseSettings" class="com.intellij.openapi.options.newEditor.settings.CloseSettingsAction" use-shortcut-of="CloseDiffEditor"/>
+
     <group id="MainMenu">
       <group id="FileMenu" popup="true">
         <group id="FileOpenGroup">
@@ -465,8 +467,8 @@
         <separator/>
         <group id="FileMainSettingsGroup">
           <action id="ShowSettings" class="com.intellij.ide.actions.ShowSettingsAction"/>
-          <action id="CloseSettings" class="com.intellij.openapi.options.newEditor.settings.CloseSettingsAction" use-shortcut-of="CloseDiffEditor"/>
         </group>
+
         <group id="FilePropertiesGroup" popup="true">
           <action id="ChangeFileEncodingAction" class="com.intellij.openapi.vfs.encoding.ChangeFileEncodingAction"/>
           <action id="AssociateWithFileType" class="com.intellij.ide.actions.AssociateFileTypeAction"/>
@@ -638,7 +640,8 @@
                     class="com.intellij.platform.ide.impl.presentationAssistant.TogglePresentationAssistantAction"/>
             <separator/>
             <action id="ViewMainMenu" class="com.intellij.ide.actions.ViewMainMenuAction"/>
-            <action id="MainMenuAsSeparateToolbarAction" class="com.intellij.ide.actions.MainMenuAsSeparateToolbarAction"/>
+            <group id="ChangeMainMenuModeActionGroup"
+                   class="com.intellij.ide.actions.ChangeMainMenuModeActionGroup" searchable="false" popup="true"/>
             <action id="ViewNewToolbarAction" class="com.intellij.ide.actions.toolbar.experimental.ViewNewToolbarAction"/>
             <action id="ViewObsoleteToolbarAction" class="com.intellij.ide.actions.toolbar.experimental.ViewObsoleteToolbarAction"/>
             <action id="ViewObsoleteNavBarAction" class="com.intellij.ide.actions.toolbar.experimental.ViewObsoleteNavBarAction"/>
@@ -769,7 +772,7 @@
           <action id="HideActiveWindow" class="com.intellij.ide.actions.HideToolWindowAction"/>
           <action id="HideSideWindows" class="com.intellij.ide.actions.HideSideWindowsAction"/>
           <action id="HideAllWindows" class="com.intellij.ide.actions.HideAllToolWindowsAction"/>
-          <action id="MoveToolWindowTabToEditorAction" class="com.intellij.openapi.wm.impl.MoveToolWindowTabToEditorAction"
+          <action id="MoveToolWindowTabToEditorAction" class="com.intellij.openapi.wm.impl.tabInEditor.ToolWindowTabInEditorAction"
                   icon="AllIcons.Actions.OpenNewTab"/>
           <action id="PinToolwindowTab" class="com.intellij.ui.content.tabs.PinToolwindowTabAction" use-shortcut-of="PinActiveTab"/>
           <action id="CloseActiveTab" class="com.intellij.ide.actions.CloseActiveTabAction"/>
@@ -983,6 +986,7 @@
         <action id="main.toolbar.Filename" class="com.intellij.openapi.wm.impl.headertoolbar.FilenameToolbarWidgetAction"/>
       </group>
       <group id="MainToolbarRight" searchable="false">
+        <action id="TrialStateWidget" class="com.intellij.ui.components.trialState.TrialStateWidget"/>
         <reference ref="SearchEverywhere"/>
         <reference ref="SettingsEntryPoint"/>
       </group>
@@ -1608,9 +1612,7 @@
       <add-to-group group-id="Internal"/>
     </group>
 
-    <action id="AnalyzePluginStartupPerformance" class="com.intellij.diagnostic.AnalyzePluginStartupPerformanceAction">
-      <add-to-group group-id="HelpDiagnosticTools" anchor="after" relative-to-action="Performance.ActivityMonitor"/>
-    </action>
+    <action id="AnalyzePluginStartupPerformance" class="com.intellij.diagnostic.AnalyzePluginStartupPerformanceAction" internal="true"/>
 
     <action id="TriggerLowMemoryNotification" class="com.intellij.diagnostic.TriggerLowMemoryNotificationAction" internal="true"/>
 
@@ -1724,7 +1726,7 @@
 
     <group id="ToolbarPopupActions.MainToolbarNewUI">
       <reference ref="MainToolbarQuickActions"/>
-      <reference ref="MainMenuAsSeparateToolbarAction"/>
+      <reference ref="ChangeMainMenuModeActionGroup"/>
       <separator/>
       <reference ref="ChangeProjectColorActionGroup"/>
       <reference ref="WelcomeScreen.ChangeProjectIcon"/>

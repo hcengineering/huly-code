@@ -895,6 +895,7 @@ e:com.intellij.diagnostic.VMOptions$MemoryKind
 - s:values():com.intellij.diagnostic.VMOptions$MemoryKind[]
 c:com.intellij.diagnostic.WindowsDefenderChecker
 - <init>():V
+- f:excludeProjectPaths(com.intellij.openapi.project.Project,java.nio.file.Path,java.util.List):Z
 - f:excludeProjectPaths(com.intellij.openapi.project.Project,java.util.List):Z
 - f:filterDevDrivePaths(java.util.List):java.util.List
 - getConfigurationInstructionsUrl():java.lang.String
@@ -1471,6 +1472,7 @@ c:com.intellij.help.impl.HelpManagerImpl
 - invokeHelp(java.lang.String):V
 com.intellij.ide.AboutPopupDescriptionProvider
 - a:getDescription():java.lang.String
+- getExtendedDescription():java.lang.String
 f:com.intellij.ide.ChangeProjectIconPalette
 - com.intellij.util.ui.ColorPalette
 - <init>(I):V
@@ -1498,6 +1500,7 @@ com.intellij.ide.CommandLineInspectionProjectConfigurator
 - a:getName():java.lang.String
 - isApplicable(com.intellij.ide.CommandLineInspectionProjectConfigurator$ConfiguratorContext):Z
 - preConfigureProject(com.intellij.openapi.project.Project,com.intellij.ide.CommandLineInspectionProjectConfigurator$ConfiguratorContext):V
+- shouldBeInvokedAlongsideActivityTracking():Z
 com.intellij.ide.CommandLineInspectionProjectConfigurator$ConfiguratorContext
 - a:getFilesFilter():java.util.function.Predicate
 - a:getLogger():com.intellij.ide.CommandLineInspectionProgressReporter
@@ -2062,13 +2065,9 @@ c:com.intellij.ide.actions.JumpToLastEditAction
 c:com.intellij.ide.actions.NextOccurenceAction
 - com.intellij.openapi.project.DumbAwareAction
 - <init>():V
-- f:actionPerformed(com.intellij.openapi.actionSystem.AnActionEvent):V
-- getActionUpdateThread():com.intellij.openapi.actionSystem.ActionUpdateThread
 - p:getDescription(com.intellij.ide.OccurenceNavigator):java.lang.String
-- p:getNavigator(com.intellij.openapi.actionSystem.DataContext):com.intellij.ide.OccurenceNavigator
 - p:go(com.intellij.ide.OccurenceNavigator):com.intellij.ide.OccurenceNavigator$OccurenceInfo
 - p:hasOccurenceToGo(com.intellij.ide.OccurenceNavigator):Z
-- update(com.intellij.openapi.actionSystem.AnActionEvent):V
 f:com.intellij.ide.actions.NextOccurenceToolbarAction
 - com.intellij.ide.actions.NextOccurenceAction
 - <init>(com.intellij.ide.OccurenceNavigator):V
@@ -2140,13 +2139,9 @@ f:com.intellij.ide.actions.PinActiveTabAction$Toggle
 c:com.intellij.ide.actions.PreviousOccurenceAction
 - com.intellij.openapi.project.DumbAwareAction
 - <init>():V
-- f:actionPerformed(com.intellij.openapi.actionSystem.AnActionEvent):V
-- getActionUpdateThread():com.intellij.openapi.actionSystem.ActionUpdateThread
 - p:getDescription(com.intellij.ide.OccurenceNavigator):java.lang.String
-- p:getNavigator(com.intellij.openapi.actionSystem.DataContext):com.intellij.ide.OccurenceNavigator
 - p:go(com.intellij.ide.OccurenceNavigator):com.intellij.ide.OccurenceNavigator$OccurenceInfo
 - p:hasOccurenceToGo(com.intellij.ide.OccurenceNavigator):Z
-- update(com.intellij.openapi.actionSystem.AnActionEvent):V
 f:com.intellij.ide.actions.PreviousOccurenceToolbarAction
 - com.intellij.ide.actions.PreviousOccurenceAction
 - <init>(com.intellij.ide.OccurenceNavigator):V
@@ -3154,17 +3149,12 @@ f:com.intellij.ide.gdpr.Consent
 - <init>(com.intellij.ide.gdpr.ConsentAttributes):V
 - <init>(java.lang.String,com.intellij.ide.gdpr.Version,java.lang.String,java.lang.String,Z,Z,java.lang.String):V
 - derive(Z):com.intellij.ide.gdpr.Consent
-- equals(java.lang.Object):Z
-- getId():java.lang.String
 - getLocale():java.lang.String
 - getName():java.lang.String
 - getText():java.lang.String
-- getVersion():com.intellij.ide.gdpr.Version
-- hashCode():I
 - isAccepted():Z
 - isDeleted():Z
 - toConsentAttributes():com.intellij.ide.gdpr.ConsentAttributes
-- a:toString():java.lang.String
 c:com.intellij.ide.gdpr.ConsentSettingsUi
 - javax.swing.JPanel
 - com.intellij.openapi.options.ConfigurableUi
@@ -5525,7 +5515,6 @@ f:com.intellij.idea.IdeaLogger
 - s:ourErrorsOccurred:java.lang.Exception
 - s:ourLastActionId:java.lang.String
 - s:dropFrequentExceptionsCaches():V
-- error(java.lang.Object):V
 - error(java.lang.String,java.lang.Throwable,com.intellij.openapi.diagnostic.Attachment[]):V
 - error(java.lang.String,java.lang.Throwable,java.lang.String[]):V
 - warn(java.lang.String,java.lang.Throwable):V
@@ -9043,6 +9032,9 @@ c:com.intellij.openapi.fileTypes.impl.FileTypeManagerImpl
 - removePlainTextAssociationsForFile(java.lang.CharSequence):V
 - setIgnoredFilesList(java.lang.String):V
 - unregisterFileType(com.intellij.openapi.fileTypes.FileType,com.intellij.openapi.extensions.PluginDescriptor):V
+com.intellij.openapi.fileTypes.impl.FileTypeOverrider
+- sf:EP_NAME:com.intellij.openapi.extensions.ExtensionPointName
+- a:getOverriddenFileType(com.intellij.openapi.vfs.VirtualFile):com.intellij.openapi.fileTypes.FileType
 c:com.intellij.openapi.fileTypes.impl.FileTypeRenderer
 - com.intellij.ui.SimpleListCellRenderer
 - <init>():V
@@ -9498,6 +9490,8 @@ f:com.intellij.openapi.options.advanced.AdvancedSettingBean
 - f:getPluginDescriptor():com.intellij.openapi.extensions.PluginDescriptor
 - f:getServiceInstance():java.lang.Object
 - f:group():java.lang.String
+- f:isEnabled():Z
+- f:isVisible():Z
 - setPluginDescriptor(com.intellij.openapi.extensions.PluginDescriptor):V
 - f:title():java.lang.String
 - f:trailingLabel():java.lang.String
@@ -9756,11 +9750,19 @@ c:com.intellij.openapi.options.newEditor.SettingsTreeView
 pf:com.intellij.openapi.options.newEditor.SettingsTreeView$AccessibleSettingsTreeView
 - javax.swing.JComponent$AccessibleJComponent
 - getAccessibleRole():javax.accessibility.AccessibleRole
-f:com.intellij.openapi.options.newEditor.settings.SettingsEditorAdvancedSettings
-- com.intellij.openapi.options.advanced.AdvancedSettingsChangeListener
-- sf:INSTANCE:com.intellij.openapi.options.newEditor.settings.SettingsEditorAdvancedSettings
-- advancedSettingChanged(java.lang.String,java.lang.Object,java.lang.Object):V
-- f:getInstantSettingsApply():Z
+f:com.intellij.openapi.options.newEditor.settings.SettingsFileEditorProvider
+- com.intellij.openapi.fileEditor.FileEditorProvider
+- com.intellij.openapi.project.DumbAware
+- sf:Companion:com.intellij.openapi.options.newEditor.settings.SettingsFileEditorProvider$Companion
+- sf:ID:java.lang.String
+- <init>():V
+- accept(com.intellij.openapi.project.Project,com.intellij.openapi.vfs.VirtualFile):Z
+- createEditor(com.intellij.openapi.project.Project,com.intellij.openapi.vfs.VirtualFile):com.intellij.openapi.fileEditor.FileEditor
+- disposeEditor(com.intellij.openapi.fileEditor.FileEditor):V
+- getEditorTypeId():java.lang.String
+- getPolicy():com.intellij.openapi.fileEditor.FileEditorPolicy
+- isDumbAware():Z
+f:com.intellij.openapi.options.newEditor.settings.SettingsFileEditorProvider$Companion
 f:com.intellij.openapi.preview.PreviewProviderId
 c:com.intellij.openapi.progress.BackgroundTaskQueue
 - pf:myProcessor:com.intellij.util.concurrency.QueueProcessor
@@ -9804,7 +9806,6 @@ f:com.intellij.openapi.progress.impl.ProgressManagerImpl
 - com.intellij.openapi.progress.impl.CoreProgressManager
 - com.intellij.openapi.Disposable
 - <init>():V
-- s:__testWhileAlwaysCheckingCanceled(java.lang.Runnable):V
 - executeProcessUnderProgress(java.lang.Runnable,com.intellij.openapi.progress.ProgressIndicator):V
 - hasUnsafeProgressIndicator():Z
 - markProgressSafe(com.intellij.openapi.util.UserDataHolder):V
@@ -10566,7 +10567,6 @@ f:com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginsAdvertise
 - sf:installAndEnablePlugins(java.util.Set,java.lang.Runnable):V
 f:com.intellij.openapi.updateSettings.impl.pluginsAdvertisement.PluginsAdvertiserDialog
 - com.intellij.openapi.ui.DialogWrapper
-- <init>(com.intellij.openapi.project.Project,java.util.Collection):V
 - <init>(com.intellij.openapi.project.Project,java.util.Collection,java.util.List):V
 - doInstallPlugins(Z,com.intellij.openapi.application.ModalityState):V
 - getPreferredFocusedComponent():javax.swing.JComponent
@@ -14459,45 +14459,20 @@ c:com.intellij.ui.TreeTableSpeedSearch
 c:com.intellij.ui.WindowMoveListener
 - java.awt.event.MouseAdapter
 - javax.swing.event.MouseInputListener
-- pf:myContent:java.awt.Component
 - <init>():V
 - <init>(java.awt.Component):V
-- p:getContent(java.awt.event.MouseEvent):java.awt.Component
-- p:getView(java.awt.Component):java.awt.Component
 - installTo(java.awt.Component):com.intellij.ui.WindowMoveListener
-- isBusy():Z
-- p:isDisabled(java.awt.Component):Z
 - mouseClicked(java.awt.event.MouseEvent):V
-- mouseDragged(java.awt.event.MouseEvent):V
 - mouseMoved(java.awt.event.MouseEvent):V
-- mousePressed(java.awt.event.MouseEvent):V
-- mouseReleased(java.awt.event.MouseEvent):V
-- p:notifyMoved():V
-- p:notifyResized():V
-- p:setCursor(java.awt.Component,java.awt.Cursor):V
-- setLeftMouseButtonOnly(Z):V
 - uninstallFrom(java.awt.Component):V
 c:com.intellij.ui.WindowResizeListener
 - java.awt.event.MouseAdapter
 - javax.swing.event.MouseInputListener
-- pf:myContent:java.awt.Component
 - <init>(java.awt.Component,java.awt.Insets,javax.swing.Icon):V
 - <init>(java.awt.Component,javax.swing.Icon):V
-- p:getContent(java.awt.event.MouseEvent):java.awt.Component
 - p:getResizeBorder(java.awt.Component):java.awt.Insets
 - p:getResizeOffset(java.awt.Component):java.awt.Insets
-- p:getView(java.awt.Component):java.awt.Component
-- isBusy():Z
 - p:isDisabled(java.awt.Component):Z
-- mouseClicked(java.awt.event.MouseEvent):V
-- mouseDragged(java.awt.event.MouseEvent):V
-- mouseMoved(java.awt.event.MouseEvent):V
-- mousePressed(java.awt.event.MouseEvent):V
-- mouseReleased(java.awt.event.MouseEvent):V
-- p:notifyMoved():V
-- p:notifyResized():V
-- p:setCursor(java.awt.Component,java.awt.Cursor):V
-- setLeftMouseButtonOnly(Z):V
 f:com.intellij.ui.WindowRoundedCornersManager
 - <init>():V
 - s:configure(com.intellij.openapi.ui.DialogWrapper):V
@@ -14835,6 +14810,15 @@ f:com.intellij.ui.components.LegalNoticeDialog$Builder
 - withCustomAction(java.lang.String,I):com.intellij.ui.components.LegalNoticeDialog$Builder
 - withParent(com.intellij.openapi.project.Project):com.intellij.ui.components.LegalNoticeDialog$Builder
 - withParent(java.awt.Component):com.intellij.ui.components.LegalNoticeDialog$Builder
+f:com.intellij.ui.components.SearchFieldWithExtension
+- javax.swing.JPanel
+- <init>(javax.swing.JComponent,com.intellij.ui.SearchTextField):V
+- f:getTextField():javax.swing.JTextField
+- getUI():javax.swing.plaf.PanelUI
+- getUIClassID():java.lang.String
+- hasFocus():Z
+- requestFocus():V
+- setBackground(java.awt.Color):V
 c:com.intellij.ui.components.SliderSelectorAction
 - com.intellij.openapi.project.DumbAwareAction
 - <init>(java.lang.String,java.lang.String,javax.swing.Icon,com.intellij.ui.components.SliderSelectorAction$Configuration):V
@@ -15796,10 +15780,12 @@ c:com.intellij.ui.plaf.beg.IdeaMenuUI
 - getPath():javax.swing.MenuElement[]
 - p:getPreferredMenuItemSize(javax.swing.JComponent,javax.swing.Icon,javax.swing.Icon,I):java.awt.Dimension
 - p:installDefaults():V
+- installUI(javax.swing.JComponent):V
 - paint(java.awt.Graphics,javax.swing.JComponent):V
 - pf:paintHover(java.awt.Graphics,javax.swing.JComponent,javax.swing.JMenu,javax.swing.Icon):V
 - s:paintRoundSelection(java.awt.Graphics,java.awt.Component,I,I):V
 - s:patchPreferredSize(java.awt.Component,java.awt.Dimension):java.awt.Dimension
+- uninstallUI(javax.swing.JComponent):V
 - update(java.awt.Graphics,javax.swing.JComponent):V
 c:com.intellij.ui.popup.AbstractPopup
 - com.intellij.ide.ui.ScreenAreaConsumer
@@ -15898,6 +15884,7 @@ c:com.intellij.ui.popup.AbstractPopup
 - setUiVisible(Z):V
 - setUserData(java.util.List):V
 - setWarning(java.lang.String):V
+- shouldRequestFocus():Z
 - show(com.intellij.openapi.ui.popup.PopupShowOptions):V
 - show(com.intellij.ui.awt.RelativePoint):V
 - show(java.awt.Component):V
@@ -16788,6 +16775,7 @@ f:com.intellij.util.ScrambledInputStream
 - read(B[],I,I):I
 - reset():V
 - skip(J):J
+f:com.intellij.util.SwingBindingsKt
 f:com.intellij.util.UriUtilKt
 - sf:changeQuery(java.net.URI,java.net.URI,java.lang.String):java.net.URI
 - sf:fromRawParts(java.net.URI,java.lang.String,Z,java.lang.String,java.lang.String,java.lang.String,I,java.lang.String,java.lang.String,java.lang.String,java.lang.String):java.net.URI

@@ -81,6 +81,15 @@ public final class MavenDomUtil {
     return MavenUtil.isPomFileName(file.getName());
   }
 
+  public static @Nullable @NlsSafe String getXmlProjectModelVersion(PsiFile file) {
+    if (!(file instanceof XmlFile)) return null;
+
+    XmlTag rootTag = ((XmlFile)file).getRootTag();
+    if (rootTag == null || !"project".equals(rootTag.getName())) return null;
+
+    return rootTag.getSubTagText("modelVersion");
+  }
+
   public static boolean isProfilesFile(PsiFile file) {
     if (!(file instanceof XmlFile)) return false;
 
@@ -477,5 +486,9 @@ public final class MavenDomUtil {
       distribution = MavenDistributionsCache.getInstance(project).getMavenDistribution(directory.getPath());
     }
     return distribution.getVersion();
+  }
+
+  public static boolean isAtLeastMaven4(VirtualFile file, Project project) {
+    return StringUtil.compareVersionNumbers(getMavenVersion(file, project), "4") >= 0;
   }
 }

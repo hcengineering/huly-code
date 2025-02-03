@@ -465,6 +465,16 @@ public class PyTypeTest extends PyTestCase {
              expr = a""");
   }
 
+  public void testIfNotEqOperator() {
+    doTest("Literal[\"ab\"]",
+           """
+             from typing import Literal
+             def foo(v: Literal["abba", "ab"]):
+                 if (v <> "abba"):
+                     expr = v
+             """);
+  }
+
   // PY-4279
   public void testFieldReassignment() {
     doTest("C1",
@@ -3442,14 +3452,14 @@ public class PyTypeTest extends PyTestCase {
 
   // PY-28227
   public void testTypeVarTargetAST() {
-    doTest("T",
+    doTest("TypeVar",
            "from typing import TypeVar\n" +
            "expr = TypeVar('T')");
   }
 
   // PY-28227
   public void testTypeVarTargetStub() {
-    doMultiFileTest("T",
+    doMultiFileTest("TypeVar",
                     "from a import T\n" +
                     "expr = T");
   }

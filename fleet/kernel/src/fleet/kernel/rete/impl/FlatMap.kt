@@ -9,8 +9,8 @@ import fleet.kernel.rete.*
 import fleet.preferences.FleetFromSourcesPaths
 import fleet.preferences.isFleetTestMode
 import fleet.util.logging.logger
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet
-import it.unimi.dsi.fastutil.longs.LongSet
+import fleet.fastutil.longs.LongOpenHashSet
+import fleet.fastutil.longs.LongSet
 
 private object FlatMap {
   val logger = logger<FlatMap>()
@@ -20,7 +20,7 @@ private val assertionsEnabled = FleetFromSourcesPaths.isRunningFromSources || is
 
 internal fun <T, U> SubscriptionScope.flatMap(producer: Producer<T>, f: (Match<T>) -> Set<U>): Producer<U> {
   data class MatchInfo(
-    val matches: MutableMap<U, Match<U>>,
+    val matches: AdaptiveMap<U, Match<U>>,
     val subscription: Subscription,
   )
 

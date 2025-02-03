@@ -10,7 +10,7 @@
 
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
-    <bootstrap.intellij.version>251.6975</bootstrap.intellij.version>
+    <bootstrap.intellij.version>251.15859</bootstrap.intellij.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -63,7 +63,7 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-extension-kotlin</artifactId>
-      <version>1.45.0</version>
+      <version>1.46.0</version>
     </dependency>
     <dependency>
       <groupId>com.jetbrains.intellij.platform</groupId>

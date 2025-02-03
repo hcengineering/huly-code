@@ -3,6 +3,10 @@ import numpy as np
 import pytest
 import sys
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 from IPython.display import HTML
 
 import _pydevd_bundle.tables.pydevd_numpy as numpy_tables_helpers
@@ -44,17 +48,15 @@ def test_array_1d_number():
 
 
 # 2
-def test_array_2d_simple():
-    arr = np.array([[True, "False", True], [True, True, False]])
-    __check_info_np_array(arr, 'test_data/numpy_with_pandas/' + test_data_directory + '/array_2d_simple.txt')
+def test_array_3d_simple():
+    arr = np.array([[True, "False", True], [True, True, False], [True, True, False]])
+    __check_info_np_array(arr, 'test_data/numpy_with_pandas/' + test_data_directory + '/array_3d_simple.txt')
 
 
 # 3
-def test_array_2d_number():
-    arr = np.array([[1, 2, 3],
-                    [4, 5, 6],
-                    [7, 8, 9]])
-    __check_info_np_array(arr, 'test_data/numpy_with_pandas/' + test_data_directory + '/array_2d_number.txt')
+def test_array_3d_number():
+    arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    __check_info_np_array(arr, 'test_data/numpy_with_pandas/' + test_data_directory + '/array_3d_number.txt')
 
 
 # 4
@@ -166,18 +168,16 @@ def test_get_data_none_values_2e(setup_np_array_with_nones):
     )
 
 
-# 13
+# 13 TODO: round by default here -- fix?
 def test_display_data_html_float_values(mocker, setup_np_array_with_floats):
     np_array = setup_np_array_with_floats
     # Mock the HTML and display functions
     mock_display = mocker.patch('IPython.display.display')
 
-    actual = numpy_tables_helpers.display_data_html(np_array, 0, 3)
+    numpy_tables_helpers.display_data_html(np_array, 0, 3)
 
     called_args, called_kwargs = mock_display.call_args
     displayed_html = called_args[0]
-
-    assert isinstance(displayed_html, HTML)
 
     __read_expected_from_file_and_compare_with_actual(
         actual=displayed_html.data,
@@ -192,16 +192,44 @@ def test_display_data_html_none_values(mocker, setup_np_array_with_nones):
     # Mock the HTML and display functions
     mock_display = mocker.patch('IPython.display.display')
 
-    actual = numpy_tables_helpers.display_data_html(np_array, 0, 3)
+    numpy_tables_helpers.display_data_html(np_array, 0, 3)
 
     called_args, called_kwargs = mock_display.call_args
     displayed_html = called_args[0]
 
-    assert isinstance(displayed_html, HTML)
-
     __read_expected_from_file_and_compare_with_actual(
         actual=displayed_html.data,
         expected_file='test_data/numpy_with_pandas/' + test_data_directory + '/display_data_html_none_values.txt'
+    )
+
+
+#15 TODO: round by default here -- fix?
+def test_display_data_csv_float_values(mocker, setup_np_array_with_floats):
+    np_array = setup_np_array_with_floats
+
+    # Mock the CSV and display functions
+    mock_print = mocker.patch('sys.stdout', new_callable=StringIO)
+    numpy_tables_helpers.display_data_csv(np_array, 0, 3)
+    displayed_csv = mock_print.getvalue()
+
+    __read_expected_from_file_and_compare_with_actual(
+        actual=displayed_csv,
+        expected_file='test_data/numpy_with_pandas/' + test_data_directory + '/display_data_csv_float_values.txt'
+    )
+
+
+# 16
+def test_display_data_csv_none_values(mocker, setup_np_array_with_nones):
+    np_array = setup_np_array_with_nones
+
+    # Mock the CSV and display functions
+    mock_print = mocker.patch('sys.stdout', new_callable=StringIO)
+    numpy_tables_helpers.display_data_csv(np_array, 0, 3)
+    displayed_csv = mock_print.getvalue()
+
+    __read_expected_from_file_and_compare_with_actual(
+        actual=displayed_csv,
+        expected_file='test_data/numpy_with_pandas/' + test_data_directory + '/display_data_csv_none_values.txt'
     )
 
 

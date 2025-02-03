@@ -1,22 +1,17 @@
 package org.jetbrains.plugins.textmate.regex
 
 import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
-import kotlin.text.toByteArray
 
-class TextMateString private constructor(@JvmField val bytes: ByteArray) {
-  @JvmField
+class TextMateString private constructor(val bytes: ByteArray) {
   val id: Any = Any()
 
   companion object {
-    @JvmStatic
     fun fromString(string: String): TextMateString {
-      return TextMateString(string.toByteArray(StandardCharsets.UTF_8))
+      return TextMateString(string.toByteArray(Charsets.UTF_8))
     }
 
-    @JvmStatic
     fun fromCharSequence(string: CharSequence): TextMateString {
-      val byteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(string))
+      val byteBuffer = Charsets.UTF_8.encode(CharBuffer.wrap(string))
       val bytes = ByteArray(byteBuffer.remaining())
       byteBuffer.get(bytes)
       return TextMateString(bytes)

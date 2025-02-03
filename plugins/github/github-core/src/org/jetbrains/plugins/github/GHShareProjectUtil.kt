@@ -11,6 +11,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.workspace.SubprojectInfoProvider
 import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.openapi.vcs.FilePath
@@ -57,7 +58,8 @@ object GHShareProjectUtil {
   fun shareProjectOnGithub(project: Project, file: VirtualFile?) {
     val gitRepository = GithubGitHelper.findGitRepository(project, file)
     val root = gitRepository?.root ?: project.baseDir
-    shareProjectOnGithub(project, gitRepository, root, project.name)
+    val projectName = file?.let { SubprojectInfoProvider.Companion.getSubprojectName(project, file) }?: project.name
+    shareProjectOnGithub(project, gitRepository, root, projectName)
   }
 
     // get gitRepository
@@ -74,9 +76,6 @@ object GHShareProjectUtil {
                            root: VirtualFile,
                            projectName: @NlsSafe String) {
     FileDocumentManager.getInstance().saveAllDocuments()
-    runWithModalProgressBlocking(project, IdeBundle.message("progress.saving.project", project.name)) {
-      saveSettings(project)
-    }
 
     val possibleRemotes = gitRepository
       ?.let(project.service<GHHostedRepositoriesManager>()::findKnownRepositories)
@@ -233,13 +232,19 @@ object GHShareProjectUtil {
           return true
         }
 
+        invokeAndWaitIfNeeded(indicator.modalityState) {
+          runWithModalProgressBlocking(project, IdeBundle.message("progress.saving.project", project.name)) {
+            saveSettings(project, forceSavingAllSettings = true)
+          }
+        }
+
         LOG.info("Trying to commit")
         try {
           LOG.info("Adding files for commit")
           indicator.text = GithubBundle.message("share.process.adding.files")
 
           // ask for files to add
-          val trackedFiles = ChangeListManager.getInstance(project).affectedFiles
+          val trackedFiles = ChangeListManager.getInstance(project).affectedFiles.toMutableList()
           val untrackedFiles =
             filterOutIgnored(project, repository.untrackedFilesHolder.retrieveUntrackedFilePaths().mapNotNull(FilePath::getVirtualFile))
           trackedFiles.removeAll(untrackedFiles) // fix IDEA-119855

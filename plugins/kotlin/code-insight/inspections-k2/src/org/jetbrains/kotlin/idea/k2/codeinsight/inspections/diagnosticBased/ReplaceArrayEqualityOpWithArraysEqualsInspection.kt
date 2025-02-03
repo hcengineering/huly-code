@@ -1,4 +1,4 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package org.jetbrains.kotlin.idea.k2.codeinsight.inspections.diagnosticBased
 
 import com.intellij.codeInspection.ProblemsHolder
@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.analysis.api.KaSession
 import org.jetbrains.kotlin.analysis.api.fir.diagnostics.KaFirDiagnostic
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
-import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinDiagnosticBasedInspectionBase
+import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinKtDiagnosticBasedInspectionBase
 import org.jetbrains.kotlin.idea.codeinsight.api.applicable.inspections.KotlinModCommandQuickFix
 import org.jetbrains.kotlin.idea.k2.codeinsight.inspections.diagnosticBased.ReplaceArrayEqualityOpWithArraysEqualsInspection.Context
 import org.jetbrains.kotlin.lexer.KtTokens
@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.psi.*
 import kotlin.reflect.KClass
 
 internal class ReplaceArrayEqualityOpWithArraysEqualsInspection :
-    KotlinDiagnosticBasedInspectionBase<KtExpression, KaFirDiagnostic.ArrayEqualityOperatorCanBeReplacedWithEquals, Context>() {
+    KotlinKtDiagnosticBasedInspectionBase<KtExpression, KaFirDiagnostic.ArrayEqualityOperatorCanBeReplacedWithEquals, Context>() {
 
     override val diagnosticType: KClass<KaFirDiagnostic.ArrayEqualityOperatorCanBeReplacedWithEquals>
         get() = KaFirDiagnostic.ArrayEqualityOperatorCanBeReplacedWithEquals::class
@@ -43,10 +43,10 @@ internal class ReplaceArrayEqualityOpWithArraysEqualsInspection :
         context: Context,
     ): @InspectionMessage String = KotlinBundle.message("dangerous.array.comparison")
 
-    override fun createQuickFix(
+    override fun createQuickFixes(
         element: KtExpression,
         context: Context,
-    ): KotlinModCommandQuickFix<KtExpression> = object : KotlinModCommandQuickFix<KtExpression>() {
+    ): Array<KotlinModCommandQuickFix<KtExpression>> = arrayOf(object : KotlinModCommandQuickFix<KtExpression>() {
 
         override fun getFamilyName(): @IntentionFamilyName String = KotlinBundle.message("replace.with.content.equals")
 
@@ -70,7 +70,7 @@ internal class ReplaceArrayEqualityOpWithArraysEqualsInspection :
             }
             element.replace(KtPsiFactory(project).createExpressionByPattern(template, left, right))
         }
-    }
+    })
 
     override fun buildVisitor(
         holder: ProblemsHolder,

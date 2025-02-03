@@ -18,11 +18,14 @@ import org.jetbrains.kotlin.analysis.api.renderer.base.annotations.KaRendererAnn
 import org.jetbrains.kotlin.analysis.api.renderer.types.KaTypeRenderer
 import org.jetbrains.kotlin.analysis.api.renderer.types.impl.KaTypeRendererForSource
 import org.jetbrains.kotlin.analysis.api.resolution.KaSimpleFunctionCall
-import org.jetbrains.kotlin.analysis.api.symbols.*
+import org.jetbrains.kotlin.analysis.api.symbols.KaNamedClassSymbol
+import org.jetbrains.kotlin.analysis.api.symbols.KaNamedFunctionSymbol
+import org.jetbrains.kotlin.analysis.api.symbols.KaSymbolVisibility
 import org.jetbrains.kotlin.analysis.api.types.KaClassType
-import org.jetbrains.kotlin.analysis.api.types.KaSubstitutor
 import org.jetbrains.kotlin.analysis.api.types.KaType
+import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.idea.base.codeInsight.KotlinNameSuggester
+import org.jetbrains.kotlin.idea.codeinsight.utils.singleReturnExpressionOrNull
 import org.jetbrains.kotlin.idea.completion.KotlinFirCompletionParameters
 import org.jetbrains.kotlin.idea.completion.impl.k2.LookupElementSink
 import org.jetbrains.kotlin.idea.completion.impl.k2.checkers.KtCompletionExtensionCandidateChecker
@@ -38,11 +41,9 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.isFirstStatement
+import org.jetbrains.kotlin.resolve.DataClassResolver
 import org.jetbrains.kotlin.types.Variance
-import org.jetbrains.kotlin.utils.addToStdlib.partitionIsInstance
 import org.jetbrains.kotlin.utils.yieldIfNotNull
-import java.util.regex.Matcher
-import java.util.regex.Pattern
 
 internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<C : KotlinRawPositionContext>(
     parameters: KotlinFirCompletionParameters,
@@ -178,7 +179,7 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
         trailingFunctionDescriptor: TrailingFunctionDescriptor,
         candidateChecker: KaCompletionExtensionCandidateChecker,
         fromIndex: Int = 0,
-        nameSuggester: (KaType, String?) -> Sequence<String>,
+        nameSuggester: (parameterType: KaType, name: String?) -> Sequence<String>,
     ): Sequence<LookupElementBuilder> {
         val parameterTypes = trailingFunctionDescriptor.functionType
             .parameterTypes
@@ -193,10 +194,12 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
 
         return when (val parameterType = parameterTypes.singleOrNull()?.lowerBoundIfFlexible()) {
             null -> sequence {
-                val suggestedNames = parameterTypes.mapIndexedNotNull { index, parameterType ->
-                    if (index < fromIndex) return@mapIndexedNotNull null
-                    parameterType to parameterNameSuggester(parameterType, index).first()
-                }
+                val suggestedNames = parameterTypes.asSequence()
+                    .drop(fromIndex)
+                    .mapIndexed { index, parameterType ->
+                        val parameterName = parameterNameSuggester(parameterType, index + fromIndex).first()
+                        parameterType to parameterName
+                    }.toList()
 
                 yieldIfNotNull(createCompoundLookupElement(suggestedNames))
             }
@@ -207,27 +210,25 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
                 val classSymbol = parameterType.expandedSymbol as? KaNamedClassSymbol
                     ?: return@sequence
 
-                val mapEntryClassSymbol = findClass(StandardClassIds.MapEntry)
-                val isMapEntry = mapEntryClassSymbol != null
-                        && (classSymbol == mapEntryClassSymbol
-                        || classSymbol.isSubClassOf(mapEntryClassSymbol))
-
-                val suggestedNames = @OptIn(KaExperimentalApi::class) destructurize(
+                val suggestedNames = getSubstitutedComponents(
                     classSymbol = classSymbol,
                     candidateChecker = candidateChecker,
                     parameterType = parameterType,
-                ).mapIndexed { index, (destructurized, substitutor) ->
-                    val returnType = substitutor.substitute(destructurized.returnType)
+                ).mapIndexed { index, (callableSymbol, returnType) ->
+                    val name = when (val member = callableSymbol.psi?.navigationElement) {
+                        is KtNamedFunction -> {
+                            val expression = member.singleReturnExpressionOrNull?.returnedExpression
+                                ?: member.bodyExpression
 
-                    val nameString = destructurized.name?.asString()
-                        ?: run {
-                            val name = if (!isMapEntry) null
-                            else if (index == 0) "key"
-                            else "value"
-                            nameSuggester(returnType, name).first()
+                            (expression as? KtNameReferenceExpression)
+                                ?.getReferencedName()
                         }
 
-                    returnType to nameString
+                        is KtParameter -> member.name
+                        else -> null
+                    }
+
+                    returnType to nameSuggester(returnType, name).first()
                 }
 
                 yieldIfNotNull(createCompoundLookupElement(suggestedNames, isDestructuring = true))
@@ -249,13 +250,13 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
 
     context(KaSession)
     @OptIn(KaExperimentalApi::class)
-    private fun destructurize(
+    private fun getSubstitutedComponents(
         classSymbol: KaNamedClassSymbol,
         candidateChecker: KaCompletionExtensionCandidateChecker,
         parameterType: KaClassType,
         receiverTypes: List<KaClassType> = listOf(parameterType), // todo all receiver types
-    ): List<Pair<Destructurized<*>, KaSubstitutor>> {
-        val components = destructurize(classSymbol, receiverTypes)
+    ): List<SubstitutedSymbol> {
+        val components = classSymbol.getComponents(receiverTypes)
         if (components.isEmpty()) return emptyList()
 
         val defaultSubstitutor = classSymbol.typeParameters
@@ -263,9 +264,7 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
             .toMap()
             .let { createSubstitutor(it) }
 
-        val associated = components.mapNotNull { destructurized ->
-            val callableSymbol = destructurized.callableSymbol
-
+        val substituted = components.mapNotNull { callableSymbol ->
             val substitutor = if (callableSymbol.isExtension) {
                 val callable = candidateChecker
                     .computeApplicability(callableSymbol) as? KaExtensionApplicabilityResult.ApplicableAsExtensionCallable
@@ -275,56 +274,52 @@ internal sealed class FirTrailingFunctionParameterNameCompletionContributorBase<
                 defaultSubstitutor
             }
 
-            destructurized to substitutor
+            SubstitutedSymbol(
+                callableSymbol = callableSymbol,
+                returnType = substitutor.substitute(callableSymbol.returnType),
+            )
         }
 
-        return if (associated.size == components.size) associated
+        return if (substituted.size == components.size) substituted
         else emptyList()
     }
 
     context(KaSession)
-    private fun destructurize(
-        classSymbol: KaNamedClassSymbol,
+    private fun KaNamedClassSymbol.getComponents(
         receiverTypes: List<KaClassType>,
-    ): List<Destructurized<*>> {
-        val targetScope = classSymbol.memberScope
-        if (classSymbol.isData) { // todo the base class might have more components!
-            return targetScope.constructors
-                .first { it.isPrimary }
-                .valueParameters
-                .map { Destructurized.ValueParameterBased(it) }
-        }
+    ): Collection<KaNamedFunctionSymbol> {
+        if (receiverTypes.isEmpty()) return emptyList()
 
-        val nameFilter = Name::hasComponentName
-        val (candidateSymbols, symbols) = targetScope.callables(nameFilter)
+        val listClassSymbol = findClass(StandardClassIds.List)
+        if (this == listClassSymbol
+            || listClassSymbol != null && isSubClassOf(listClassSymbol)
+        ) return emptyList()
+
+        val nameFilter: (Name) -> Boolean = DataClassResolver::isComponentLike
+        val candidateSymbols = memberScope.callables(nameFilter)
             .ifEmpty {
                 symbolFromIndexProvider.getExtensionCallableSymbolsByNameFilter(nameFilter, receiverTypes) { declaration ->
                     visibilityChecker.canBeVisible(declaration)
                             && declaration.canBeAnalysed()
                 }
-            }.toList()
-            .sortedBy { it.name }
-            .partitionIsInstance<KaCallableSymbol, KaNamedFunctionSymbol>()
-        if (symbols.isNotEmpty()) return emptyList()
-
-        val indices = candidateSymbols.asSequence()
+            }.filterIsInstance<KaNamedFunctionSymbol>()
             .filter { it.isOperator }
-            .filter { it.visibility == KaSymbolVisibility.PUBLIC } // todo visibilityChecker::isVisible
-            .map { it.name }
-            .mapNotNull { name ->
-                val matcher = ComponentFunctionNameRegex.matcher(name)
-                if (matcher.find()) matcher.group(1) else null
-            }.mapNotNull { it.toIntOrNull() }
             .toList()
+        if (candidateSymbols.isEmpty()) return emptyList()
 
-        val count = candidateSymbols.size
-        if (count == 0
-            || indices.size != count
-            || indices.first() != 1
-            || indices.last() != count
+        val symbolsByIndex = candidateSymbols.asSequence()
+            .filter { it.visibility == KaSymbolVisibility.PUBLIC } // todo visibilityChecker::isVisible
+            .associateByTo(sortedMapOf()) { functionSymbol ->
+                DataClassResolver.getComponentIndex(functionSymbol.name.asString())
+            }
+
+        if (symbolsByIndex.isEmpty()
+            || symbolsByIndex.size != candidateSymbols.size
+            || symbolsByIndex.firstKey() != 1
+            || symbolsByIndex.lastKey() != candidateSymbols.size
         ) return emptyList()
 
-        return candidateSymbols.map { Destructurized.OperatorBased(it) }
+        return symbolsByIndex.values
     }
 }
 
@@ -394,7 +389,7 @@ private fun createExtensionCandidateChecker(
 
     val codeFragment = KtPsiFactory(functionLiteral.project)
         .createBlockCodeFragment(
-            text = "it",
+            text = StandardNames.IMPLICIT_LAMBDA_PARAMETER_NAME.asString(),
             context = bodyExpression,
         )
 
@@ -409,32 +404,7 @@ private fun createExtensionCandidateChecker(
     )
 }
 
-private val ComponentFunctionNameRegex: Pattern = Pattern.compile("^component(\\d+)$")
-
-@OptIn(KaExperimentalApi::class)
-private sealed class Destructurized<S : KaCallableSymbol>(
-    open val callableSymbol: S,
-    open val returnType: KaType = callableSymbol.returnType,
-    open val name: Name? = callableSymbol.name,
-) {
-
-    open operator fun component1(): S = callableSymbol
-
-    open operator fun component2(): KaType = returnType
-
-    open operator fun component3(): Name? = name
-
-    data class ValueParameterBased(
-        override val callableSymbol: KaValueParameterSymbol,
-    ) : Destructurized<KaValueParameterSymbol>(callableSymbol)
-
-    data class OperatorBased(
-        override val callableSymbol: KaFunctionSymbol,
-    ) : Destructurized<KaFunctionSymbol>(callableSymbol, name = null)
-}
-
-private fun Pattern.matcher(name: Name): Matcher =
-    matcher(name.asString())
-
-private val Name.hasComponentName: Boolean
-    get() = ComponentFunctionNameRegex.matcher(this).matches()
+private data class SubstitutedSymbol(
+    val callableSymbol: KaNamedFunctionSymbol,
+    val returnType: KaType,
+)

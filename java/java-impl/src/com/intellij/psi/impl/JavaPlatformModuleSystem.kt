@@ -45,10 +45,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.regex.Pattern
-
-private const val MAIN = "main"
-private val javaVersionPattern: Pattern by lazy { Pattern.compile("java\\d+") }
 
 /**
  * Checks package accessibility according to JLS 7 "Packages and Modules".
@@ -305,11 +301,7 @@ internal class JavaPlatformModuleSystem : JavaModuleSystemEx {
   private fun inSameMultiReleaseModule(current: ModuleInfo, target: ModuleInfo): Boolean {
     val placeModule = current.jpsModule ?: return false
     val targetModule = target.jpsModule ?: return false
-    if (targetModule.name.endsWith(".$MAIN")) {
-      val baseModuleName = targetModule.name.substringBeforeLast(MAIN)
-      return javaVersionPattern.matcher(placeModule.name.substringAfter(baseModuleName)).matches()
-    }
-    return false
+    return com.intellij.codeInsight.daemon.impl.analysis.areMainAndAdditionalMultiReleaseModules(targetModule, placeModule)
   }
 
   private fun detectAutomaticModule(current: ModuleInfo): PsiJavaModule? {

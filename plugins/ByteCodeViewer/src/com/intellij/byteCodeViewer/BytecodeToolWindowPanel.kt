@@ -2,105 +2,71 @@
 package com.intellij.byteCodeViewer
 
 import com.intellij.ide.highlighter.JavaClassFileType
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ScrollType
-import com.intellij.openapi.editor.event.CaretEvent
-import com.intellij.openapi.editor.event.CaretListener
+import com.intellij.openapi.editor.event.SelectionEvent
+import com.intellij.openapi.editor.event.SelectionListener
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.fileEditor.TextEditor
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.text.StringUtil
-import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiUtilBase
-import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
-import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.concurrency.annotations.RequiresWriteLock
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiClass
+import org.jetbrains.org.objectweb.asm.ClassReader
+import org.jetbrains.org.objectweb.asm.util.Textifier
+import org.jetbrains.org.objectweb.asm.util.TraceClassVisitor
 import java.awt.BorderLayout
-import java.util.function.Consumer
+import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
 import javax.swing.JPanel
 import kotlin.math.min
 
-internal class BytecodeToolWindowPanel(private val project: Project, private val file: PsiFile) : JPanel(BorderLayout()), Disposable {
-  private val bytecodeDocument: Document = EditorFactory.getInstance().createDocument("")
-
+internal class BytecodeToolWindowPanel(
+  private val project: Project,
+  private val psiClass: PsiClass,
+  private val classFile: VirtualFile
+) : JPanel(BorderLayout()), Disposable {
   private val bytecodeEditor: Editor = EditorFactory.getInstance()
-    .createEditor(bytecodeDocument, project, JavaClassFileType.INSTANCE, true)
-
-  private var existingLoadBytecodeTask: LoadBytecodeTask? = null
+    .createEditor(EditorFactory.getInstance().createDocument(""), project, JavaClassFileType.INSTANCE, true)
 
   init {
-    bytecodeEditor.setBorder(null)
     add(bytecodeEditor.getComponent())
-    WriteAction.run<RuntimeException> {
-      setBytecodeText(null, DEFAULT_TEXT)
-    }
-    setUpListeners()
+    setBorder(null)
 
-    queueLoadBytecodeTask {
-      val editor = FileEditorManager.getInstance(project)
-        .getSelectedTextEditor()
-        ?.takeIf { it.virtualFile == file.virtualFile } ?: return@queueLoadBytecodeTask
-      updateBytecodeSelection(editor)
-    }
-  }
-
-  private fun setUpListeners() {
-    val messageBus = project.getMessageBus()
-    val messageBusConnection = messageBus.connect(this)
-    messageBusConnection.subscribe<FileEditorManagerListener>(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
-      override fun selectionChanged(event: FileEditorManagerEvent) {
-        val newFile = event.newFile
-        if (newFile == null) return
-        if (!isValidFileType(newFile.fileType)) return
-
-        val fileEditor = FileEditorManager.getInstance(project).getSelectedEditor(newFile)
-        if (fileEditor !is TextEditor) return
-        if (fileEditor.file != file.virtualFile) return
-        val sourceEditor = fileEditor.getEditor()
-
+    setEditorText()
+    EditorFactory.getInstance().getEventMulticaster().addSelectionListener(object : SelectionListener {
+      override fun selectionChanged(e: SelectionEvent) {
+        val sourceEditor = selectedMatchingEditor()
+        if (e.editor != sourceEditor) return
         updateBytecodeSelection(sourceEditor)
       }
-    })
-
-    val multicaster = EditorFactory.getInstance().getEventMulticaster()
-
-    multicaster.addCaretListener(object : CaretListener {
-      override fun caretPositionChanged(event: CaretEvent) {
-        updateBytecodeSelection(event.editor)
-      }
-    }, this)
+    }, this@BytecodeToolWindowPanel)
   }
 
-  /** Update only text selection ranges. Do not read bytecode again.
-   *
-   * @param sourceEditor an editor that displays Java code (either real source Java or decompiled Java). If not, this method does nothing.
-   */
-  @RequiresEdt
+  fun setEditorText() {
+    val byteCodeText = deserializeBytecode()
+    bytecodeEditor.document.putUserData(BYTECODE_WITH_DEBUG_INFO, byteCodeText) // include debug info for selection matching
+    runWriteAction {
+      val byteCodeToShow = if (BytecodeViewerSettings.getInstance().state.showDebugInfo) byteCodeText else removeDebugInfo(byteCodeText)
+      bytecodeEditor.document.setText(byteCodeToShow)
+    }
+
+    val sourceEditor = selectedMatchingEditor() ?: return
+    updateBytecodeSelection(sourceEditor)
+  }
+
+  private fun selectedMatchingEditor(): Editor? {
+    return FileEditorManager.getInstance(project).getSelectedTextEditor()?.takeIf {
+      it.virtualFile == psiClass.containingFile.virtualFile
+    }
+  }
+
   private fun updateBytecodeSelection(sourceEditor: Editor) {
     if (sourceEditor.getCaretModel().getCaretCount() != 1) return
-    val virtualFile = sourceEditor.virtualFile ?: return
-    if (virtualFile.fileType !== JavaFileType.INSTANCE) return
-
-    val selectedPsiElement = getPsiElement(project, sourceEditor)
-    if (selectedPsiElement == null) return
-    val containingClass = BytecodeViewerManager.getContainingClass(selectedPsiElement)
-    if (containingClass == null) {
-      bytecodeEditor.getSelectionModel().removeSelection()
-      return
-    }
 
     val sourceStartOffset = sourceEditor.getCaretModel().getCurrentCaret().getSelectionStart()
     val sourceEndOffset = sourceEditor.getCaretModel().getCurrentCaret().getSelectionEnd()
@@ -111,6 +77,8 @@ internal class BytecodeToolWindowPanel(private val project: Project, private val
     if (sourceEndLine > sourceStartLine && sourceEndOffset > 0 && sourceDocument.charsSequence[sourceEndOffset - 1] == '\n') {
       sourceEndLine--
     }
+
+    val bytecodeDocument = bytecodeEditor.getDocument()
 
     val bytecodeWithDebugInfo = bytecodeDocument.getUserData<String?>(BYTECODE_WITH_DEBUG_INFO)
     if (bytecodeWithDebugInfo == null) {
@@ -143,87 +111,23 @@ internal class BytecodeToolWindowPanel(private val project: Project, private val
     bytecodeEditor.getSelectionModel().setSelection(startOffset, endOffset)
   }
 
-  /** Update the contents of the whole editor in the tool window, including reading bytecode again from the currently opened file. */
-  @RequiresEdt
-  private fun queueLoadBytecodeTask(@RequiresWriteLock @RequiresEdt onAfterBytecodeLoaded: Runnable?) {
-    // If a new task was scheduled to update bytecode, we want to cancel the previous one.
-    if (existingLoadBytecodeTask != null) {
-      if (existingLoadBytecodeTask?.isRunning == true) {
-        existingLoadBytecodeTask?.cancel()
+  private fun deserializeBytecode(): String {
+    try {
+      val bytes = classFile.contentsToByteArray(false)
+      val stringWriter = StringWriter()
+      PrintWriter(stringWriter).use { printWriter ->
+        ClassReader(bytes).accept(TraceClassVisitor(null, Textifier(), printWriter), ClassReader.SKIP_FRAMES)
       }
-      existingLoadBytecodeTask = null
+      return stringWriter.toString()
     }
-    existingLoadBytecodeTask = LoadBytecodeTask(project) { bytecode ->
-      ApplicationManager.getApplication().invokeLater {
-        WriteAction.run<RuntimeException> {
-          setBytecodeText(bytecode.withDebugInfo, bytecode.withoutDebugInfo)
-          onAfterBytecodeLoaded?.run()
-        }
-      }
+    catch (e: IOException) {
+      LOG.warn(e)
+      return BytecodeViewerBundle.message("deserialization.error")
     }
-    existingLoadBytecodeTask?.queue()
-  }
-
-  @RequiresEdt
-  @RequiresWriteLock
-  private fun setBytecodeText(bytecodeWithDebugInfo: String?, bytecodeWithoutDebugInfo: String) {
-    val document = bytecodeEditor.getDocument()
-    document.putUserData<String?>(BYTECODE_WITH_DEBUG_INFO, bytecodeWithDebugInfo)
-    document.setText(StringUtil.convertLineSeparators(bytecodeWithoutDebugInfo))
   }
 
   override fun dispose() {
     EditorFactory.getInstance().releaseEditor(bytecodeEditor)
-  }
-
-  private class LoadBytecodeTask(
-    project: Project,
-    @param:RequiresEdt private val onBytecodeUpdated: Consumer<Bytecode>,
-  ) : Task.Backgroundable(project, BytecodeViewerBundle.message("loading.bytecode"), true) {
-    private var myProgressIndicator: ProgressIndicator? = null
-
-    private var myBytecode: Bytecode? = null
-
-    fun cancel() {
-      myProgressIndicator?.cancel()
-    }
-
-    val isRunning: Boolean get() = myProgressIndicator != null && myProgressIndicator!!.isRunning()
-
-    @RequiresBackgroundThread
-    override fun run(indicator: ProgressIndicator) {
-      val project = myProject ?: return
-      myProgressIndicator = indicator
-      myBytecode = ReadAction.computeCancellable<Bytecode, RuntimeException> {
-        val selectedEditor = FileEditorManager.getInstance(project).getSelectedTextEditor()
-        if (selectedEditor == null) return@computeCancellable null
-
-        val psiFileInEditor = PsiUtilBase.getPsiFileInEditor(selectedEditor, project)
-        if (psiFileInEditor == null) return@computeCancellable null
-
-        if (!isValidFileType(psiFileInEditor.getFileType())) return@computeCancellable null
-
-        val selectedPsiElement = getPsiElement(project, selectedEditor)
-        if (selectedPsiElement == null) return@computeCancellable null
-
-        val containingClass = BytecodeViewerManager.getContainingClass(selectedPsiElement)
-        if (containingClass == null) return@computeCancellable null
-
-        //CancellationUtil.sleepCancellable(1000); // Uncomment if you want to make sure we continue to not freeze the IDE
-        getByteCodeVariants(selectedPsiElement)
-      }
-    }
-
-    @RequiresEdt
-    override fun onSuccess() {
-      myBytecode?.let { onBytecodeUpdated.accept(it) }
-    }
-
-    @RequiresEdt
-    override fun onCancel() {
-      val progressIndicator = myProgressIndicator ?: return
-      LOG.warn("task was canceled, task title: " + title + "task text: " + progressIndicator.getText())
-    }
   }
 
   companion object {
@@ -232,7 +136,5 @@ internal class BytecodeToolWindowPanel(private val project: Project, private val
     private val LOG = Logger.getInstance(BytecodeToolWindowPanel::class.java)
 
     private val BYTECODE_WITH_DEBUG_INFO = Key.create<String>("BYTECODE_WITH_DEBUG_INFO")
-
-    private val DEFAULT_TEXT = BytecodeViewerBundle.message("open.java.file.to.see.bytecode")
   }
 }

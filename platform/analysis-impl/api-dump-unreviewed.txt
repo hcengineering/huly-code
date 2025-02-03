@@ -244,7 +244,6 @@ c:com.intellij.codeInsight.completion.BaseCompletionService
 - <init>():V
 - p:addWeighersBefore(com.intellij.codeInsight.completion.impl.CompletionSorterImpl):com.intellij.codeInsight.completion.impl.CompletionSorterImpl
 - p:createMatcher(java.lang.String,Z):com.intellij.codeInsight.completion.PrefixMatcher
-- p:createResultSet(com.intellij.codeInsight.completion.CompletionParameters,com.intellij.util.Consumer,com.intellij.codeInsight.completion.CompletionContributor,com.intellij.codeInsight.completion.PrefixMatcher):com.intellij.codeInsight.completion.CompletionResultSet
 - defaultSorter(com.intellij.codeInsight.completion.CompletionParameters,com.intellij.codeInsight.completion.PrefixMatcher):com.intellij.codeInsight.completion.CompletionSorter
 - emptySorter():com.intellij.codeInsight.completion.impl.CompletionSorterImpl
 - getCurrentCompletion():com.intellij.codeInsight.completion.CompletionProcess
@@ -564,7 +563,6 @@ c:com.intellij.codeInsight.daemon.impl.DaemonProgressIndicator
 - f:cancel(java.lang.Throwable,java.lang.String):V
 - f:checkCanceled():V
 - f:equals(java.lang.Object):Z
-- p:getCancellationTrace():java.lang.Throwable
 - f:hashCode():I
 - f:isCanceled():Z
 - isIndeterminate():Z
@@ -772,7 +770,7 @@ a:com.intellij.codeInsight.daemon.impl.ProgressableTextEditorHighlightingPass
 - f:doCollectInformation(com.intellij.openapi.progress.ProgressIndicator):V
 - p:getEditor():com.intellij.openapi.editor.Editor
 - p:getHighlightingSession():com.intellij.codeInsight.daemon.impl.HighlightingSession
-- p:getPresentableName():java.lang.String
+- getPresentableName():java.lang.String
 - getProgress():D
 - isFinished():Z
 - p:isValid():Z
@@ -3444,6 +3442,7 @@ com.intellij.profile.codeInspection.InspectionProfileManager
 - a:getProfiles():java.util.Collection
 - getScopesManager():com.intellij.psi.search.scope.packageSet.NamedScopesHolder
 - a:getSeverityRegistrar():com.intellij.codeInsight.daemon.impl.SeverityRegistrar
+- s:hasTooLowSeverity(com.intellij.codeInspection.LocalInspectionToolSession,com.intellij.codeInspection.LocalInspectionTool):Z
 - a:setRootProfile(java.lang.String):V
 a:com.intellij.profile.codeInspection.InspectionProfileProcessor
 - com.intellij.configurationStore.LazySchemeProcessor

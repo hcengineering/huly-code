@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.analysis.api.signatures.KaVariableSignature
 import org.jetbrains.kotlin.analysis.api.symbols.*
 import org.jetbrains.kotlin.analysis.api.types.*
 import org.jetbrains.kotlin.builtins.StandardNames
+import org.jetbrains.kotlin.idea.base.analysis.api.utils.findSamSymbolOrNull
 import org.jetbrains.kotlin.idea.base.analysis.api.utils.isPossiblySubTypeOf
 import org.jetbrains.kotlin.idea.base.analysis.api.utils.shortenReferencesInRange
 import org.jetbrains.kotlin.idea.base.analysis.withRootPrefixIfNeeded
@@ -102,7 +103,7 @@ internal object FunctionLookupElementFactory {
                     .substitute(samConstructorType)) as? KaFunctionType
                     ?: return null
 
-                val samSymbol = functionClassSymbol.samSymbol
+                val samSymbol = functionClassSymbol.findSamSymbolOrNull()
                     ?: return null
 
                 TrailingFunctionDescriptor.SamConstructor(functionType, samSymbol)
@@ -162,7 +163,7 @@ internal object FunctionLookupElementFactory {
         return when (insertionStrategy) {
             CallableInsertionStrategy.AsCall -> builder.withInsertHandler(FunctionInsertionHandler)
             CallableInsertionStrategy.AsIdentifier -> builder.withInsertHandler(CallableIdentifierInsertionHandler())
-            is CallableInsertionStrategy.AsIdentifierCustom -> builder.withInsertHandler(object : QuotedNamesAwareInsertionHandler() {
+            is CallableInsertionStrategy.AsIdentifierCustom -> builder.withInsertHandler(object : CallableIdentifierInsertionHandler() {
                 override fun handleInsert(context: InsertionContext, item: LookupElement) {
                     super.handleInsert(context, item)
                     insertionStrategy.insertionHandlerAction(context)
@@ -432,13 +433,6 @@ internal sealed interface TrailingFunctionDescriptor {
                 ?.name
     }
 }
-
-context(KaSession)
-private val KaNamedClassSymbol.samSymbol: KaNamedFunctionSymbol?
-    get() = declaredMemberScope.callables
-        .filterIsInstance<KaNamedFunctionSymbol>()
-        .filter { it.modality == KaSymbolModality.ABSTRACT }
-        .singleOrNull()
 
 /**
  * @see KaVariableSignature.getValueFromParameterNameAnnotation

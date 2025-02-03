@@ -1,6 +1,6 @@
 #  Copyright 2000-2023 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
-import numpy as np
 import io
+import numpy as np
 
 TABLE_TYPE_NEXT_VALUE_SEPARATOR = '__pydev_table_column_type_val__'
 MAX_COLWIDTH = 100000
@@ -13,10 +13,11 @@ CSV_FORMAT_SEPARATOR = '~'
 is_pd = False
 try:
     import pandas as pd
+
     version = pd.__version__
     majorVersion = int(version[0])
     pd.set_option('display.max_colwidth', None)
-    is_pd = majorVersion>=1
+    is_pd = majorVersion >= 1
     is_pd = True
 except:
     pass
@@ -29,6 +30,8 @@ def get_type(table):
 
 def get_shape(table):
     # type: (np.ndarray) -> str
+    if table.dtype.names is not None:
+        return str((table.shape[0], len(table.dtype.names)))
     if table.ndim == 1:
         return str((table.shape[0], 1))
     else:
@@ -37,13 +40,19 @@ def get_shape(table):
 
 def get_head(table):
     # type: (np.ndarray) -> str
+    column_names = table.dtype.names
+    if column_names:
+        return TABLE_TYPE_NEXT_VALUE_SEPARATOR.join([str(column_names[i]) for i in range(len(column_names))])
     return "None"
 
 
 def get_column_types(table):
     # type: (np.ndarray) -> str
     table = __create_table(table[:1])
-    cols_types = [str(t) for t in table.dtypes] if is_pd else table.get_cols_types()
+    try:
+        cols_types = [str(t) for t in table.dtypes] if is_pd else table.get_cols_types()
+    except AttributeError:
+        cols_types = table.get_cols_types()
 
     return NP_ROWS_TYPE + TABLE_TYPE_NEXT_VALUE_SEPARATOR + \
         TABLE_TYPE_NEXT_VALUE_SEPARATOR.join(cols_types)
@@ -126,27 +135,28 @@ class _NpTable:
         html.append('<thead>\n'
                     '<tr style="text-align: right;">\n'
                     '<th></th>\n')
-        html += self._collect_cols_names()
+        html += self.__collect_cols_names()
         html.append('</tr>\n'
                     '</thead>\n')
 
         # tbody
-        html += self._collect_values(None)
+        html += self.__collect_values(None)
 
         html.append('</table>\n')
 
         return "".join(html)
 
-    def _collect_cols_names(self):
+    def __collect_cols_names(self):
         if self.type == ONE_DIM:
             return ['<th>0</th>\n']
 
         if self.type == WITH_TYPES:
-            return ['<th>{}</th>\n'.format(name) for name in self.array.dtype.names]
+            columns_names = self.array.dtype.names
+            return ['<th>{}</th>\n'.format(str(columns_names[i])) for i in range(len(columns_names))]
 
         return ['<th>{}</th>\n'.format(i) for i in range(len(self.array[0]))]
 
-    def _collect_values(self, max_cols):
+    def __collect_values(self, max_cols):
         html = ['<tbody>\n']
         rows = self.array.shape[0]
         for row_num in range(rows):
@@ -177,8 +187,7 @@ class _NpTable:
         html.append('</tbody>\n')
         return html
 
-
-    def to_csv(self, na_rep = "None", float_format=None, sep=CSV_FORMAT_SEPARATOR):
+    def to_csv(self, na_rep="None", float_format=None, sep=CSV_FORMAT_SEPARATOR):
         csv_stream = io.StringIO()
         np_array_without_nones = np.where(self.array == None, np.nan, self.array)
         if float_format is None or float_format == 'null':
@@ -186,12 +195,12 @@ class _NpTable:
 
         np.savetxt(csv_stream, np_array_without_nones, delimiter=sep, fmt=float_format)
         csv_string = csv_stream.getvalue()
-        csv_rows_with_index = self._insert_index_at_rows_begging_csv(csv_string)
+        csv_rows_with_index = self.__insert_index_at_rows_begging_csv(csv_string)
 
-        col_names = self._collect_col_names_csv()
+        col_names = self.__collect_col_names_csv()
         return col_names + "\n" + csv_rows_with_index
 
-    def _insert_index_at_rows_begging_csv(self, csv_string):
+    def __insert_index_at_rows_begging_csv(self, csv_string):
         # type: (str) -> str
         csv_rows = csv_string.split('\n')
         csv_rows_with_index = []
@@ -199,7 +208,7 @@ class _NpTable:
             csv_rows_with_index.append(str(row_index) + CSV_FORMAT_SEPARATOR + csv_rows[row_index])
         return "\n".join(csv_rows_with_index)
 
-    def _collect_col_names_csv(self):
+    def __collect_col_names_csv(self):
         if self.type == ONE_DIM:
             return '{}0'.format(CSV_FORMAT_SEPARATOR)
 
@@ -224,7 +233,7 @@ class _NpTable:
 
         cols, orders = sort_keys
         if 0 in cols:
-            return self._sort_by_index(True in orders)
+            return self.__sort_by_index(True in orders)
 
         if self.type == ONE_DIM:
             extended = np.column_stack((self.indexes, self.array))
@@ -261,7 +270,7 @@ class _NpTable:
         self.array = extended[:, 1:]
         return self
 
-    def _sort_by_index(self, order):
+    def __sort_by_index(self, order):
         if order:
             return self
         self.array = self.array[::-1]
@@ -292,7 +301,12 @@ def __create_table(command, start_index=None, end_index=None, format=None):
         np_array = command
 
     if is_pd:
-        sorted_df = __sort_df(pd.DataFrame(np_array), sort_keys)
+        if isinstance(np_array, np.recarray):
+            sorted_df = pd.DataFrame()
+            for record in np_array:
+                sorted_df = pd.concat([sorted_df, pd.DataFrame(record.tolist())])
+        else:
+            sorted_df = __sort_df(pd.DataFrame(np_array), sort_keys)
         if start_index is not None and end_index is not None:
             sorted_df_slice = sorted_df.iloc[start_index:end_index]
             # to apply "format" we should not have None inside DFs
@@ -306,7 +320,8 @@ def __create_table(command, start_index=None, end_index=None, format=None):
             return sorted_df_slice
         return sorted_df
 
-    return _NpTable(np_array, format=format).sort(sort_keys).slice(start_index, end_index)
+    return _NpTable(np_array, format=format).sort(sort_keys).slice(start_index,
+                                                                   end_index)
 
 
 def __compute_data(arr, fun, format=None):

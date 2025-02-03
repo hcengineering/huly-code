@@ -1,8 +1,10 @@
-// Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
+// Copyright 2000-2025 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.intellij.idea
 
 import com.intellij.diagnostic.VMOptions
 import com.intellij.execution.ExecutionException
+import com.intellij.execution.wsl.WslIjentAvailabilityService
+import com.intellij.execution.wsl.ijent.nio.toggle.IjentWslNioFsToggler
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.ide.actions.EditCustomVmOptionsAction
@@ -13,10 +15,8 @@ import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.notification.impl.NotificationFullContent
-import com.intellij.openapi.application.Application
-import com.intellij.openapi.application.ApplicationNamesInfo
-import com.intellij.openapi.application.EDT
-import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.*
 import com.intellij.openapi.application.ex.ApplicationManagerEx
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
@@ -24,8 +24,10 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.updateSettings.impl.ExternalUpdateManager
 import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.openapi.util.SystemInfoRt
 import com.intellij.openapi.util.io.NioFiles
 import com.intellij.platform.ide.CoreUiCoroutineScopeHolder
+import com.intellij.platform.ide.bootstrap.eel.MultiRoutingFileSystemVmOptionsSetter
 import com.intellij.platform.ide.bootstrap.shellEnvDeferred
 import com.intellij.platform.ide.customization.ExternalProductResourceUrls
 import com.intellij.platform.ide.progress.ModalTaskOwner
@@ -39,7 +41,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.future.asDeferred
 import org.jetbrains.annotations.PropertyKey
 import org.jetbrains.jps.model.java.JdkVersionDetector
-import java.io.File
 import java.io.IOException
 import java.nio.file.FileStore
 import java.nio.file.Files
@@ -66,6 +67,8 @@ internal suspend fun startSystemHealthMonitor() {
     checkAncientOs()
   }
   startDiskSpaceMonitoring()
+
+  MultiRoutingFileSystemVmOptionsSetter.onApplicationActivated()
 }
 
 private val LOG = logger<Application>()
@@ -251,7 +254,7 @@ private suspend fun checkEnvironment() {
 
 private fun checkLauncher() {
   if (
-    (SystemInfo.isWindows || SystemInfo.isLinux) &&
+    (SystemInfoRt.isWindows || SystemInfoRt.isLinux) &&
     System.getProperty("ide.native.launcher") == null &&
     !ExternalUpdateManager.isCreatingDesktopEntries()
   ) {
@@ -259,7 +262,7 @@ private fun checkLauncher() {
     val binName = baseName + if (SystemInfo.isWindows) "64.exe" else ""
     val scriptName = baseName + if (SystemInfo.isWindows) ".bat" else ".sh"
     if (Files.isRegularFile(Path.of(PathManager.getBinPath(), binName))) {
-      val prefix = "bin" + File.separatorChar
+      @Suppress("IO_FILE_USAGE") val prefix = "bin" + java.io.File.separatorChar
       val action = NotificationAction.createSimpleExpiring(IdeBundle.message("shell.env.loading.learn.more")) { BrowserUtil.browse("https://intellij.com/launcher") }
       showNotification("ide.script.launcher.used", suppressable = true, action, prefix + scriptName, prefix + binName)
     }
@@ -298,7 +301,7 @@ private fun checkTempDirEnvVars() {
 }
 
 private fun checkAncientOs() {
-  if (SystemInfo.isWindows) {
+  if (SystemInfoRt.isWindows) {
     val buildNumber = SystemInfo.getWinBuildNumber()
     if (buildNumber != null && buildNumber < 10000) {  // 10 1507 = 10240, Server 2016 = 14393
       showNotification("unsupported.windows", suppressable = true, action = null)
@@ -389,6 +392,48 @@ private fun monitorDiskSpace(scope: CoroutineScope, dir: Path, store: FileStore,
   }
 }
 
-private fun storeName(store: FileStore): String =
-  if (store.name().isBlank()) store.toString().trim().trimStart('(').trimEnd(')')
-  else store.toString()
+private fun storeName(store: FileStore): String {
+  return if (store.name().isBlank()) store.toString().trim().trimStart('(').trimEnd(')') else store.toString()
+}
+
+private suspend fun MultiRoutingFileSystemVmOptionsSetter.onApplicationActivated() {
+  if (!WslIjentAvailabilityService.getInstance().useIjentForWslNioFileSystem()) return
+
+  val changedOptions = ensureInVmOptions()
+  when {
+    changedOptions.isEmpty() -> {
+      IjentWslNioFsToggler.instanceAsync().enableForAllWslDistributions()
+    }
+
+    PluginManagerCore.isRunningFromSources() || AppMode.isDevServer() -> {
+      logger<MultiRoutingFileSystemVmOptionsSetter>().warn(
+        changedOptions.joinToString(
+          prefix = "This message is seen only in Dev Mode/Run from sources.\n" +
+                   "The value of the registry flag for IJent FS " +
+                   "doesn't match the VM options.\n" +
+                   "Add the following VM options to the Run Configuration:\n",
+          separator = "\n",
+        ) { (k, v) ->
+          "  $k${v.orEmpty()}"
+        }
+      )
+    }
+
+    else -> withContext(Dispatchers.EDT + ModalityState.nonModal().asContextElement()) {
+      showNotification(
+        key = "ijent.wsl.fs.dialog.message",
+        suppressable = false,
+        action = object : NotificationAction(
+          if (ApplicationManager.getApplication().isRestartCapable)
+            IdeBundle.message("ijent.wsl.fs.dialog.restart.button")
+          else
+            IdeBundle.message("ijent.wsl.fs.dialog.shutdown.button")
+        ) {
+          override fun actionPerformed(e: AnActionEvent, notification: Notification) {
+            ApplicationManagerEx.getApplicationEx().restart(true)
+          }
+        }
+      )
+    }
+  }
+}

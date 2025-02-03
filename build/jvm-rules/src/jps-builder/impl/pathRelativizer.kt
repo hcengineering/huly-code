@@ -16,7 +16,8 @@ private const val OUT_ID_PREFIX = "@"
 internal fun createPathRelativizer(baseDir: Path, classOutDir: Path): PathRelativizerService {
   val baseDirPrefix = "${baseDir.invariantSeparatorsPathString}/"
   // Bazel may use paths with `../`
-  val parentOfBaseDirPrefix = "${baseDir.parent.invariantSeparatorsPathString}/"
+  val baseDirParent = baseDir.parent
+  val parentOfBaseDirPrefix = "${baseDirParent.invariantSeparatorsPathString}/"
   val outBaseDirPrefix = "${classOutDir.invariantSeparatorsPathString}/"
 
   val typeAwareRelativizer = object : PathTypeAwareRelativizer {
@@ -27,7 +28,7 @@ internal fun createPathRelativizer(baseDir: Path, classOutDir: Path): PathRelati
           return when {
             p.startsWith(baseDirPrefix) -> p.substring(baseDirPrefix.length)
             p.startsWith(parentOfBaseDirPrefix) -> "../" + p.substring(parentOfBaseDirPrefix.length)
-            else -> error("Unexpected path: $p")
+            else -> error("Unexpected path: $p (baseDirPrefix=$baseDirPrefix, parentOfBaseDirPrefix=$parentOfBaseDirPrefix)")
           }
         }
         RelativePathType.OUTPUT -> {
@@ -39,6 +40,13 @@ internal fun createPathRelativizer(baseDir: Path, classOutDir: Path): PathRelati
 
     override fun toRelative(path: Path, type: RelativePathType): String {
       return toRelative(path.invariantSeparatorsPathString, type)
+    }
+
+    override fun toAbsoluteFile(path: String, type: RelativePathType): Path {
+      return when (type) {
+        RelativePathType.SOURCE -> if (path.startsWith("../")) baseDirParent.resolve(path.substring(3)) else baseDir.resolve(path)
+        RelativePathType.OUTPUT -> classOutDir.resolve(path)
+      }
     }
 
     override fun toAbsolute(path: String, type: RelativePathType): String {
@@ -53,6 +61,7 @@ internal fun createPathRelativizer(baseDir: Path, classOutDir: Path): PathRelati
     override fun toRelativePath(path: String): String? {
       return when {
         path.startsWith(outBaseDirPrefix) -> OUT_ID_PREFIX + path.substring(outBaseDirPrefix.length)
+        path.startsWith(parentOfBaseDirPrefix) -> OUT_ID_PREFIX + "../" + path.substring(parentOfBaseDirPrefix.length)
         path.startsWith(baseDirPrefix) -> BASE_ID_PREFIX + path.substring(baseDirPrefix.length)
         else -> null
       }

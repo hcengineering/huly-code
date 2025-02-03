@@ -2,9 +2,9 @@
 package com.hulylabs.intellij.plugins.langconfigurator.settings
 
 import com.intellij.codeInsight.actions.ReformatCodeProcessor
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
@@ -12,15 +12,16 @@ import com.intellij.psi.PsiDocumentManager
 class SaveActionsDocumentManagerListener(val project: Project) : FileDocumentManagerListener {
   private val psiDocumentManager = PsiDocumentManager.getInstance(project)
 
-  override fun beforeAllDocumentsSaving() {
+  override fun beforeDocumentSaving(document: Document) {
     if (!project.service<Settings>().state.formatOnSave) {
       return
     }
-    val unsavedDocuments: List<Document> = listOf(*FileDocumentManager.getInstance().unsavedDocuments)
-    if (unsavedDocuments.isNotEmpty()) {
-      val files = unsavedDocuments.map { psiDocumentManager.getPsiFile(it)!! }.toTypedArray()
-      val processor = ReformatCodeProcessor(project, files, null, false)
-      processor.run()
+    val file = psiDocumentManager.getPsiFile(document)
+    if (file != null) {
+      ApplicationManager.getApplication().invokeLater {
+        val processor = ReformatCodeProcessor(project, arrayOf(file), null, false)
+        processor.run()
+      }
     }
   }
 }

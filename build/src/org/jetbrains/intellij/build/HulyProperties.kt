@@ -133,6 +133,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       //CommunityRepositoryModules.groovyPlugin(),
       pluginAuto("redhat.lsp4ij") { spec ->
         spec.withModuleLibrary("eclipse.lsp4j", "redhat.lsp4ij", "org.eclipse.lsp4j-0.21.1.jar")
+        spec.withModuleLibrary("eclipse.lsp4j.debug", "redhat.lsp4ij", "org.eclipse.lsp4j.debug-0.21.1.jar")
         spec.withModuleLibrary("vladsch.flexmark", "redhat.lsp4ij", "flexmark-0.64.8.jar")
         spec.withModuleLibrary("nibor.autolink", "redhat.lsp4ij", "autolink-0.11.0.jar")
       },

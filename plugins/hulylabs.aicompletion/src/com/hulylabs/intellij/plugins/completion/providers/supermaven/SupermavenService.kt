@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 private val LOG = logger<SupermavenService>()
 
 @Service(Service.Level.PROJECT)
-class SupermavenService(val project: Project, val scope: CoroutineScope) {
+class SupermavenService(val project: Project, val scope: CoroutineScope) : Disposable {
   enum class AgentState {
     STARTING, FAILED_DOWNLOAD, STARTED, ERROR, STOPPED
   }
@@ -77,11 +78,11 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     return false
   }
 
-  fun update(path: String, content: String, entryId: Int, cursorOffset: Int) {
+  fun update(path: String, content: String, cursorOffset: Int) {
     if (!checkStarted()) {
       return
     }
-    agent!!.newCompletionState(entryId, cursorOffset)
+    agent!!.newCompletionState(path, cursorOffset)
     val msg = SupermavenStateUpdateMessage(agent!!.newStateId.toString(), listOf(
       FileUpdateMessage(path, content),
       CursorPositionUpdateMessage(path, cursorOffset)
@@ -89,7 +90,7 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     agent!!.send(msg)
   }
 
-  fun completion(content: String, entryId: Int, cursorOffset: Int): Long? {
+  fun completion(path: String, content: String, cursorOffset: Int): Long? {
     if (!checkStarted()) {
       return null
     }
@@ -97,7 +98,7 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     var stateId = agent!!.newStateId
     while (agent!!.states.containsKey(stateId)) {
       val state = agent!!.states[stateId]!!
-      if (entryId == state.entryId && state.prefixOffset == cursorOffset) {
+      if (path == state.path && state.prefixOffset == cursorOffset) {
         return stateId
       }
       stateId--
@@ -143,5 +144,9 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) {
     }
     agent!!.serviceTier = null
     agent!!.send(SupermavenLogoutMessage)
+  }
+
+  override fun dispose() {
+    stop()
   }
 }

@@ -2,6 +2,8 @@
 package com.hulylabs.intellij.plugins.completion.providers
 
 import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.flow.Flow
 
@@ -13,8 +15,16 @@ interface InlineCompletionProviderService {
   /** uses for switching between inline completion providers */
   fun stop()
 
+  /** displays the status of the provider in status bar */
   fun getStatus(): String
+  /** popup actions of the provider in status bar */
   fun getActions(file: VirtualFile?): List<AnAction>
-  fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int)
-  suspend fun suggest(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int): Flow<String>?
+
+  fun documentOpened(file: VirtualFile, content: String) {}
+  fun documentClosed(file: VirtualFile) {}
+  fun documentChanged(file: VirtualFile, event: DocumentEvent) {}
+  fun completionAccepted() {}
+  fun completionRejected() {}
+  fun update(file: VirtualFile, content: String, cursorOffset: Int) {}
+  suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>?
 }

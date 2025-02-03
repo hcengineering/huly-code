@@ -14,6 +14,7 @@
     <editorFactoryListener implementation="com.hulylabs.intellij.plugins.completion.listeners.InlineCompletionEditorFactoryListener"/>
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.completion.services.ProjectStartupActivity"/>
     <statusBarWidgetFactory id="AIInlineCompletion" implementation="com.hulylabs.intellij.plugins.completion.ui.WidgetFactory" />
+    <notificationGroup id="AI Inline Completion" displayType="TOOL_WINDOW"/>
   </extensions>
 
   <extensions defaultExtensionNs="com.intellij.inline.completion">

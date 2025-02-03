@@ -1,7 +1,9 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
@@ -20,6 +22,8 @@ import java.nio.file.Path
 
 private val supermavenDirectory = Path.of(PathManager.getConfigPath(), "supermaven")
 private val LOG = Logger.getInstance(SupermavenRuntime::class.java)
+
+private const val WEEK_PERIOD_IN_MILLIS = 1000 * 60 * 60 * 24 * 7
 
 class SupermavenRuntime {
 
@@ -59,7 +63,15 @@ class SupermavenRuntime {
     if (arch == "") {
       throw IOException("Unsupported architecture")
     }
-    val downloadInfo = getDownloadInfo(project, platform, arch)
+    var settings = ApplicationManager.getApplication().service<SupermavenSettings>()
+    if (settings.state.agentVersionLastCheckTime + WEEK_PERIOD_IN_MILLIS < System.currentTimeMillis()) {
+      LOG.info("Checking for new Supermaven Agent version")
+      val info = getDownloadInfo(project, platform, arch)
+      settings.state.agentVersion = info.version
+      settings.state.agentDownloadUrl = info.downloadUrl
+      settings.state.agentVersionLastCheckTime = System.currentTimeMillis()
+    }
+    val downloadInfo = SupermavenDownloadInfo(settings.state.agentVersion, settings.state.agentDownloadUrl!!, "")
     val exeSuffix = if (SystemInfo.isWindows) ".exe" else ""
     val fileName = "sm-agent-${downloadInfo.version}${exeSuffix}"
     val binaryPath = supermavenDirectory.resolve(fileName)

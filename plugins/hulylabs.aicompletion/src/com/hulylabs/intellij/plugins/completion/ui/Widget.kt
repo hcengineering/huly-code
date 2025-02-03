@@ -2,10 +2,17 @@
 package com.hulylabs.intellij.plugins.completion.ui
 
 import com.hulylabs.intellij.plugins.completion.CompletionProviderStateChangedListener
+import com.hulylabs.intellij.plugins.completion.CompletionSettings
 import com.hulylabs.intellij.plugins.completion.InlineCompletionProviderRegistry
+import com.hulylabs.intellij.plugins.completion.actions.EnableAction
+import com.hulylabs.intellij.plugins.completion.actions.FileEnableAction
+import com.hulylabs.intellij.plugins.completion.actions.SwitchProviderAction
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupFactory.ActionSelectionAid
@@ -17,18 +24,26 @@ import com.intellij.openapi.wm.impl.status.EditorBasedStatusBarPopup
 class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
   init {
     project.messageBus.connect(this)
-      .subscribe(CompletionProviderStateChangedListener.COMPLETION_PROVIDER_STATE_CHANGED,
+      .subscribe(CompletionProviderStateChangedListener.TOPIC,
                  object : CompletionProviderStateChangedListener {
                    override fun stateChanged() {
-                     update()
+                     ApplicationManager.getApplication().invokeLater {
+                       update()
+                     }
                    }
                  })
   }
 
   override fun getWidgetState(file: VirtualFile?): WidgetState {
-    val provider = InlineCompletionProviderRegistry.getInstance(project).provider
-    val title = "${provider.name}: ${provider.getStatus()}"
-    return WidgetState(title, title, true)
+    if (ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
+      val provider = InlineCompletionProviderRegistry.getProvider(project)
+      val title = "${provider.name}: ${provider.getStatus()}"
+      return WidgetState(title, title, true)
+    }
+    else {
+      val title = "Completion: disabled"
+      return WidgetState(title, title, true)
+    }
   }
 
   override fun createPopup(context: DataContext): ListPopup {
@@ -45,8 +60,18 @@ class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
 
   private fun getActionGroup(): ActionGroup {
     val actionGroup = DefaultActionGroup()
-    val provider = InlineCompletionProviderRegistry.getInstance(project).provider
-    actionGroup.addAll(provider.getActions(this.statusBar?.currentEditor?.invoke()?.file))
+    val provider = InlineCompletionProviderRegistry.getProvider(project)
+    actionGroup.add(EnableAction(project))
+    if (ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
+      actionGroup.add(SwitchProviderAction(project))
+      actionGroup.add(Separator())
+      val file = this.statusBar?.currentEditor?.invoke()?.file
+      if (file != null && file.extension != null) {
+        val extension = file.extension!!
+        actionGroup.add(FileEnableAction(extension))
+      }
+      actionGroup.addAll(provider.getActions(file))
+    }
     return actionGroup
   }
 

@@ -123,7 +123,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       "intellij.platform.starter",
       "hulylabs.intellij.customization",
     )
-    productLayout.bundledPluginModules = HULY_BUNDLED_PLUGINS// + sequenceOf("intellij.vcs.github.community")
+    productLayout.bundledPluginModules = HULY_BUNDLED_PLUGINS // + sequenceOf("intellij.vcs.github.community")
 
     productLayout.prepareCustomPluginRepositoryForPublishedPlugins = false
     productLayout.buildAllCompatiblePlugins = false
@@ -133,6 +133,7 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       //CommunityRepositoryModules.groovyPlugin(),
       pluginAuto("redhat.lsp4ij") { spec ->
         spec.withModuleLibrary("eclipse.lsp4j", "redhat.lsp4ij", "org.eclipse.lsp4j-0.21.1.jar")
+        spec.withModuleLibrary("eclipse.lsp4j.debug", "redhat.lsp4ij", "org.eclipse.lsp4j.debug-0.21.1.jar")
         spec.withModuleLibrary("vladsch.flexmark", "redhat.lsp4ij", "flexmark-0.64.8.jar")
         spec.withModuleLibrary("nibor.autolink", "redhat.lsp4ij", "autolink-0.11.0.jar")
       },
@@ -143,6 +144,9 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       pluginAuto("hulylabs.treesitter") { spec ->
         spec.withModuleLibrary("tree-sitter-libs", "hulylabs.treesitter", "tree-sitter-libs.jar")
       },
+      pluginAuto("hulylabs.aicompletion") { spec ->
+        spec.withModuleLibrary("eclipse.lsp4j.jsonrpc", "hulylabs.aicompletion", "eclipse.lsp4j.jsonrpc-0.23.1.jar")
+      }
     ))
 
     productLayout.addPlatformSpec { layout, _ ->

@@ -25,6 +25,6 @@ interface InlineCompletionProviderService {
   fun documentChanged(file: VirtualFile, event: DocumentEvent) {}
   fun completionAccepted() {}
   fun completionRejected() {}
-  fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int)
+  fun update(file: VirtualFile, content: String, cursorOffset: Int) {}
   suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>?
 }

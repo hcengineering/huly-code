@@ -14,9 +14,8 @@ class InlineCompletionCaretListener : CaretListener {
         && ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(event.editor.virtualFile)) {
       if (event.editor.document.textLength < 1_000_000) {
         val content = event.editor.document.text
-        val entryId = event.editor.document.hashCode()
         val provider = InlineCompletionProviderRegistry.getProvider(event.editor.project!!)
-        provider.update(event.editor.virtualFile!!, content, entryId, event.caret!!.offset)
+        provider.update(event.editor.virtualFile!!, content, event.caret!!.offset)
       }
     }
   }

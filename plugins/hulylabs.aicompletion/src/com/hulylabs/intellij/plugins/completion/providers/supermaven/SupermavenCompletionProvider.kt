@@ -72,22 +72,22 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     return file.extension != null && !ApplicationManager.getApplication().service<CompletionSettings>().state.disabledExtensions.contains(file.extension)
   }
 
-  override fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int) {
+  override fun update(file: VirtualFile, content: String,  cursorOffset: Int) {
     if (!isFileSupported(file)) {
       return
     }
-    supermaven.update(file.path, content, entryId, cursorOffset)
+    supermaven.update(file.path, content, cursorOffset)
   }
 
   override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>? {
     if (!isFileSupported(file)) {
       return null
     }
-    val entryId = document.hashCode()
+    val path = file.path
     val content = document.text
     return flow {
       delay(20)
-      val stateId = supermaven.completion(content, entryId, cursorOffset) ?: return@flow
+      val stateId = supermaven.completion(path, content, cursorOffset) ?: return@flow
       val now = System.currentTimeMillis()
       var i = 0
       while (System.currentTimeMillis() - now < 10000) {

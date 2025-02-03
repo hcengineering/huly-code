@@ -79,9 +79,6 @@ class CopilotCompletionProvider(project: Project) : InlineCompletionProviderServ
     copilot.completionRejected()
   }
 
-  override fun update(file: VirtualFile, content: String, entryId: Int, cursorOffset: Int) {
-  }
-
   override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>? {
     return flow {
       copilot.completion(file, document, cursorOffset)?.let {

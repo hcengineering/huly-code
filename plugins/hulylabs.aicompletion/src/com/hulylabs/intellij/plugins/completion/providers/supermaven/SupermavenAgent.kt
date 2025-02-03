@@ -22,7 +22,7 @@ import kotlin.concurrent.thread
 private val LOG = Logger.getInstance(SupermavenAgent::class.java)
 
 data class SupermavenCompletionState(
-  val entryId: Int,
+  val path: String,
   val prefixOffset: Int,
   var chunks: List<String> = listOf(),
   var dedent: String = "",
@@ -190,9 +190,9 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
     }
   }
 
-  fun newCompletionState(entryId: Int, cursorOffset: Int) {
+  fun newCompletionState(path: String, cursorOffset: Int) {
     newStateId++
-    states[newStateId] = SupermavenCompletionState(entryId, cursorOffset)
+    states[newStateId] = SupermavenCompletionState(path, cursorOffset)
     if (states.size > 1000) {
       states.remove(states.firstKey())
     }

@@ -78,11 +78,11 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) : Dispo
     return false
   }
 
-  fun update(path: String, content: String, entryId: Int, cursorOffset: Int) {
+  fun update(path: String, content: String, cursorOffset: Int) {
     if (!checkStarted()) {
       return
     }
-    agent!!.newCompletionState(entryId, cursorOffset)
+    agent!!.newCompletionState(path, cursorOffset)
     val msg = SupermavenStateUpdateMessage(agent!!.newStateId.toString(), listOf(
       FileUpdateMessage(path, content),
       CursorPositionUpdateMessage(path, cursorOffset)
@@ -90,7 +90,7 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) : Dispo
     agent!!.send(msg)
   }
 
-  fun completion(content: String, entryId: Int, cursorOffset: Int): Long? {
+  fun completion(path: String, content: String, cursorOffset: Int): Long? {
     if (!checkStarted()) {
       return null
     }
@@ -98,7 +98,7 @@ class SupermavenService(val project: Project, val scope: CoroutineScope) : Dispo
     var stateId = agent!!.newStateId
     while (agent!!.states.containsKey(stateId)) {
       val state = agent!!.states[stateId]!!
-      if (entryId == state.entryId && state.prefixOffset == cursorOffset) {
+      if (path == state.path && state.prefixOffset == cursorOffset) {
         return stateId
       }
       stateId--

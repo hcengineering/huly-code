@@ -165,7 +165,11 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
     baseDownloadUrl = "https://dist.huly.io/code/"
     buildDocAuthoringAssets = true
 
-    additionalVmOptions = persistentListOf("-Dllm.show.ai.promotion.window.on.start=false", "-Djb.consents.confirmation.enabled=false")
+    additionalVmOptions = persistentListOf(
+      "-Dllm.show.ai.promotion.window.on.start=false",
+      "-Djb.consents.confirmation.enabled=false",
+      "-Didea.show.splash.longer=true"
+    )
   }
 
   override suspend fun copyAdditionalFiles(context: BuildContext, targetDir: Path) {

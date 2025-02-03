@@ -72,7 +72,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     return file.extension != null && !ApplicationManager.getApplication().service<CompletionSettings>().state.disabledExtensions.contains(file.extension)
   }
 
-  override fun update(file: VirtualFile, content: String,  cursorOffset: Int) {
+  override fun update(file: VirtualFile, content: String, cursorOffset: Int) {
     if (!isFileSupported(file)) {
       return
     }
@@ -92,31 +92,43 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
       var i = 0
       while (System.currentTimeMillis() - now < 10000) {
         val state = supermaven.completionState(stateId) ?: break
+        var str = ""
+        val isStart = i == 0
+        val isEnd = state.end
         while (i < state.chunks.size) {
-          if (i == 0) {
-            var idxOffset = max(0, cursorOffset - 20)
-            var pattern = content.substring(idxOffset, cursorOffset)
-            while (idxOffset < cursorOffset && pattern.isNotEmpty()) {
-              if (state.chunks[i].startsWith(pattern)) {
-                break
-              }
-              pattern = pattern.substring(1)
+          str += state.chunks[i]
+          i++
+        }
+        // try removing prefix from start
+        if (isStart && str.isNotEmpty()) {
+          var idxOffset = max(0, cursorOffset - 20)
+          var pattern = content.substring(idxOffset, cursorOffset)
+          while (idxOffset < cursorOffset && pattern.isNotEmpty()) {
+            if (str.startsWith(pattern)) {
+              break
+            }
+            pattern = pattern.substring(1)
+            idxOffset++
+          }
+          if (pattern.isNotEmpty()) {
+            str = str.substring(pattern.length)
+          }
+        }
+        // try removing suffix from end
+        if (isEnd) {
+          var pattern = content.substring(cursorOffset)
+          if (pattern.isNotEmpty()) {
+            var idxOffset = 0
+            while (idxOffset < str.length && !pattern.startsWith(str.substring(idxOffset))) {
               idxOffset++
             }
-            if (pattern.isNotEmpty()) {
-              emit(state.chunks[i].substring(pattern.length))
-            }
-            else {
-              emit(state.chunks[i])
+            if (idxOffset < str.length) {
+              str = str.substring(0, idxOffset)
             }
           }
-          else if (state.end && i == state.chunks.size - 1) {
-            emit(state.chunks[i].trimEnd())
-          }
-          else {
-            emit(state.chunks[i])
-          }
-          i++
+        }
+        if (str.isNotEmpty()) {
+          emit(str)
         }
         if (state.end) break
         delay(50)

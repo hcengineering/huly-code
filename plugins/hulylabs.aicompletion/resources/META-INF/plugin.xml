@@ -19,7 +19,7 @@
   </extensions>
 
   <extensions defaultExtensionNs="com.intellij.inline.completion">
-    <provider id="AIInlineCompletionProvider" implementation="com.hulylabs.intellij.plugins.completion.EditorInlineCompletionProvider"/>
+    <provider id="AIInlineCompletionProvider" implementation="com.hulylabs.intellij.plugins.completion.EditorInlineCompletionProvider" order="last"/>
   </extensions>
 
 </idea-plugin>

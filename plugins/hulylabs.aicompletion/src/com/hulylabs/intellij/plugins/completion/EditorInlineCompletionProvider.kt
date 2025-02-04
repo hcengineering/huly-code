@@ -3,8 +3,13 @@ package com.hulylabs.intellij.plugins.completion
 
 import com.intellij.codeInsight.inline.completion.*
 import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayTextElement
+import com.intellij.codeInsight.inline.completion.session.InlineCompletionSession
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSingleSuggestion
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSuggestion
+import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupEvent
+import com.intellij.codeInsight.lookup.LookupListener
+import com.intellij.codeInsight.lookup.LookupManagerListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
@@ -14,7 +19,10 @@ import kotlinx.coroutines.withContext
 import javax.swing.JComponent
 import javax.swing.JLabel
 
-class EditorInlineCompletionProvider : InlineCompletionProvider {
+class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerListener {
+  var lookupListenerAdded = false
+  var lookupShown = false
+
   override val id: InlineCompletionProviderID
     get() = InlineCompletionProviderID("AIInlineCompletionProvider")
 
@@ -29,6 +37,13 @@ class EditorInlineCompletionProvider : InlineCompletionProvider {
     if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(request.editor.virtualFile)) {
       return InlineCompletionSuggestion.Empty
     }
+    if (!lookupListenerAdded && request.editor.project != null) {
+      request.editor.project!!.messageBus.connect().subscribe(LookupManagerListener.TOPIC, this)
+      lookupListenerAdded = true
+    }
+    if (lookupShown) {
+      InlineCompletionSuggestion.Empty
+    }
     return InlineCompletionSingleSuggestion.build {
       val editor = request.editor
       val provider = InlineCompletionProviderRegistry.getProvider(editor.project!!)
@@ -42,10 +57,38 @@ class EditorInlineCompletionProvider : InlineCompletionProvider {
     }
   }
 
+  override fun restartOn(event: InlineCompletionEvent): Boolean {
+    return event is InlineCompletionEvent.LookupCancelled
+  }
+
   override fun isEnabled(event: InlineCompletionEvent): Boolean {
     if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
       return false
     }
-    return event is InlineCompletionEvent.DocumentChange || event is InlineCompletionEvent.Backspace
+    if (lookupShown) {
+      return false
+    }
+    return event is InlineCompletionEvent.DocumentChange
+           || event is InlineCompletionEvent.Backspace
+           || event is InlineCompletionEvent.DirectCall
+           || event is InlineCompletionEvent.SuggestionInserted
+  }
+
+  override fun activeLookupChanged(oldLookup: Lookup?, newLookup: Lookup?) {
+    lookupShown = false
+    newLookup?.addLookupListener(object : LookupListener {
+      override fun lookupCanceled(event: LookupEvent) {
+        lookupShown = false
+      }
+
+      override fun lookupShown(event: LookupEvent) {
+        lookupShown = true
+        val handler = InlineCompletion.getHandlerOrNull(event.lookup.editor)
+        val currentSession = InlineCompletionSession.getOrNull(event.lookup.editor)
+        if (currentSession != null) {
+          handler?.invokeEvent(InlineCompletionEvent.LookupCancelled(event.lookup.editor, event))
+        }
+      }
+    })
   }
 }

@@ -95,7 +95,11 @@ class CopilotAgent(
         if (process.isAlive != true) {
           break
         }
-        LOG.warn("stderr: ${str ?: continue}")
+        if (str == null) {
+          Thread.sleep(10)
+          continue
+        }
+        LOG.warn("stderr: ${str}")
       }
       LOG.info("CopilotAgent destroyed")
       project.messageBus.syncPublisher(CompletionProviderStateChangedListener.TOPIC).stateChanged()

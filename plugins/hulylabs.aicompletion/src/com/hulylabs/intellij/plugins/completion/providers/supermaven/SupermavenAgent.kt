@@ -85,7 +85,11 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         catch (_: IOException) {
           break
         }
-        var line = str ?: continue
+        if (str == null) {
+          Thread.sleep(10)
+          continue
+        }
+        var line = str
         if (!line.startsWith(SM_MESSAGE_PREFIX)) {
           LOG.warn("stdout: $line")
           continue
@@ -107,7 +111,11 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         catch (_: IOException) {
           break
         }
-        LOG.warn("stderr: ${str ?: continue}")
+        if (str == null) {
+          Thread.sleep(10)
+          continue
+        }
+        LOG.warn("stderr: ${str}")
       }
     }
 

@@ -46,8 +46,18 @@
     </option>
     <option name="DEFAULT_BLOCK_COMMENT">
       <value>
-        <option name="FOREGROUND" value="8c8c8c" />
+        <option name="FOREGROUND" value="a2a3a7" />
         <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <option name="DEFAULT_BRACES">
+      <value>
+        <option name="FOREGROUND" value="4d4f52" />
+      </value>
+    </option>
+    <option name="DEFAULT_BRACKETS">
+      <value>
+        <option name="FOREGROUND" value="4d4f52" />
       </value>
     </option>
     <option name="DEFAULT_CLASS_NAME">
@@ -62,25 +72,25 @@
     </option>
     <option name="DEFAULT_CONSTANT">
       <value>
-        <option name="FOREGROUND" value="871094" />
+        <option name="FOREGROUND" value="669f59" />
         <option name="FONT_TYPE" value="2" />
       </value>
     </option>
     <option name="DEFAULT_DOC_COMMENT">
       <value>
-        <option name="FOREGROUND" value="8c8c8c" />
+        <option name="FOREGROUND" value="7c7e86" />
         <option name="FONT_TYPE" value="2" />
       </value>
     </option>
     <option name="DEFAULT_DOC_COMMENT_TAG">
       <value>
-        <option name="EFFECT_COLOR" value="999999" />
+        <option name="FOREGROUND" value="7c7e86" />
         <option name="EFFECT_TYPE" value="1" />
       </value>
     </option>
     <option name="DEFAULT_DOC_COMMENT_TAG_VALUE">
       <value>
-        <option name="FOREGROUND" value="3d3d3d" />
+        <option name="FOREGROUND" value="7c7e86" />
         <option name="FONT_TYPE" value="2" />
       </value>
     </option>
@@ -125,13 +135,19 @@
     </option>
     <option name="DEFAULT_LABEL">
       <value>
+        <option name="FOREGROUND" value="5c78e2" />
         <option name="EFFECT_TYPE" value="1" />
       </value>
     </option>
     <option name="DEFAULT_LINE_COMMENT">
       <value>
-        <option name="FOREGROUND" value="8c8c8c" />
+        <option name="FOREGROUND" value="a2a3a7" />
         <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <option name="DEFAULT_LOCAL_VARIABLE">
+      <value>
+        <option name="FOREGROUND" value="242529" />
       </value>
     </option>
     <option name="DEFAULT_METADATA">
@@ -141,12 +157,22 @@
     </option>
     <option name="DEFAULT_NUMBER">
       <value>
-        <option name="FOREGROUND" value="1750eb" />
+        <option name="FOREGROUND" value="ad6e25" />
       </value>
     </option>
     <option name="DEFAULT_OPERATION_SIGN">
       <value>
         <option name="FOREGROUND" value="3882b7" />
+      </value>
+    </option>
+    <option name="DEFAULT_PARAMETER">
+      <value>
+        <option name="FOREGROUND" value="242529" />
+      </value>
+    </option>
+    <option name="DEFAULT_PARENTHS">
+      <value>
+        <option name="FOREGROUND" value="4d4f52" />
       </value>
     </option>
     <option name="DEFAULT_REASSIGNED_LOCAL_VARIABLE">
@@ -173,7 +199,7 @@
     </option>
     <option name="DEFAULT_STRING">
       <value>
-        <option name="FOREGROUND" value="67d17" />
+        <option name="FOREGROUND" value="649f57" />
       </value>
     </option>
     <option name="DEFAULT_TAG">
@@ -459,12 +485,64 @@
         <option name="FOREGROUND" value="e6" />
       </value>
     </option>
+    <option name="ts.capture.boolean">
+      <value>
+        <option name="FOREGROUND" value="ad6e25" />
+      </value>
+    </option>
     <option name="ts.capture.constant.builtin">
       <value>
         <option name="FOREGROUND" value="3882b7" />
       </value>
     </option>
-    <option name="ts.capture.module.builtin" baseAttributes="ts.capture.module" />
+    <option name="ts.capture.embedded">
+      <value>
+        <option name="FOREGROUND" value="242529" />
+      </value>
+    </option>
+    <option name="ts.capture.module">
+      <value />
+    </option>
+    <option name="ts.capture.module.builtin">
+      <value>
+        <option name="FOREGROUND" value="a449ab" />
+      </value>
+    </option>
+    <option name="ts.capture.punctuation">
+      <value>
+        <option name="FOREGROUND" value="242529" />
+      </value>
+    </option>
+    <option name="ts.capture.punctuation.delimiter">
+      <value>
+        <option name="FOREGROUND" value="4d4f52" />
+      </value>
+    </option>
+    <option name="ts.capture.punctuation.delimiter.comma">
+      <value>
+        <option name="FOREGROUND" value="4d4f52" />
+      </value>
+    </option>
+    <option name="ts.capture.string.regexp">
+      <value>
+        <option name="FOREGROUND" value="ad6e26" />
+      </value>
+    </option>
+    <option name="ts.capture.string.special">
+      <value>
+        <option name="FOREGROUND" value="ad6e26" />
+      </value>
+    </option>
+    <option name="ts.capture.string.special.url">
+      <value>
+        <option name="FOREGROUND" value="3882b7" />
+      </value>
+    </option>
     <option name="ts.capture.type.builtin" baseAttributes="ts.capture.type" />
+    <option name="ts.capture.variable.builtin">
+      <value>
+        <option name="FOREGROUND" value="ad6e25" />
+      </value>
+    </option>
   </attributes>
 </scheme>

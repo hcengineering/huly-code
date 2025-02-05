@@ -1,3 +1,4 @@
-<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M8.00005 11.6922C10.0393 11.6922 11.6924 10.0391 11.6924 7.99993C11.6924 5.96072 10.0393 4.30762 8.00005 4.30762C5.96084 4.30762 4.30774 5.96072 4.30774 7.99993C4.30774 10.0391 5.96084 11.6922 8.00005 11.6922Z" fill="#548AF7"/>
+<!-- Copyright 2000-2023 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license. -->
+<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="6.5" cy="6.5" r="3" fill="#548AF7"/>
 </svg>

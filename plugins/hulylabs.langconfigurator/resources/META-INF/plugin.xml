@@ -32,8 +32,8 @@
                          dynamic="true"/>
     <themeProvider id="HulyCode Dark" path="themes/dark.theme.json" parentTheme="ExperimentalDark" targetUi="new"/>
     <themeProvider id="HulyCode Light" path="themes/light.theme.json" parentTheme="ExperimentalLight" targetUi="new"/>
-    <bundledColorScheme id="GitHubDarkDimmed" path="themes/GitHub_Dark_Dimmed.xml"/>
-    <bundledColorScheme id="GitHubLight" path="themes/GitHub_Light.xml"/>
+    <bundledColorScheme id="ZedOneDark" path="themes/ZedOneDark.xml"/>
+    <bundledColorScheme id="ZedOneLight" path="themes/ZedOneLight.xml"/>
     <bundledKeymap file="VSCode.xml" />
     <bundledKeymap file="VSCode OSX.xml" />
     <consoleFilterProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.terminal.FileLinkTerminalFilterProvider"/>

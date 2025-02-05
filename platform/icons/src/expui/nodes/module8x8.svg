@@ -1,4 +1,10 @@
-<!-- Copyright 2000-2022 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license. -->
 <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="0.5" y="0.5" width="7" height="7" rx="1.5" fill="#E7EFFD" stroke="#3574F0"/>
+<g clip-path="url(#clip0_3871_131661)">
+<path d="M6 0.5H2C1.17157 0.5 0.5 1.17157 0.5 2V6C0.5 6.82843 1.17157 7.5 2 7.5H6C6.82843 7.5 7.5 6.82843 7.5 6V2C7.5 1.17157 6.82843 0.5 6 0.5Z" fill="#E7EFFD" stroke="#3574F0"/>
+</g>
+<defs>
+<clipPath id="clip0_3871_131661">
+<rect width="8" height="8" fill="white"/>
+</clipPath>
+</defs>
 </svg>

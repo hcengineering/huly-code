@@ -25,7 +25,7 @@
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
     <workspaceModel.fileIndexContributor
       implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
-    <fileIconProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.CustomFileIconProvider"/>
+    <fileIconProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.CustomFileIconProvider" order="first"/>
     <projectConfigurable id="hulylabs.langconfigurator.settings"
                          key="settings.display.name"
                          instance="com.hulylabs.intellij.plugins.langconfigurator.settings.Configuration"

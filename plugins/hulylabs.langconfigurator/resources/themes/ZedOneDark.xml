@@ -400,7 +400,11 @@
     <option name="DEFAULT_BRACES" baseAttributes="" />
     <option name="DEFAULT_BRACKETS" baseAttributes="" />
     <option name="DEFAULT_COMMA" baseAttributes="" />
-    <option name="DEFAULT_CONSTANT" baseAttributes="DEFAULT_IDENTIFIER" />
+    <option name="DEFAULT_CONSTANT">
+      <value>
+        <option name="FOREGROUND" value="dfc184" />
+      </value>
+    </option>
     <option name="DEFAULT_DOC_COMMENT">
       <value>
         <option name="FOREGROUND" value="5d636f" />

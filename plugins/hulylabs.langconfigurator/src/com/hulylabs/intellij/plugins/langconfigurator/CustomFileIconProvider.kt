@@ -13,8 +13,10 @@ class CustomFileIconProvider : FileIconProvider {
     val ext = file.extension
     when (ext) {
       "rs" -> return getInstance().getIcon("icons/rust.svg", CustomFileIconProvider::class.java.classLoader)
-      "ts", "jsx", "tsx" -> return getInstance().getIcon("icons/typescript.svg", CustomFileIconProvider::class.java.classLoader)
+      "js", "jsx" -> return getInstance().getIcon("icons/javascript.svg", CustomFileIconProvider::class.java.classLoader)
+      "ts", "tsx" -> return getInstance().getIcon("icons/typescript.svg", CustomFileIconProvider::class.java.classLoader)
       "zig" -> return getInstance().getIcon("icons/zig.svg", CustomFileIconProvider::class.java.classLoader)
+      "go" -> return getInstance().getIcon("icons/go.svg", CustomFileIconProvider::class.java.classLoader)
       else -> return null
     }
   }

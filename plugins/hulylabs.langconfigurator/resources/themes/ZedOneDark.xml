@@ -941,13 +941,12 @@
     </option>
     <option name="LSP_NAMESPACE">
       <value>
-        <option name="FOREGROUND" value="acb2be" />
+        <option name="FOREGROUND" value="6eb4bf" />
       </value>
     </option>
     <option name="LSP_NAMESPACE_DECLARATION">
       <value>
-        <option name="FOREGROUND" value="acb2be" />
-        <option name="BACKGROUND" value="282c33" />
+        <option name="FOREGROUND" value="6eb4bf" />
       </value>
     </option>
     <option name="MACRONAME">

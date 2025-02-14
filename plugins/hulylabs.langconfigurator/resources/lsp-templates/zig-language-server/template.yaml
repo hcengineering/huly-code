@@ -8,7 +8,7 @@ programArgs:
 binaryUrls:
   windows-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-windows.zip"
   linux-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-linux.tar.xz"
-  lunix-aarch64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-aarch64-linux.tar.xz"
+  linux-aarch64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-aarch64-linux.tar.xz"
   mac-x86_64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-x86_64-macos.tar.xz"
   mac-aarch64: "https://github.com/zigtools/zls/releases/download/0.13.0/zls-aarch64-macos.tar.xz"
 

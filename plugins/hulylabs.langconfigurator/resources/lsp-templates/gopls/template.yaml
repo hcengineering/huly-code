@@ -2,10 +2,10 @@ id: gopls
 name: "Go Language Server"
 
 programArgs:
-  default: "sh -c gopls -mode=stdio"
-  windows: "gopls -mode=stdio"
+  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/gopls/gopls' -mode=stdio\""
+  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/gopls/gopls\" -mode=stdio"
 
-installCommand: "go install golang.org/x/tools/gopls@latest"
+installGoPackages: ["golang.org/x/tools/gopls@latest"]
 
 mappingSettings:
   - languageId: go

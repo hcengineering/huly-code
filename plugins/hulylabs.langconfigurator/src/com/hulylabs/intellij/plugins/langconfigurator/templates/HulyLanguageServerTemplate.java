@@ -20,6 +20,7 @@ public class HulyLanguageServerTemplate {
   public String name;
   public String installCommand;
   public List<String> installNodeModules;
+  public List<String> installGoPackages;
   public Map<String, String> programArgs;
   public Map<String, String> binaryUrls;
   public String binaryExecutable;

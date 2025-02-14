@@ -92,7 +92,62 @@ object LanguageServerTemplateInstaller {
     else if (template.binaryUrl != null) {
       downloadBinary(project, template)
     }
+    else if (template.installGoPackages != null && template.installGoPackages.isNotEmpty()) {
+      installGoPackages(project, template)
+    }
     return env
+  }
+
+  @Throws(IOException::class)
+  private suspend fun installGoPackages(
+    project: Project,
+    template: HulyLanguageServerTemplate,
+  ) {
+    val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
+    if (directory.exists()) {
+      NioFiles.deleteRecursively(directory)
+    }
+    directory.createDirectories()
+    val exePath = PathEnvironmentVariableUtil.findExecutableInWindowsPath("go")
+    val args = buildList<String>(template.installGoPackages.size + 1) {
+      add("install")
+      addAll(template.installGoPackages)
+    }
+    val installEnv = mutableMapOf<String, String>()
+    installEnv["GOBIN"] = directory.toString()
+    val commandLine =
+      GeneralCommandLine().withExePath(exePath).withParameters(args).withEnvironment(installEnv)
+        .withWorkDirectory(project.basePath).withCharset(StandardCharsets.UTF_8).withRedirectErrorStream(true)
+    LOG.info("Run go install: " + commandLine.commandLineString)
+    val processHandler: ProcessHandler
+    try {
+      processHandler = OSProcessHandler(commandLine)
+    }
+    catch (e: ExecutionException) {
+      throw IOException("Cannot execute command $commandLine", e)
+    }
+
+    val runner = CapturingProcessRunner(processHandler)
+    reportRawProgress { reporter ->
+      withContext(Dispatchers.IO) {
+        reporter.text("Execute command")
+        processHandler.addProcessListener(object : ProcessAdapter() {
+          override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+            LOG.info(event.text)
+            reporter.details(event.text)
+          }
+
+          override fun processTerminated(event: ProcessEvent) {
+            reporter.text("Command finished")
+          }
+        })
+        val output = runner.runProcess(100_000, true)
+        if (output.exitCode != 0) {
+          LOG.warn("go install command failed with exit code: " + output.exitCode)
+          throw IOException("go install command failed with exit code: " + output.exitCode)
+        }
+      }
+    }
   }
 
   @Throws(IOException::class)

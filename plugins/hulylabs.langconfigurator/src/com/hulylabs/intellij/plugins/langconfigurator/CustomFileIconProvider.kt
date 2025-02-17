@@ -17,6 +17,7 @@ class CustomFileIconProvider : FileIconProvider {
       "ts", "tsx" -> return getInstance().getIcon("icons/typescript.svg", CustomFileIconProvider::class.java.classLoader)
       "zig" -> return getInstance().getIcon("icons/zig.svg", CustomFileIconProvider::class.java.classLoader)
       "go" -> return getInstance().getIcon("icons/go.svg", CustomFileIconProvider::class.java.classLoader)
+      "svelte" -> return getInstance().getIcon("icons/svelte.svg", CustomFileIconProvider::class.java.classLoader)
       else -> return null
     }
   }

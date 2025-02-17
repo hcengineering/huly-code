@@ -1,17 +1,19 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.completion.providers.copilot
 
+import com.hulylabs.intellij.plugins.completion.providers.CompletionUtils
 import com.hulylabs.intellij.plugins.completion.providers.InlineCompletionProviderService
 import com.hulylabs.intellij.plugins.completion.providers.copilot.actions.LogoutAction
 import com.hulylabs.intellij.plugins.completion.providers.copilot.actions.SignInAction
 import com.hulylabs.intellij.plugins.completion.providers.copilot.lsp.AuthStatusKind
+import com.intellij.codeInsight.inline.completion.elements.InlineCompletionElement
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.asFlow
 
 class CopilotCompletionProvider(project: Project) : InlineCompletionProviderService {
   private val copilot: CopilotService = CopilotService.getInstance(project)
@@ -79,11 +81,16 @@ class CopilotCompletionProvider(project: Project) : InlineCompletionProviderServ
     copilot.completionRejected()
   }
 
-  override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>? {
-    return flow {
-      copilot.completion(file, document, cursorOffset)?.let {
-        emit(it)
-      }
+  override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int, tabSize: Int, insertTabs: Boolean): Flow<InlineCompletionElement>? {
+    var completionResult = copilot.completion(file, document, cursorOffset, tabSize, insertTabs)
+    if (completionResult == null || completionResult.completions.isEmpty()) {
+      return null
     }
+    val completion = completionResult.completions.first()
+    var txt = completion.displayText
+
+    var lineEndOffset = document.getLineEndOffset(document.getLineNumber(cursorOffset))
+    var lineSuffix = document.immutableCharSequence.subSequence(cursorOffset, lineEndOffset).toString()
+    return CompletionUtils.splitCompletion(txt, lineSuffix).asFlow()
   }
 }

@@ -2,8 +2,11 @@
 package com.hulylabs.intellij.plugins.completion.providers.supermaven
 
 import com.hulylabs.intellij.plugins.completion.CompletionSettings
+import com.hulylabs.intellij.plugins.completion.providers.CompletionUtils
 import com.hulylabs.intellij.plugins.completion.providers.InlineCompletionProviderService
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.actions.*
+import com.intellij.codeInsight.inline.completion.elements.InlineCompletionElement
+import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayTextElement
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
@@ -79,7 +82,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
     supermaven.update(file.path, content, cursorOffset)
   }
 
-  override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int): Flow<String>? {
+  override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int, tabSize: Int, insertTabs: Boolean): Flow<InlineCompletionElement>? {
     if (!isFileSupported(file)) {
       return null
     }
@@ -114,21 +117,13 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
             str = str.substring(pattern.length)
           }
         }
-        // try removing suffix from end
-        if (isEnd) {
-          var pattern = content.substring(cursorOffset)
-          if (pattern.isNotEmpty()) {
-            var idxOffset = 0
-            while (idxOffset < str.length && !pattern.startsWith(str.substring(idxOffset))) {
-              idxOffset++
-            }
-            if (idxOffset < str.length) {
-              str = str.substring(0, idxOffset)
-            }
-          }
+        if (str.contains('\n') || isEnd) {
+          var lineEndOffset = document.getLineEndOffset(document.getLineNumber(cursorOffset))
+          var lineSuffix = document.immutableCharSequence.subSequence(cursorOffset, lineEndOffset).toString()
+          CompletionUtils.splitCompletion(str.trimEnd('\n'), lineSuffix).forEach { emit(it) }
         }
-        if (str.isNotEmpty()) {
-          emit(str)
+        else if (str.isNotEmpty()) {
+          emit(InlineCompletionGrayTextElement(str))
         }
         if (state.end) break
         delay(50)

@@ -2,10 +2,9 @@
 package com.hulylabs.intellij.plugins.completion
 
 import com.intellij.codeInsight.inline.completion.*
-import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayTextElement
 import com.intellij.codeInsight.inline.completion.session.InlineCompletionSession
-import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSingleSuggestion
 import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionSuggestion
+import com.intellij.codeInsight.inline.completion.suggestion.InlineCompletionVariant
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupEvent
 import com.intellij.codeInsight.lookup.LookupListener
@@ -14,6 +13,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.UserDataHolderBase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.swing.JComponent
@@ -44,16 +44,24 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
     if (lookupShown) {
       InlineCompletionSuggestion.Empty
     }
-    return InlineCompletionSingleSuggestion.build {
-      val editor = request.editor
-      val provider = InlineCompletionProviderRegistry.getProvider(editor.project!!)
-      val caretOffset = withContext(Dispatchers.EDT) {
-        editor.caretModel.offset
+    return object : InlineCompletionSuggestion {
+      override suspend fun getVariants(): List<InlineCompletionVariant> {
+        val editor = request.editor
+        val provider = InlineCompletionProviderRegistry.getProvider(editor.project!!)
+        val caretOffset = withContext(Dispatchers.EDT) {
+          editor.caretModel.offset
+        }
+        val tabSize = editor.settings.getTabSize(editor.project)
+        val insertTabs = editor.settings.isUseTabCharacter(editor.project)
+        var data = UserDataHolderBase()
+        val elements = provider.suggest(editor.virtualFile, editor.document, caretOffset, tabSize, insertTabs)
+        if (elements != null) {
+          return listOf(InlineCompletionVariant.build(data, elements))
+        }
+        else {
+          return emptyList()
+        }
       }
-      val flow = provider.suggest(editor.virtualFile, editor.document, caretOffset)
-      flow?.collect {
-        emit(InlineCompletionGrayTextElement(it))
-      } ?: InlineCompletionSuggestion.Empty
     }
   }
 
@@ -69,7 +77,6 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
       return false
     }
     return event is InlineCompletionEvent.DocumentChange
-           || event is InlineCompletionEvent.Backspace
            || event is InlineCompletionEvent.DirectCall
            || event is InlineCompletionEvent.SuggestionInserted
   }

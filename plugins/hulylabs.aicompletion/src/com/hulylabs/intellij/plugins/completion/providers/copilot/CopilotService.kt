@@ -25,6 +25,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.await
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
+import java.util.concurrent.CompletableFuture
 
 private val LOG = Logger.getInstance("#copilot")
 
@@ -48,6 +49,7 @@ class CopilotService(private val project: Project, private val scope: CoroutineS
   private var lastCompletionUUIDs = ArrayList<String>()
   private var agentStatus = AgentStatus.Stopped
   private var signInDialog: SignInDialog? = null
+  private var completionResult: CompletableFuture<GetCompletionsResult>? = null
 
   companion object {
     @JvmStatic
@@ -116,6 +118,9 @@ class CopilotService(private val project: Project, private val scope: CoroutineS
   }
 
   fun documentChanged(file: VirtualFile, event: DocumentEvent) {
+    if (completionResult != null && !completionResult!!.isDone) {
+      return
+    }
     val textDocument = VersionedTextDocumentIdentifier(fromFile(file), event.document.modificationStamp)
     if (event.isWholeTextReplaced) {
       agent?.server?.didChangeTextDocument(DidChangeTextDocumentParams(textDocument, listOf(TextDocumentContentChangeEvent(event.document.text))))
@@ -130,19 +135,16 @@ class CopilotService(private val project: Project, private val scope: CoroutineS
     }
   }
 
-  suspend fun completion(file: VirtualFile, document: Document, cursorOffset: Int): String? {
+  suspend fun completion(file: VirtualFile, document: Document, cursorOffset: Int, tabSize: Int, insertTabs: Boolean): GetCompletionsResult? {
+    if (completionResult != null && !completionResult!!.isDone) {
+      return completionResult?.await()
+    }
     val line = document.getLineNumber(cursorOffset)
     val position = LSPPosition(line, cursorOffset - document.getLineStartOffset(line))
     val relativePath = VfsUtil.getRelativePath(file, project.guessProjectDir()!!)!!
-    val doc = GetCompletionsDocument(2, 2, false, fromFile(file), relativePath, position, document.modificationStamp)
-    val completionResult = agent?.server?.getCompletions(GetCompletionsParams(doc))?.await()
-    completionResult?.let {
-      if (it.completions.isNotEmpty()) {
-        lastCompletionUUIDs.addAll(it.completions.map { it.uuid })
-        return it.completions[0].displayText
-      }
-    }
-    return null
+    val doc = GetCompletionsDocument(tabSize, tabSize, !insertTabs, fromFile(file), relativePath, position, document.modificationStamp)
+    completionResult = agent?.server?.getCompletions(GetCompletionsParams(doc))
+    return completionResult?.await()
   }
 
   fun completionAccepted() {

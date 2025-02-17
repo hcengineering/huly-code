@@ -217,6 +217,7 @@ object LanguageServerTemplateInstaller {
     val definition =
       UserDefinedLanguageServerDefinition(
         serverId,
+        null,
         template.name,
         "",
         template.commandLine,

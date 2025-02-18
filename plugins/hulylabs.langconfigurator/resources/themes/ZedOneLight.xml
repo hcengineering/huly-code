@@ -203,7 +203,9 @@
       </value>
     </option>
     <option name="DEFAULT_TAG">
-      <value />
+      <value>
+        <option name="FOREGROUND" value="ad6e25" />
+      </value>
     </option>
     <option name="DEFAULT_VALID_STRING_ESCAPE">
       <value>
@@ -492,7 +494,7 @@
     </option>
     <option name="ts.capture.constant.builtin">
       <value>
-        <option name="FOREGROUND" value="3882b7" />
+        <option name="FONT_TYPE" value="1" />
       </value>
     </option>
     <option name="ts.capture.embedded">
@@ -536,6 +538,12 @@
     <option name="ts.capture.string.special.url">
       <value>
         <option name="FOREGROUND" value="3882b7" />
+      </value>
+    </option>
+    <option name="ts.capture.tag.directive">
+      <value>
+        <option name="FOREGROUND" value="d3604f" />
+        <option name="FONT_TYPE" value="1" />
       </value>
     </option>
     <option name="ts.capture.type.builtin" baseAttributes="ts.capture.type" />

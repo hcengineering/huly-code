@@ -534,7 +534,7 @@
     </option>
     <option name="DEFAULT_TAG">
       <value>
-        <option name="FOREGROUND" value="74ade8" />
+        <option name="FOREGROUND" value="bf956a" />
       </value>
     </option>
     <option name="DEFAULT_TEMPLATE_LANGUAGE_COLOR" baseAttributes="TEXT" />
@@ -1656,6 +1656,7 @@
     <option name="ts.capture.constant.builtin">
       <value>
         <option name="FOREGROUND" value="6eb4bf" />
+        <option name="FONT_TYPE" value="1" />
       </value>
     </option>
     <option name="ts.capture.constant.macro">
@@ -1694,7 +1695,28 @@
         <option name="FOREGROUND" value="6eb4bf" />
       </value>
     </option>
-    <option name="ts.capture.type.builtin" baseAttributes="ts.capture.type" />
+    <option name="ts.capture.tag.attribute">
+      <value>
+        <option name="FOREGROUND" value="d07277" />
+      </value>
+    </option>
+    <option name="ts.capture.tag.constructor">
+      <value>
+        <option name="FOREGROUND" value="6eb4bf" />
+      </value>
+    </option>
+    <option name="ts.capture.tag.directive">
+      <value>
+        <option name="FOREGROUND" value="d07277" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <option name="ts.capture.type.builtin">
+      <value>
+        <option name="FOREGROUND" value="6eb4bf" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
     <option name="ts.capture.variable.builtin">
       <value>
         <option name="FOREGROUND" value="bf956a" />

@@ -392,6 +392,11 @@
         <option name="FOREGROUND" value="a1c181" />
       </value>
     </option>
+    <option name="DEFAULT_ATTRIBUTE">
+      <value>
+        <option name="FOREGROUND" value="d07277" />
+      </value>
+    </option>
     <option name="DEFAULT_BLOCK_COMMENT">
       <value>
         <option name="FOREGROUND" value="5d636f" />

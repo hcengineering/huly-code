@@ -603,8 +603,8 @@
     </option>
     <option name="ERRORS_ATTRIBUTES">
       <value>
-        <option name="EFFECT_COLOR" value="ff6667" />
-        <option name="ERROR_STRIPE_COLOR" value="ff0000" />
+        <option name="EFFECT_COLOR" value="d07277" />
+        <option name="ERROR_STRIPE_COLOR" value="d07277" />
         <option name="EFFECT_TYPE" value="2" />
       </value>
     </option>
@@ -816,8 +816,8 @@
     </option>
     <option name="INFO_ATTRIBUTES">
       <value>
-        <option name="EFFECT_COLOR" value="343434" />
-        <option name="ERROR_STRIPE_COLOR" value="ffffcc" />
+        <option name="EFFECT_COLOR" value="74ade8" />
+        <option name="ERROR_STRIPE_COLOR" value="74ade8" />
         <option name="EFFECT_TYPE" value="2" />
       </value>
     </option>
@@ -1563,10 +1563,9 @@
     </option>
     <option name="WARNING_ATTRIBUTES">
       <value>
-        <option name="BACKGROUND" value="4a3f10" />
-        <option name="EFFECT_COLOR" value="acb2be" />
-        <option name="ERROR_STRIPE_COLOR" value="ffff00" />
-        <option name="EFFECT_TYPE" value="1" />
+        <option name="EFFECT_COLOR" value="dec184" />
+        <option name="ERROR_STRIPE_COLOR" value="dec184" />
+        <option name="EFFECT_TYPE" value="2" />
       </value>
     </option>
     <option name="WRITE_IDENTIFIER_UNDER_CARET_ATTRIBUTES">

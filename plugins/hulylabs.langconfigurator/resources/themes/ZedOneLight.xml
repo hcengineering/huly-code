@@ -218,6 +218,13 @@
         <option name="ERROR_STRIPE_COLOR" value="b6d2f2" />
       </value>
     </option>
+    <option name="ERRORS_ATTRIBUTES">
+      <value>
+        <option name="EFFECT_COLOR" value="d36151" />
+        <option name="ERROR_STRIPE_COLOR" value="d36151" />
+        <option name="EFFECT_TYPE" value="2" />
+      </value>
+    </option>
     <option name="FOLDED_TEXT_ATTRIBUTES">
       <value>
         <option name="FOREGROUND" value="414d41" />
@@ -328,6 +335,13 @@
     <option name="IMPLICIT_ANONYMOUS_CLASS_PARAMETER_ATTRIBUTES">
       <value>
         <option name="FOREGROUND" value="851691" />
+      </value>
+    </option>
+    <option name="INFO_ATTRIBUTES">
+      <value>
+        <option name="EFFECT_COLOR" value="5c78e2" />
+        <option name="ERROR_STRIPE_COLOR" value="5c78e2" />
+        <option name="EFFECT_TYPE" value="2" />
       </value>
     </option>
     <option name="INLAY_DEFAULT">
@@ -451,9 +465,9 @@
     </option>
     <option name="WARNING_ATTRIBUTES">
       <value>
-        <option name="BACKGROUND" value="f5eac1" />
-        <option name="ERROR_STRIPE_COLOR" value="ebc700" />
-        <option name="EFFECT_TYPE" value="1" />
+        <option name="EFFECT_COLOR" value="a48819" />
+        <option name="ERROR_STRIPE_COLOR" value="a48819" />
+        <option name="EFFECT_TYPE" value="2" />
       </value>
     </option>
     <option name="WRITE_IDENTIFIER_UNDER_CARET_ATTRIBUTES">

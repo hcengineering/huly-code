@@ -19,6 +19,8 @@ class GitIgnoreSyncService(val project: Project) {
   private var modificationStamp = 0L
   var excludeFolders = HashSet<String>()
     private set
+  var excludeFiles = HashSet<String>()
+    private set
   var excludePatterns = HashSet<String>()
     private set
 
@@ -30,7 +32,7 @@ class GitIgnoreSyncService(val project: Project) {
     file.readText().lines().forEach { pLine ->
       var line = pLine.trim()
       if (!line.startsWith("#") && line.isNotBlank()) {
-        if (!line.contains('/') && (line.contains('*') || line.contains('.'))) {
+        if (!line.contains('/') && line.contains('*')) {
           excludePatterns.add(line)
         }
         else {
@@ -49,8 +51,14 @@ class GitIgnoreSyncService(val project: Project) {
           }
           if (line.contains("*")) {
             LOG.warn("Unsupported pattern '$line' contains '*' in the middle of the string")
-          } else {
-            excludeFolders.add(line)
+          }
+          else {
+            if (line.lastIndexOf('.') > 0) {
+              excludeFiles.add(line)
+            }
+            else {
+              excludeFolders.add(line)
+            }
           }
         }
       }

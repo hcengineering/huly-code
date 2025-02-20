@@ -24,10 +24,17 @@ class ContentRootFileIndexIgnoreContributor : WorkspaceFileIndexContributor<Cont
         val relativePath = file.url.substring(moduleRoot.length)
         if (relativePath.isEmpty()) return false
         return gitIgnoreService.excludeFolders.any {
-          if (it[0] == '/') relativePath.startsWith(it)
-          else {
-            if (file.isDirectory) ("$relativePath/").contains(it) else relativePath.contains(it)
+          if (file.isDirectory) {
+            if (it[0] == '/') relativePath.startsWith(it)
+            else {
+              ("$relativePath/").contains(it)
+            }
           }
+          else {
+            false
+          }
+        } || gitIgnoreService.excludeFiles.any {
+          relativePath.endsWith(it)
         }
       }, entity)
     }

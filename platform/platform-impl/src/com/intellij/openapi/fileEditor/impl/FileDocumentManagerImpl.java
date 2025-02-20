@@ -760,7 +760,10 @@ public class FileDocumentManagerImpl extends FileDocumentManagerBase implements 
               }
             }
           }
-        ), UIBundle.message("file.cache.conflict.action"), null, UndoConfirmationPolicy.REQUEST_CONFIRMATION);
+        ), UIBundle.message("file.cache.conflict.action"), null,
+           /// WORKAROUND: set to default policy to avoid "Undo" confirmation dialog after external tools execution
+           UndoConfirmationPolicy.DEFAULT
+        );
       }
       if (isReloadable[0]) {
         myMultiCaster.fileContentReloaded(file, document);

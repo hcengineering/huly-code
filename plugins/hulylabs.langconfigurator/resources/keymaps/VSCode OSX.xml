@@ -776,4 +776,12 @@
   <action id="CollapseDocComments">
     <keyboard-shortcut first-keystroke="meta k" second-keystroke="meta SLASH"/>
   </action>
+  <action id="EditorPageDownWithSelection">
+    <keyboard-shortcut first-keystroke="shift page_down" />
+    <keyboard-shortcut first-keystroke="shift meta down" />
+  </action>
+  <action id="EditorPageUpWithSelection">
+    <keyboard-shortcut first-keystroke="shift page_up" />
+    <keyboard-shortcut first-keystroke="shift meta up" />
+  </action>
 </keymap>

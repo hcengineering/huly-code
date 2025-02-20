@@ -40,7 +40,7 @@ public class FormatOnSaveOptionsBase<S extends FormatOnSaveOptionsBase.StateBase
 
       if (mySelectedFileTypes.isEmpty()) {
         // Default state when there are no extensions that want some files to be processed on save by default.
-        myRunOnSave = false;
+        myRunOnSave = true;
         myAllFileTypesSelected = true;
       }
       else {

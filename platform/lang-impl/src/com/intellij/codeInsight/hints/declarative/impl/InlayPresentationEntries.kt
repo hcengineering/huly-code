@@ -83,7 +83,7 @@ class TextInlayPresentationEntry(
         graphics.font = font
         graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, AntialiasingType.getKeyForCurrentScope(false))
         graphics.color = foreground
-        val baseline = max(editor.ascent, (rectHeight + metrics.ascent - metrics.descent) / 2) - 1
+        val baseline = max(editor.ascent, (rectHeight + metrics.ascent - metrics.descent) / 2)
         graphics.drawString(text, 0, baseline)
         val effectColor = attributes.effectColor ?: foreground
         if (isDisabled) {

@@ -89,7 +89,7 @@ public class EditorSettingsExternalizable implements PersistentStateComponent<Ed
     public int STICKY_LINES_LIMIT = 5;
     public boolean ENABLE_RENDERED_DOC = false;
     public boolean SHOW_INTENTION_PREVIEW = true;
-    public boolean USE_EDITOR_FONT_IN_INLAYS = false;
+    public boolean USE_EDITOR_FONT_IN_INLAYS = true;
 
     public boolean SMART_HOME = true;
 

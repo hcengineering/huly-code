@@ -28,7 +28,7 @@ internal object MarkdownPsiUtil {
         offset--
         continue
       }
-      if (!MarkdownTokenTypeSets.WHITE_SPACES.contains(element.node.elementType)) {
+      if (!MarkdownTokenTypeSets.WHITE_SPACES.contains(element.node?.elementType)) {
         return element
       }
       val newOffset = element.textOffset

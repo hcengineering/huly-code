@@ -199,6 +199,9 @@ public class HtmlCompletionContributor extends CompletionContributor implements 
     if (isDeselectingFirstPopupItemDisabled(element)) {
       return false;
     }
+    if (element.getNode() == null) {
+      return false;
+    }
     IElementType elementType = element.getNode().getElementType();
 
     if ((elementType == XmlTokenType.XML_DATA_CHARACTERS

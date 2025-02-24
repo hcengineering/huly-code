@@ -24,7 +24,7 @@ class TomlStringLiteralSelectionHandler : ExtendWordSelectionHandlerBase() {
         val valueRange = kind.offsets.value?.shiftRight(kind.node.startOffset) ?: return null
         val result = super.select(e, editorText, cursorOffset, editor) ?: mutableListOf()
 
-        val elementType = e.elementType
+        val elementType = e.elementType ?: return result
         if (elementType in TomlEscapeLexer.ESCAPABLE_LITERALS_TOKEN_SET) {
             SelectWordUtil.addWordHonoringEscapeSequences(
                 editorText,

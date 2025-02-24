@@ -87,6 +87,9 @@ public final class XmlCompletionContributor extends CompletionContributor {
                                     @NotNull ProcessingContext context,
                                     @NotNull CompletionResultSet result) {
         PsiElement position = parameters.getPosition();
+        if (position.getNode() == null) {
+          return;
+        }
         IElementType type = position.getNode().getElementType();
         if (type != XmlTokenType.XML_DATA_CHARACTERS && type != XmlTokenType.XML_ATTRIBUTE_VALUE_TOKEN) {
           return;

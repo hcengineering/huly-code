@@ -266,7 +266,10 @@ public final class XmlCompletionContributor extends CompletionContributor {
     }
 
     final PsiElement at = file.findElementAt(offset);
-    if (at != null && at.getNode().getElementType() == XmlTokenType.XML_NAME && at.getParent() instanceof XmlAttribute) {
+    if (at != null &&
+        at.getNode() != null &&
+        at.getNode().getElementType() == XmlTokenType.XML_NAME &&
+        at.getParent() instanceof XmlAttribute) {
       context.getOffsetMap().addOffset(CompletionInitializationContext.IDENTIFIER_END_OFFSET, at.getTextRange().getEndOffset());
     }
     if (at != null && at.getParent() instanceof XmlAttributeValue) {

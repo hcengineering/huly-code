@@ -11,6 +11,7 @@
   <essential-plugin>hulylabs.hulycode.plugins.hulylangconfigurator</essential-plugin>
   <essential-plugin>com.hulylabs.aicompletion</essential-plugin>
   <essential-plugin>com.hulylabs.aichat</essential-plugin>
+  <essential-plugin>com.hulylabs.cline</essential-plugin>
   <essential-plugin>com.hulylabs.TreeSitter</essential-plugin>
 
   <default-laf dark="HulyCode Dark" light="HulyCode Light"/>

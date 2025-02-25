@@ -11,6 +11,7 @@ import org.jetbrains.intellij.build.io.copyDir
 import org.jetbrains.intellij.build.io.copyFileToDir
 import org.jetbrains.intellij.build.kotlin.KotlinBinaries
 import java.nio.file.Path
+import java.util.Locale
 
 val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + sequenceOf(
   //JavaPluginLayout.MAIN_MODULE_NAME,
@@ -74,6 +75,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "hulylabs.treesitter",
   "hulylabs.aicompletion",
   "hulylabs.aichat",
+  "hulylabs.cline",
 )
 
 internal suspend fun createHulyBuildContext(
@@ -81,7 +83,7 @@ internal suspend fun createHulyBuildContext(
   projectHome: Path = COMMUNITY_ROOT.communityRoot,
 ): BuildContext {
   return BuildContextImpl.createContext(projectHome = projectHome,
-                                        productProperties = HulyProperties(COMMUNITY_ROOT.communityRoot),
+                                        productProperties = HulyProperties(COMMUNITY_ROOT.communityRoot, options),
                                         setupTracer = true,
                                         proprietaryBuildTools = ProprietaryBuildTools(
                                           scrambleTool = null,
@@ -94,7 +96,7 @@ internal suspend fun createHulyBuildContext(
                                         options = options)
 }
 
-open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperties() {
+open class HulyProperties(private val communityHomeDir: Path, options: BuildOptions) : BaseIdeaProperties() {
   companion object {
     val MAVEN_ARTIFACTS_ADDITIONAL_MODULES = persistentListOf(
       //"intellij.tools.jps.build.standalone",
@@ -147,6 +149,14 @@ open class HulyProperties(private val communityHomeDir: Path) : BaseIdeaProperti
       },
       pluginAuto("hulylabs.aicompletion") { spec ->
         spec.withModuleLibrary("eclipse.lsp4j.jsonrpc", "hulylabs.aicompletion", "eclipse.lsp4j.jsonrpc-0.23.1.jar")
+      },
+      pluginAuto("hulylabs.cline") { spec ->
+        spec.withModuleLibrary("caoccao.javet", "hulylabs.cline", "javet-4.1.1.jar")
+        spec.excludeModuleLibrary("eclipse.lsp4j", "hulylabs.cline")
+        val osName = options.targetOs.first().name.lowercase(Locale.ENGLISH)
+        val archName = if (options.targetArch == JvmArchitecture.aarch64) "arm64" else "x86_64"
+        val libName = "caoccao.javet.node.${osName}.${archName}.i18n"
+        spec.withModuleLibrary(libName, "hulylabs.cline", "${libName}.jar")
       }
     ))
 

@@ -252,6 +252,7 @@
     <orderEntry type="module" module-name="hulylabs.intellij.customization" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.treesitter" scope="RUNTIME" />
     <orderEntry type="module" module-name="hulylabs.aicompletion" scope="RUNTIME" />
-    <orderEntry type="module" module-name="hulylabs.aichat" />
+    <orderEntry type="module" module-name="hulylabs.aichat" scope="RUNTIME" />
+    <orderEntry type="module" module-name="hulylabs.cline" scope="RUNTIME" />
   </component>
 </module>

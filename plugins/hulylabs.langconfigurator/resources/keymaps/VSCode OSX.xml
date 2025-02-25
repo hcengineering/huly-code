@@ -784,4 +784,5 @@
     <keyboard-shortcut first-keystroke="shift page_up" />
     <keyboard-shortcut first-keystroke="shift meta up" />
   </action>
+  <action id="InsertInlineCompletionLineAction" />
 </keymap>

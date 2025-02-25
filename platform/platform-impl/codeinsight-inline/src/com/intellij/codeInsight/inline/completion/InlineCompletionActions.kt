@@ -16,7 +16,16 @@ import org.jetbrains.annotations.ApiStatus
 class InsertInlineCompletionAction : EditorAction(InsertInlineCompletionHandler()), HintManagerImpl.ActionToIgnore {
   class InsertInlineCompletionHandler : EditorWriteActionHandler() {
     override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext) {
-      InlineCompletion.getHandlerOrNull(editor)?.insert()
+      //InlineCompletion.getHandlerOrNull(editor)?.insert()
+      val handler = InlineCompletion.getHandlerOrNull(editor) ?: return
+      val session = InlineCompletionSession.getOrNull(editor) ?: return
+      if (!session.firstCompletion || !session.context.textToInsert().any { it == '\n' }) {
+        handler.insert()
+      }
+      else {
+        handler.invokeEvent(InlineCompletionEvent.InsertNextLine(editor))
+      }
+      session.firstCompletion = false
     }
 
     override fun isEnabledForCaret(editor: Editor, caret: Caret, dataContext: DataContext): Boolean {

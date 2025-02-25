@@ -36,6 +36,7 @@ class InlineCompletionSession private constructor(
   private var variantsProvider: InlineCompletionVariantsProvider? = null
 
   val context = InlineCompletionContext(editor, request.file.language, request.endOffset)
+  var firstCompletion = true
 
   init {
     Disposer.register(this, context)

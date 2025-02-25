@@ -121,6 +121,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
           var lineEndOffset = document.getLineEndOffset(document.getLineNumber(cursorOffset))
           var lineSuffix = document.immutableCharSequence.subSequence(cursorOffset, lineEndOffset).toString()
           CompletionUtils.splitCompletion(str.trimEnd('\n'), lineSuffix).forEach { emit(it) }
+          str = ""
         }
         else if (str.isNotEmpty()) {
           emit(InlineCompletionGrayTextElement(str))

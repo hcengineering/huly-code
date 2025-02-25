@@ -4,3 +4,6 @@
 [submodule "plugins/hulylabs.treesitter"]
 	path = plugins/hulylabs.treesitter
 	url = https://github.com/hcengineering/huly-code-treesitter
+[submodule "plugins/hulylabs.cline"]
+	path = plugins/hulylabs.cline
+	url = git@github.com:hcengineering/huly-code-cline.git

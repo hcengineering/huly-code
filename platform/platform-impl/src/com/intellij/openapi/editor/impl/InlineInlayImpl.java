@@ -111,6 +111,7 @@ final class InlineInlayImpl<R extends EditorCustomElementRenderer> extends Inlay
   public @NotNull InlayProperties getProperties() {
     return new InlayProperties()
       .relatesToPrecedingText(isRelatedToPrecedingText())
+      .disableSoftWrapping(true)
       .priority(myPriority);
   }
 

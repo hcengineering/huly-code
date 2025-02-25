@@ -27,7 +27,10 @@ public final class WrapElementMeasuringIterator extends WrapElementIterator {
   public WrapElementMeasuringIterator(@NotNull EditorView view, int startOffset, int endOffset) {
     super(view.getEditor(), startOffset, endOffset);
     myView = view;
-    inlineInlays = view.getEditor().getInlayModel().getInlineElementsInRange(startOffset, endOffset);
+    inlineInlays = ContainerUtil.filter(
+      view.getEditor().getInlayModel().getInlineElementsInRange(startOffset, endOffset),
+      inlay -> !inlay.getProperties().isSoftWrappingDisabled()
+    );
     afterLineEndInlays = ContainerUtil.filter(
       view.getEditor().getInlayModel().getAfterLineEndElementsInRange(DocumentUtil.getLineStartOffset(startOffset, myDocument), endOffset),
       inlay -> !inlay.getProperties().isSoftWrappingDisabled()

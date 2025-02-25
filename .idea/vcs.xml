@@ -52,6 +52,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/android" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/plugins/hulylabs.cline" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/plugins/hulylabs.treesitter" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/plugins/lsp4ij" vcs="Git" />
   </component>

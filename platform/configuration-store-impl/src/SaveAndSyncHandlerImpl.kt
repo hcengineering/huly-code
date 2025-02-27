@@ -318,7 +318,9 @@ private class SaveAndSyncHandlerImpl(private val coroutineScope: CoroutineScope)
       val interval = Registry.intValue("vfs.background.refresh.interval", 15).coerceIn(0, Int.MAX_VALUE).seconds
       while (true) {
         delay(interval)
+        LOG.debug("check for dirty roots")
         if (roots.any { it is NewVirtualFile && it.isDirty }) {
+          LOG.debug("dirty roots found")
           val session = queue.createBackgroundRefreshSession(roots)
           bgRefreshSession = session
           session.launch()

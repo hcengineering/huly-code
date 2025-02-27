@@ -61,7 +61,7 @@ public class CodeInsightSettings implements PersistentStateComponent<Element>, C
   public boolean SHOW_PARAMETER_NAME_HINTS_ON_COMPLETION;
   public boolean AUTO_POPUP_PARAMETER_INFO = true;
   public int PARAMETER_INFO_DELAY = PARAMETER_INFO_DELAY_RANGE.initial;
-  public boolean AUTO_POPUP_JAVADOC_INFO;
+  public boolean AUTO_POPUP_JAVADOC_INFO = true;
   public int JAVADOC_INFO_DELAY = JAVADOC_INFO_DELAY_RANGE.initial;
   public boolean AUTO_POPUP_COMPLETION_LOOKUP = true;
 

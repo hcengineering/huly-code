@@ -87,8 +87,9 @@ class KotlinPushDownProcessor(
         addElements(usages.mapNotNull { it.element as? KtClassOrObject })
     }
 
-    override fun findUsages(): Array<out UsageInfo> {
+    protected override fun findUsages(): Array<out UsageInfo> {
         return HierarchySearchRequest(context.sourceClass, context.sourceClass.useScope, false).searchInheritors()
+            .asIterable()
             .mapNotNull { it.unwrapped }
             .map(::SubclassUsage)
             .toTypedArray()

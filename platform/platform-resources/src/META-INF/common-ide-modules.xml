@@ -16,16 +16,14 @@
     <module name="intellij.platform.jewel.ideLafBridge"/>
     <module name="intellij.platform.jewel.markdown.ideLafBridgeStyling"/>
     <module name="intellij.platform.jewel.markdown.extension.gfmAlerts"/>
+    <module name="intellij.platform.jewel.markdown.extension.gfmTables"/>
     <module name="intellij.platform.jewel.markdown.core"/>
     <module name="intellij.platform.diagnostic.freezeAnalyzer"/>
     <module name="intellij.platform.diagnostic.freezes"/>
-    <module name="intellij.grid"/>
-    <module name="intellij.grid.types"/>
-    <module name="intellij.grid.csv.core.impl"/>
-    <module name="intellij.grid.core.impl"/>
-    <module name="intellij.grid.impl"/>
+    <module name="intellij.settingsSync.core"/>
   </content>
 
+  <xi:include href="/META-INF/grid-core-modules.xml"/>
   <xi:include href="/META-INF/vcs-modules.xml"/>
 
 </idea-plugin>

@@ -110,12 +110,12 @@ public class ExtractClosureFromMethodProcessor extends ExtractClosureProcessorBa
   }
 
   @Override
-  public UsageInfo @NotNull [] findUsages() {
+  protected UsageInfo @NotNull [] findUsages() {
     List<UsageInfo> result = new ArrayList<>();
 
     final PsiMethod toSearchFor = (PsiMethod)myHelper.getToSearchFor();
 
-    for (PsiReference ref1 : MethodReferencesSearch.search(toSearchFor, GlobalSearchScope.projectScope(myProject), true)) {
+    for (PsiReference ref1 : MethodReferencesSearch.search(toSearchFor, GlobalSearchScope.projectScope(myProject), true).asIterable()) {
       PsiElement ref = ref1.getElement();
       if (ref.getLanguage() != GroovyLanguage.INSTANCE) {
         result.add(new OtherLanguageUsageInfo(ref1));

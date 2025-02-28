@@ -9,6 +9,7 @@ import com.intellij.internal.statistic.service.fus.collectors.CounterUsagesColle
 import com.intellij.openapi.application.ConfigImportHelper
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.wm.BannerStartPagePromoter
+import com.intellij.openapi.wm.StartPagePromoter.Companion.PRIORITY_LEVEL_NORMAL
 import com.intellij.ui.LicensingFacade
 import org.jetbrains.annotations.Nls
 import java.util.*
@@ -48,6 +49,8 @@ internal class TechInsightsLabPromoter : BannerStartPagePromoter() {
     it.set(2025, Calendar.JUNE, 1, 0, 1)
   }
 
+  override fun getPriorityLevel() = PRIORITY_LEVEL_NORMAL - 1
+
   override fun getPromotion(isEmptyState: Boolean): JComponent {
     val promotion = super.getPromotion(isEmptyState)
     promoPanel = promotion
@@ -73,15 +76,15 @@ internal class TechInsightsLabPromoter : BannerStartPagePromoter() {
     if (PropertiesComponent.getInstance().getBoolean(BUTTON_CLICKED_PROPERTY)) {
       return false
     }
-    if (LicensingFacade.getInstance()?.isEvaluationLicense == true) {
+    if (ConfigImportHelper.isFirstSession() || ConfigImportHelper.isConfigImported()) {
       return false
     }
-    if (ConfigImportHelper.isFirstSession() || ConfigImportHelper.isConfigImported()) {
+    if (LicensingFacade.getInstance()?.isEvaluationLicense == true) {
       return false
     }
 
     val now = Calendar.getInstance()
-    return now.before(endDate) && now.after(startDate)
+    return now.before(endDate) && now.after(startDate) || java.lang.Boolean.getBoolean("ignore.promo.dates")
   }
 }
 

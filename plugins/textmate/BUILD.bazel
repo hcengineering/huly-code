@@ -7,12 +7,6 @@ jvm_resources(
   strip_prefix = "resources"
 )
 
-jvm_resources(
-  name = "textmate_resources_1",
-  files = glob(["src/META-INF/**/*"]),
-  strip_prefix = "src"
-)
-
 jvm_library(
   name = "textmate",
   module_name = "intellij.textmate",
@@ -35,11 +29,9 @@ jvm_library(
     "@lib//:caffeine",
     "//fleet/fastutil",
     "@lib//:fastutil-min",
+    "//plugins/textmate/joni",
   ],
-  runtime_deps = [
-    ":textmate_resources",
-    ":textmate_resources_1",
-  ]
+  runtime_deps = [":textmate_resources"]
 )
 
 jvm_library(
@@ -71,11 +63,10 @@ jvm_library(
     "@lib//:caffeine",
     "//fleet/fastutil",
     "@lib//:fastutil-min",
+    "//plugins/textmate/joni",
+    "//plugins/textmate/joni:joni_test_lib",
   ],
-  runtime_deps = [
-    ":textmate_resources",
-    ":textmate_resources_1",
-  ]
+  runtime_deps = [":textmate_resources"]
 )
 
 jvm_test(

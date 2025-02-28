@@ -627,6 +627,7 @@
       "scala.svg": "language/scala.svg"
     },
     "nodes": {
+      "artifact.svg": "nodes/artifact.svg",
       "attribute.svg": "nodes/objectTypeAttribute.svg",
       "abstractException.svg": "nodes/abstractException.svg",
       "accessLocal.svg": ["nodes/c_plocal.svg", "nodes/packageLocal.svg"],
@@ -697,6 +698,7 @@
         "actions/moduleDirectory.svg"
       ],
       "moduleJava.svg": "nodes/javaModule.svg",
+      "multipleTypeDefinitions.svg": "nodes/multipleTypeDefinitions.svg",
       "moduleGroup.svg": "nodes/moduleGroup.svg",
       "package.svg": "nodes/package.svg",
       "parameter.svg": [

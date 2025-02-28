@@ -1401,9 +1401,9 @@ class PluginDetailsPageComponent @JvmOverloads constructor(
         val bundled = plugin!!.isBundled
         val isEssential = ApplicationInfo.getInstance().isEssentialPlugin(
           plugin!!.pluginId)
-        gearButton!!.isVisible = !uninstalled && !bundled
+        gearButton!!.isVisible = !uninstalled && !bundled && showComponent?.isNotFreeInFreeMode != true
         myEnableDisableButton!!.isVisible = bundled
-        myEnableDisableButton!!.isEnabled = !isEssential
+        myEnableDisableButton!!.isEnabled = !isEssential && showComponent?.isNotFreeInFreeMode != true
       }
       else {
         gearButton!!.isVisible = !uninstalled
@@ -1427,9 +1427,11 @@ class PluginDetailsPageComponent @JvmOverloads constructor(
   }
 
   private fun updateErrors() {
-    val errors = pluginModel.getErrors(descriptorForActions!!)
-    updateIcon(errors)
-    errorComponent!!.setErrors(errors) { this.handleErrors() }
+    if (showComponent?.isNotFreeInFreeMode != true) {
+      val errors = pluginModel.getErrors(descriptorForActions!!)
+      updateIcon(errors)
+      errorComponent!!.setErrors(errors) { this.handleErrors() }
+    }
   }
 
   private fun handleErrors() {

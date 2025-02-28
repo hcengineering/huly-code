@@ -2,9 +2,11 @@
 package com.intellij.pycharm.community.ide.impl.miscProject.impl
 
 import com.intellij.ide.impl.OpenProjectTask
+import com.intellij.ide.trustedProjects.TrustedProjects
+import com.intellij.ide.trustedProjects.TrustedProjectsLocator.Companion.locateProject
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.readAction
-import com.intellij.openapi.application.writeAction
+import com.intellij.openapi.application.edtWriteAction
 import com.intellij.openapi.diagnostic.fileLogger
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.module.Module
@@ -16,10 +18,8 @@ import com.intellij.openapi.project.modules
 import com.intellij.openapi.project.rootManager
 import com.intellij.openapi.projectRoots.ProjectJdkTable
 import com.intellij.openapi.projectRoots.Sdk
-import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.platform.experiment.ab.impl.experiment.ABExperiment
 import com.intellij.platform.ide.progress.ModalTaskOwner
 import com.intellij.platform.ide.progress.TaskCancellation
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
@@ -35,8 +35,10 @@ import com.intellij.python.community.services.systemPython.SystemPythonService
 import com.intellij.util.SystemProperties
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.jetbrains.python.*
+import com.jetbrains.python.sdk.configurePythonSdk
 import com.jetbrains.python.sdk.createSdk
 import com.jetbrains.python.sdk.flavors.PythonSdkFlavor
+import com.jetbrains.python.sdk.getOrCreateAdditionalData
 import com.jetbrains.python.venvReader.VirtualEnvReader
 import kotlinx.coroutines.*
 import org.jetbrains.annotations.Nls
@@ -45,12 +47,12 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
+import kotlin.io.path.name
 import kotlin.time.Duration.Companion.milliseconds
 
 private val logger = fileLogger()
 
 internal val miscProjectDefaultPath: Lazy<Path> = lazy { Path.of(SystemProperties.getUserHome()).resolve("PyCharmMiscProject") }
-internal val miscProjectEnabled: Lazy<Boolean> = lazy { ABExperiment.getABExperimentInstance().isExperimentOptionEnabled(PyMiscProjectExperimentOption::class.java) }
 
 /**
  * Creates a project in [projectPath] in a modal window.
@@ -164,7 +166,12 @@ private suspend fun createProjectAndSdk(
   val sdk = getSdk(venvPython, project)
   val module = project.modules.first()
   ensureModuleHasRoot(module, projectPathVfs)
-  ModuleRootModificationUtil.setModuleSdk(module, sdk)
+  withContext(Dispatchers.IO) {
+    // generated files should be readable by VFS
+    VfsUtil.markDirtyAndRefresh(false, true, true, projectPathVfs)
+  }
+  configurePythonSdk(project, module, sdk)
+  sdk.getOrCreateAdditionalData().associateWithModule(module)
   return Result.Success(Pair(project, sdk))
 }
 
@@ -195,7 +202,7 @@ private suspend fun getSystemPython(confirmInstallation: suspend () -> Boolean, 
 
 
   // First, find the latest python according to strategy
-  var systemPythonBinary = pythonService.findSystemPythons().minByOrNull { it.languageLevel }
+  var systemPythonBinary = pythonService.findSystemPythons().firstOrNull()
 
   // No python found?
   if (systemPythonBinary == null) {
@@ -213,7 +220,7 @@ private suspend fun getSystemPython(confirmInstallation: suspend () -> Boolean, 
         }
         is Result.Success -> {
           // Find the latest python again, after installation
-          systemPythonBinary = pythonService.findSystemPythons().minByOrNull { it.languageLevel }
+          systemPythonBinary = pythonService.findSystemPythons().firstOrNull()
         }
       }
     }
@@ -228,14 +235,17 @@ private suspend fun getSystemPython(confirmInstallation: suspend () -> Boolean, 
 }
 
 private suspend fun openProject(projectPath: Path): Project {
+  TrustedProjects.setProjectTrusted(locateProject(projectPath, null), isTrusted = true)
   val projectManager = ProjectManagerEx.getInstanceEx()
   val project = projectManager.openProjectAsync(projectPath, OpenProjectTask {
     runConfigurators = false
+    isProjectCreatedWithWizard = true
+
   }) ?: error("Failed to open project in $projectPath, check logs")
   // There are countless number of reasons `openProjectAsync` might return null
   if (project.modules.isEmpty()) {
-    writeAction {
-      ModuleManager.getInstance(project).newModule(projectPath, PythonModuleTypeBase.getInstance().id)
+    edtWriteAction {
+      ModuleManager.getInstance(project).newModule(projectPath.resolve("${projectPath.name}.iml"), PythonModuleTypeBase.getInstance().id)
     }
   }
   return project
@@ -269,10 +279,10 @@ private suspend fun createProjectDir(projectPath: Path): Result<VirtualFile, @Nl
   return@withContext Result.Success(projectPathVfs)
 }
 
-private suspend fun ensureModuleHasRoot(module: Module, root: VirtualFile): Unit = writeAction {
+private suspend fun ensureModuleHasRoot(module: Module, root: VirtualFile): Unit = edtWriteAction {
   with(module.rootManager.modifiableModel) {
     try {
-      if (root in contentRoots) return@writeAction
+      if (root in contentRoots) return@edtWriteAction
       addContentEntry(root)
     }
     finally {

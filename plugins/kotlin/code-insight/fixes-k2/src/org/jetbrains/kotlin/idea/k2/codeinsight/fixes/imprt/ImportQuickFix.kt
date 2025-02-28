@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.analysis.api.permissions.KaAllowAnalysisOnEdt
 import org.jetbrains.kotlin.analysis.api.permissions.allowAnalysisFromWriteAction
 import org.jetbrains.kotlin.analysis.api.permissions.allowAnalysisOnEdt
 import org.jetbrains.kotlin.analysis.api.symbols.KaClassLikeSymbol
+import org.jetbrains.kotlin.analysis.api.symbols.KaEnumEntrySymbol
 import org.jetbrains.kotlin.idea.base.analysis.withRootPrefixIfNeeded
 import org.jetbrains.kotlin.idea.base.psi.imports.addImport
 import org.jetbrains.kotlin.idea.base.resources.KotlinBundle
@@ -27,6 +28,7 @@ import org.jetbrains.kotlin.idea.references.KtSimpleNameReference
 import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.idea.util.application.executeWriteCommand
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.isOneSegmentFQN
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
 import org.jetbrains.kotlin.psi.KtElement
@@ -119,18 +121,38 @@ class ImportQuickFix(
     private fun shouldBeImportedWithShortening(element: KtElement, importVariant: SymbolBasedAutoImportVariant): Boolean {
         if (element !is KtSimpleNameExpression) return false
 
-        // Declarations from root package cannot be imported by FQN, hence cannot be shortened
+        // Declarations from the root package cannot be imported by FQN, hence cannot be shortened
         if (importVariant.fqName.isOneSegmentFQN()) return false
         
         val restoredCandidate = importVariant.candidatePointer.restore() ?: return false
 
-        // for class or package we use ShortenReferences because we not necessary insert an import but may want to
+        // for class or enum entry we use ShortenReferences because we do not necessarily add an import but may want to
         // insert a partially qualified name
-        if (restoredCandidate.symbol !is KaClassLikeSymbol) return false
+        if (
+            restoredCandidate.symbol !is KaClassLikeSymbol &&
+            restoredCandidate.symbol !is KaEnumEntrySymbol
+        ) {
+            return false
+        }
         
         // callable references cannot be fully qualified
         if (element.parent is KtCallableReferenceExpression) return false
         
         return true
-    } 
+    }
+
+    override fun isClassDefinitelyPositivelyImportedAlready(containingFile: KtFile, classFqName: FqName): Boolean {
+        val importList = containingFile.importList
+        if (importList == null) return false
+        for (statement in importList.imports) {
+            val importRefFqName = statement.importedFqName ?: continue// rely on the optimization: no resolve while getting import statement canonical text
+            if (importRefFqName == classFqName) {
+                return true
+            }
+            if (importRefFqName.shortName() == Name.identifier("*") && importRefFqName.parent() == classFqName.parent()) {
+                return true
+            }
+        }
+        return false
+    }
 }

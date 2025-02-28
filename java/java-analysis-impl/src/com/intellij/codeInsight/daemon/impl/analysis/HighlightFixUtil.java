@@ -2,13 +2,13 @@
 package com.intellij.codeInsight.daemon.impl.analysis;
 
 import com.intellij.codeInsight.daemon.QuickFixBundle;
-import com.intellij.codeInsight.daemon.impl.HighlightInfo;
 import com.intellij.codeInsight.daemon.impl.quickfix.*;
 import com.intellij.codeInsight.intention.CommonIntentionAction;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInsight.intention.QuickFixFactory;
 import com.intellij.codeInsight.intention.impl.PriorityIntentionActionWrapper;
 import com.intellij.codeInsight.quickfix.ChangeVariableTypeQuickFixProvider;
+import com.intellij.java.codeserver.core.JavaPsiModifierUtil;
 import com.intellij.lang.jvm.JvmModifier;
 import com.intellij.lang.jvm.actions.JvmElementActionFactories;
 import com.intellij.lang.jvm.actions.MemberRequestsKt;
@@ -17,7 +17,10 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.JavaSdkVersion;
+import com.intellij.openapi.projectRoots.JavaSdkVersionUtil;
 import com.intellij.openapi.projectRoots.JavaVersionService;
+import com.intellij.pom.java.JavaFeature;
+import com.intellij.pom.java.LanguageLevel;
 import com.intellij.psi.*;
 import com.intellij.psi.controlFlow.*;
 import com.intellij.psi.infos.CandidateInfo;
@@ -32,6 +35,7 @@ import com.intellij.util.JavaPsiConstructorUtil;
 import com.intellij.util.ObjectUtils;
 import com.siyeh.ig.callMatcher.CallMatcher;
 import com.siyeh.ig.psiutils.ExpressionUtils;
+import com.siyeh.ig.psiutils.InstanceOfUtils;
 import com.siyeh.ig.psiutils.SwitchUtils;
 import com.siyeh.ig.psiutils.VariableAccessUtils;
 import org.jetbrains.annotations.Contract;
@@ -41,7 +45,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static java.util.Objects.*;
+import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
 public final class HighlightFixUtil {
   private static final Logger LOG = Logger.getInstance(HighlightFixUtil.class);
@@ -158,7 +163,7 @@ public final class HighlightFixUtil {
     if (place instanceof PsiReferenceExpression && place.getParent() instanceof PsiMethodCallExpression) {
       ReplaceGetClassWithClassLiteralFix.registerFix((PsiMethodCallExpression)place.getParent(), info);
     }
-    if (refElement instanceof PsiJvmModifiersOwner) {
+    if (refElement instanceof PsiJvmModifiersOwner && !(refElement instanceof PsiParameter)) {
       List<IntentionAction> fixes =
         JvmElementActionFactories.createModifierActions((PsiJvmModifiersOwner)refElement, MemberRequestsKt.modifierRequest(JvmModifier.STATIC, true));
       fixes.forEach(info);
@@ -182,12 +187,6 @@ public final class HighlightFixUtil {
     if (q != null) return true;
     String qname = ((PsiJavaCodeReferenceElement)qualifier).getQualifiedName();
     return qname == null || !Character.isLowerCase(qname.charAt(0));
-  }
-
-  static void registerChangeVariableTypeFixes(@NotNull PsiVariable parameter,
-                                              @Nullable PsiType itemType,
-                                              @Nullable HighlightInfo.Builder highlightInfo) {
-    registerChangeVariableTypeFixes(parameter, itemType, HighlightUtil.asConsumer(highlightInfo));
   }
 
   static void registerChangeVariableTypeFixes(@NotNull PsiVariable parameter,
@@ -349,21 +348,6 @@ public final class HighlightFixUtil {
       return QuickFixFactory.getInstance().createAddSwitchDefaultFix(switchStatement, message);
     }
     return null;
-  }
-
-  static void registerMakeNotFinalAction(@NotNull PsiVariable var, @Nullable HighlightInfo.Builder highlightInfo) {
-    if (var instanceof PsiField) {
-      QuickFixAction.registerQuickFixActions(
-        highlightInfo, null,
-        JvmElementActionFactories.createModifierActions((PsiField)var, MemberRequestsKt.modifierRequest(JvmModifier.FINAL, false))
-      );
-    }
-    else {
-      IntentionAction action = QuickFixFactory.getInstance().createModifierListFix(var, PsiModifier.FINAL, false, false);
-      if (highlightInfo != null) {
-        highlightInfo.registerFix(action, null, null, null, null);
-      }
-    }
   }
 
   public static void registerFixesForExpressionStatement(@NotNull PsiElement statement, @NotNull Consumer<? super CommonIntentionAction> info) {
@@ -722,7 +706,7 @@ public final class HighlightFixUtil {
     PsiShortNamesCache shortNamesCache = PsiShortNamesCache.getInstance(project);
     PsiClass[] classes = shortNamesCache.getClassesByName(shortName, GlobalSearchScope.allScope(project));
     PsiElementFactory factory = facade.getElementFactory();
-    JavaSdkVersion version = Objects.requireNonNullElse(JavaVersionService.getInstance().getJavaSdkVersion(file),
+    JavaSdkVersion version = requireNonNullElse(JavaVersionService.getInstance().getJavaSdkVersion(file),
                                                         JavaSdkVersion.fromLanguageLevel(PsiUtil.getLanguageLevel(file)));
     for (PsiClass aClass : classes) {
       if (aClass == null) {
@@ -799,6 +783,160 @@ public final class HighlightFixUtil {
     PermuteArgumentsFix.registerFix(sink, methodCall, candidates);
     registerChangeParameterClassFix(methodCall, list, sink);
     registerMethodCallIntentions(sink, methodCall, list);
+  }
+
+  static void registerIncompatibleTypeFixes(@NotNull Consumer<? super @Nullable CommonIntentionAction> sink,
+                                            @NotNull PsiElement anchor,
+                                            @NotNull PsiType lType, @Nullable PsiType rType) {
+    QuickFixFactory factory = QuickFixFactory.getInstance();
+    PsiElement parent = PsiUtil.skipParenthesizedExprUp(anchor.getParent());
+    if (anchor instanceof PsiJavaCodeReferenceElement && parent instanceof PsiReferenceList &&
+        parent.getParent() instanceof PsiMethod method && method.getThrowsList() == parent) {
+      // Incompatible type in throws clause
+      PsiClass usedClass = PsiUtil.resolveClassInClassTypeOnly(rType);
+      if (usedClass != null && lType instanceof PsiClassType throwableType) {
+        sink.accept(factory.createExtendsListFix(usedClass, throwableType, true));
+      }
+    }
+    if (anchor instanceof PsiExpression expression) {
+      AddTypeArgumentsConditionalFix.register(sink, expression, lType);
+      AdaptExpressionTypeFixUtil.registerExpectedTypeFixes(sink, expression, lType, rType);
+      sink.accept(ChangeNewOperatorTypeFix.createFix(expression, lType));
+      if (PsiTypes.booleanType().equals(lType) && expression instanceof PsiAssignmentExpression assignment &&
+          assignment.getOperationTokenType() == JavaTokenType.EQ) {
+        sink.accept(factory.createAssignmentToComparisonFix(assignment));
+      }
+      else if (expression instanceof PsiMethodCallExpression callExpression) {
+        registerCallInferenceFixes(callExpression, sink);
+      }
+      if (parent instanceof PsiArrayInitializerExpression initializerList) {
+        PsiType sameType = JavaHighlightUtil.sameType(initializerList.getInitializers());
+        sink.accept(sameType == null ? null : VariableArrayTypeFix.createFix(initializerList, sameType));
+      }
+      else if (parent instanceof PsiConditionalExpression ternary) {
+        PsiExpression thenExpression = PsiUtil.skipParenthesizedExprDown(ternary.getThenExpression());
+        PsiExpression elseExpression = PsiUtil.skipParenthesizedExprDown(ternary.getElseExpression());
+        PsiExpression otherSide = elseExpression == expression ? thenExpression : elseExpression;
+        if (otherSide != null && !TypeConversionUtil.isVoidType(rType)) {
+          if (TypeConversionUtil.isVoidType(otherSide.getType())) {
+            registerIncompatibleTypeFixes(sink, ternary, lType, rType);
+          } else {
+            PsiExpression expressionCopy = PsiElementFactory.getInstance(expression.getProject())
+              .createExpressionFromText(ternary.getText(), ternary);
+            PsiType expectedType = expression.getType();
+            PsiType actualType = expressionCopy.getType();
+            if (expectedType != null && actualType != null && !expectedType.isAssignableFrom(actualType)) {
+              registerIncompatibleTypeFixes(sink, ternary, expectedType, actualType);
+            }
+          }
+        }
+      }
+      else if (parent instanceof PsiReturnStatement && rType != null && !PsiTypes.voidType().equals(rType)) {
+        if (PsiTreeUtil.getParentOfType(parent, PsiMethod.class, PsiLambdaExpression.class) instanceof PsiMethod method) {
+          sink.accept(factory.createMethodReturnFix(method, rType, true, true));
+          PsiType expectedType = determineReturnType(method);
+          if (expectedType != null && !PsiTypes.voidType().equals(expectedType) && !expectedType.equals(rType)) {
+            sink.accept(factory.createMethodReturnFix(method, expectedType, true, true));
+          }
+        }
+      }
+      else if (parent instanceof PsiVariable var &&
+               PsiUtil.skipParenthesizedExprDown(var.getInitializer()) == expression && rType != null) {
+        registerChangeVariableTypeFixes(var, rType, sink);
+      }
+      else if (parent instanceof PsiAssignmentExpression assignment &&
+               PsiUtil.skipParenthesizedExprDown(assignment.getRExpression()) == expression) {
+        PsiExpression lExpr = assignment.getLExpression();
+
+        sink.accept(factory.createChangeToAppendFix(assignment.getOperationTokenType(), lType, assignment));
+        if (rType != null) {
+          registerChangeVariableTypeFixes(lExpr, rType, sink);
+          if (expression instanceof PsiMethodCallExpression call && assignment.getParent() instanceof PsiStatement &&
+              PsiTypes.voidType().equals(rType)) {
+            sink.accept(new ReplaceAssignmentFromVoidWithStatementIntentionAction(assignment, call));
+          }
+        }
+      }
+    }
+    if (anchor instanceof PsiParameter parameter && parent instanceof PsiForeachStatement forEach) {
+      registerChangeVariableTypeFixes(parameter, lType, sink);
+      PsiExpression iteratedValue = forEach.getIteratedValue();
+      if (iteratedValue != null && rType != null) {
+        PsiType type = iteratedValue.getType();
+        if (type instanceof PsiArrayType) {
+          AdaptExpressionTypeFixUtil.registerExpectedTypeFixes(sink, iteratedValue, rType.createArrayType(), type);
+        }
+      }
+    }
+    registerChangeParameterClassFix(lType, rType, sink);
+  }
+
+  private static @NotNull LanguageLevel getApplicableLevel(@NotNull PsiFile file, @NotNull JavaFeature feature) {
+    LanguageLevel standardLevel = feature.getStandardLevel();
+    LanguageLevel featureLevel = feature.getMinimumLevel();
+    if (featureLevel.isPreview()) {
+      JavaSdkVersion sdkVersion = JavaSdkVersionUtil.getJavaSdkVersion(file);
+      if (sdkVersion != null) {
+        if (standardLevel != null && sdkVersion.isAtLeast(JavaSdkVersion.fromLanguageLevel(standardLevel))) {
+          return standardLevel;
+        }
+        LanguageLevel previewLevel = sdkVersion.getMaxLanguageLevel().getPreviewLevel();
+        if (previewLevel != null && previewLevel.isAtLeast(featureLevel)) {
+          return previewLevel;
+        }
+      }
+    }
+    return featureLevel;
+  }
+
+  public static @NotNull List<CommonIntentionAction> getIncreaseLanguageLevelFixes(
+    @NotNull PsiElement element, @NotNull JavaFeature feature) {
+    if (PsiUtil.isAvailable(feature, element)) return List.of();
+    if (feature.isLimited()) return List.of(); //no reason for applying it because it can be outdated
+    LanguageLevel applicableLevel = getApplicableLevel(element.getContainingFile(), feature);
+    if (applicableLevel == LanguageLevel.JDK_X) return List.of(); // do not suggest to use experimental level
+    QuickFixFactory factory = QuickFixFactory.getInstance();
+    return List.of(factory.createIncreaseLanguageLevelFix(applicableLevel),
+                   factory.createUpgradeSdkFor(applicableLevel),
+                   factory.createShowModulePropertiesFix(element));
+  }
+
+  static void registerFixesOnInvalidSelector(@NotNull PsiExpression selector,
+                                             @NotNull Consumer<? super @Nullable CommonIntentionAction> sink) {
+    QuickFixFactory factory = QuickFixFactory.getInstance();
+    if (selector.getParent() instanceof PsiSwitchStatement switchStatement) {
+      sink.accept(factory.createConvertSwitchToIfIntention(switchStatement));
+    }
+    PsiType selectorType = selector.getType();
+    if (PsiTypes.longType().equals(selectorType) ||
+        PsiTypes.floatType().equals(selectorType) ||
+        PsiTypes.doubleType().equals(selectorType)) {
+      sink.accept(factory.createAddTypeCastFix(PsiTypes.intType(), selector));
+      sink.accept(factory.createWrapWithAdapterFix(PsiTypes.intType(), selector));
+    }
+  }
+
+  static @Nullable IntentionAction createPrimitiveToBoxedPatternFix(@NotNull PsiElement anchor) {
+    PsiTypeElement element = null;
+    PsiType operandType = null;
+    if (anchor instanceof PsiInstanceOfExpression instanceOfExpression) {
+      element = InstanceOfUtils.findCheckTypeElement(instanceOfExpression);
+      operandType = instanceOfExpression.getOperand().getType();
+    }
+    else if (anchor instanceof PsiPattern pattern) {
+      element = JavaPsiPatternUtil.getPatternTypeElement(pattern);
+      PsiSwitchBlock block = PsiTreeUtil.getParentOfType(element, PsiSwitchBlock.class);
+      if (block != null) {
+        PsiExpression selector = block.getExpression();
+        if (selector != null) {
+          operandType = selector.getType();
+        }
+      }
+    }
+    if (element != null && operandType != null && TypeConversionUtil.isPrimitiveAndNotNull(element.getType())) {
+      return QuickFixFactory.getInstance().createReplacePrimitiveWithBoxedTypeAction(operandType, requireNonNull(element));
+    }
+    return null;
   }
 
   private static final class ReturnModel {

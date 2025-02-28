@@ -47,8 +47,10 @@ open class JEditorUiComponent(data: ComponentData) : UiComponent(data) {
   var text: String
     get() = document.getText()
     set(value) {
-      driver.withWriteAction {
-        document.setText(value)
+      step("Set text '$value'") {
+        driver.withWriteAction {
+          document.setText(value)
+        }
       }
     }
 
@@ -122,10 +124,17 @@ open class JEditorUiComponent(data: ComponentData) : UiComponent(data) {
     robot.click(component, point, button, times)
   }
 
-  fun setCaretPosition(line: Int, column: Int) {
+  fun goToPosition(line: Int, column: Int) = step("Go to position $line line $column column") {
     click()
     interact {
       getCaretModel().moveToLogicalPosition(driver.logicalPosition(line - 1, column - 1, (this as? RefWrapper)?.getRef()?.rdTarget ?: RdTarget.DEFAULT))
+    }
+  }
+
+  fun goToLine(line: Int) = step("Go to $line line") {
+    click()
+    interact {
+      getCaretModel().moveToLogicalPosition(driver.logicalPosition(line - 1, 1, (this as? RefWrapper)?.getRef()?.rdTarget ?: RdTarget.DEFAULT))
     }
   }
 
@@ -170,6 +179,14 @@ open class JEditorUiComponent(data: ComponentData) : UiComponent(data) {
 
   fun invokeAiIntentionAction(intentionActionName: String) {
     driver.utility(AiTestIntentionUtils::class).invokeAiAssistantIntention(editor, intentionActionName)
+  }
+
+  fun containsText(expectedText: String) {
+    step("Verify that editor contains text: $expectedText") {
+      waitFor(errorMessage = { "Editor doesn't contain text: $expectedText" }) {
+        text.trimIndent().contains(expectedText)
+      }
+    }
   }
 }
 
@@ -217,7 +234,7 @@ class GutterUiComponent(data: ComponentData) : UiComponent(data) {
 
 
   fun getGutterIcons(): List<GutterIcon> {
-    waitFor  { this.icons.isNotEmpty() }
+    waitFor { this.icons.isNotEmpty() }
     return this.icons
   }
 
@@ -243,6 +260,7 @@ class GutterUiComponent(data: ComponentData) : UiComponent(data) {
     fun click() {
       click(location)
     }
+
     fun getIconPath(): String {
       return mark
         .getIcon()
@@ -273,7 +291,7 @@ data class GutterState(
 class InlayHint(val offset: Int, val text: String)
 
 fun List<InlayHint>.getHint(offset: Int): InlayHint {
-  val foundHint = this.find { it.offset.equals(offset) }
+  val foundHint = this.find { it.offset == offset }
   if (foundHint == null) {
     throw NoSuchElementException("cannot find hint with offset: $offset")
   }

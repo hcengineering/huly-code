@@ -93,7 +93,7 @@ class PyInlineFunctionProcessor(project: Project,
     return true
   }
 
-  override fun findUsages(): Array<UsageInfo> {
+  protected override fun findUsages(): Array<UsageInfo> {
     if (myInlineThisOnly) {
       val element = myReference!!.element as PyReferenceExpression
       val localImport = PyResolveUtil.resolveLocally(ScopeUtil.getScopeOwner(element)!!, element.name!!).firstOrNull { it is PyImportElement }
@@ -101,9 +101,9 @@ class PyInlineFunctionProcessor(project: Project,
     }
 
     // TODO: replace with PyRefactoringUtil#findUsages after PY-26881 and PY-36493 are fixed
-    var references = ReferencesSearch.search(myFunction, myRefactoringScope).findAll().asSequence()
+    var references = ReferencesSearch.search(myFunction, myRefactoringScope).asIterable().asSequence()
     PyiUtil.getPythonStub(myFunction)?.let { stub ->
-      references += ReferencesSearch.search(stub, myRefactoringScope).asSequence()
+      references += ReferencesSearch.search(stub, myRefactoringScope).asIterable().asSequence()
     }
     return references
       .distinct()

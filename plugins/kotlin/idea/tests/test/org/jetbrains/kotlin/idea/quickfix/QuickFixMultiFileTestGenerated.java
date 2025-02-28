@@ -270,14 +270,29 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
                 runTest("testData/quickfix/autoImports/innerClass/innerClassInCallableReference.test");
             }
 
+            @TestMetadata("innerClassInCallableReference_fromJava.test")
+            public void testInnerClassInCallableReference_fromJava() throws Exception {
+                runTest("testData/quickfix/autoImports/innerClass/innerClassInCallableReference_fromJava.test");
+            }
+
             @TestMetadata("innerClassInExpression.test")
             public void testInnerClassInExpression() throws Exception {
                 runTest("testData/quickfix/autoImports/innerClass/innerClassInExpression.test");
             }
 
+            @TestMetadata("innerClassInExpression_fromJava.test")
+            public void testInnerClassInExpression_fromJava() throws Exception {
+                runTest("testData/quickfix/autoImports/innerClass/innerClassInExpression_fromJava.test");
+            }
+
             @TestMetadata("innerClassInTypeReference.test")
             public void testInnerClassInTypeReference() throws Exception {
                 runTest("testData/quickfix/autoImports/innerClass/innerClassInTypeReference.test");
+            }
+
+            @TestMetadata("innerClassInTypeReference_fromJava.test")
+            public void testInnerClassInTypeReference_fromJava() throws Exception {
+                runTest("testData/quickfix/autoImports/innerClass/innerClassInTypeReference_fromJava.test");
             }
         }
 
@@ -521,6 +536,16 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
                 runTest("testData/quickfix/autoImports/delegateNoOperator.test");
             }
 
+            @TestMetadata("delegateToBinaryExpression.test")
+            public void testDelegateToBinaryExpression() throws Exception {
+                runTest("testData/quickfix/autoImports/delegateToBinaryExpression.test");
+            }
+
+            @TestMetadata("delegateToStringLiteral.test")
+            public void testDelegateToStringLiteral() throws Exception {
+                runTest("testData/quickfix/autoImports/delegateToStringLiteral.test");
+            }
+
             @TestMetadata("divOperator.before.Main.kt")
             public void testDivOperator() throws Exception {
                 runTest("testData/quickfix/autoImports/divOperator.before.Main.kt");
@@ -534,6 +559,31 @@ public abstract class QuickFixMultiFileTestGenerated extends AbstractQuickFixMul
             @TestMetadata("dslMarkersOnReceiver.before.Main.kt")
             public void testDslMarkersOnReceiver() throws Exception {
                 runTest("testData/quickfix/autoImports/dslMarkersOnReceiver.before.Main.kt");
+            }
+
+            @TestMetadata("enumEntries_CallableReference.test")
+            public void testEnumEntries_CallableReference() throws Exception {
+                runTest("testData/quickfix/autoImports/enumEntries_CallableReference.test");
+            }
+
+            @TestMetadata("enumEntries_ExplicitReceiver.test")
+            public void testEnumEntries_ExplicitReceiver() throws Exception {
+                runTest("testData/quickfix/autoImports/enumEntries_ExplicitReceiver.test");
+            }
+
+            @TestMetadata("enumEntries_FromJava.test")
+            public void testEnumEntries_FromJava() throws Exception {
+                runTest("testData/quickfix/autoImports/enumEntries_FromJava.test");
+            }
+
+            @TestMetadata("enumEntries_FromJava_private.test")
+            public void testEnumEntries_FromJava_private() throws Exception {
+                runTest("testData/quickfix/autoImports/enumEntries_FromJava_private.test");
+            }
+
+            @TestMetadata("enumEntries_Private.test")
+            public void testEnumEntries_Private() throws Exception {
+                runTest("testData/quickfix/autoImports/enumEntries_Private.test");
             }
 
             @TestMetadata("extensionErroneousReceiver.test")

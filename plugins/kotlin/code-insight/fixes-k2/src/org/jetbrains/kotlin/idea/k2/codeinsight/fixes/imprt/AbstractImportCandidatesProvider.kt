@@ -20,11 +20,10 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 import org.jetbrains.kotlin.resolve.ImportPath
 
-internal abstract class AbstractImportCandidatesProvider(
-    protected val positionContext: KotlinNameReferencePositionContext,
-): ImportCandidatesProvider {
+internal abstract class AbstractImportCandidatesProvider(): ImportCandidatesProvider {
+    protected abstract val positionContext: KotlinRawPositionContext
 
-    private val file: KtFile get() = positionContext.nameExpression.containingKtFile
+    private val file: KtFile get() = positionContext.position.containingFile as KtFile
     private val fileImports: List<ImportPath> by lazy { file.importDirectives.mapNotNull { it.importPath } }
 
     context(KaSession)
@@ -45,7 +44,7 @@ internal abstract class AbstractImportCandidatesProvider(
 
     protected fun PsiMember.canBeImported(): Boolean {
         return when (this) {
-            is PsiClass -> qualifiedName != null && (containingClass == null || hasModifier(JvmModifier.STATIC))
+            is PsiClass -> qualifiedName != null && (containingClass == null || hasModifier(JvmModifier.STATIC) || positionContext.acceptsInnerClasses())
             is PsiField, is PsiMethod -> hasModifier(JvmModifier.STATIC) && containingClass?.qualifiedName != null
             else -> false
         }

@@ -35,7 +35,6 @@ import com.intellij.openapi.wm.impl.customFrameDecorations.header.CustomWindowHe
 import com.intellij.openapi.wm.impl.customFrameDecorations.header.CustomWindowHeaderUtil.isMenuButtonInToolbar
 import com.intellij.openapi.wm.impl.customFrameDecorations.header.toolbar.ExpandableMenu
 import com.intellij.openapi.wm.impl.customFrameDecorations.header.toolbar.HeaderToolbarButtonLook
-import com.intellij.openapi.wm.impl.customFrameDecorations.header.toolbar.MainMenuButton
 import com.intellij.platform.diagnostic.telemetry.impl.span
 import com.intellij.ui.*
 import com.intellij.ui.components.panels.HorizontalLayout
@@ -73,17 +72,21 @@ private sealed interface MainToolbarFlavor {
 private class MenuButtonInToolbarMainToolbarFlavor(coroutineScope: CoroutineScope,
                                                    private val headerContent: JComponent,
                                                    frame: JFrame) : MainToolbarFlavor {
-  private val mainMenuButton = MainMenuButton(coroutineScope)
+
+
+  private val mainMenuWithButton = MainMenuWithButton(coroutineScope, frame)
+  private val mainMenuButton = mainMenuWithButton.mainMenuButton
 
   init {
-    val expandableMenu = ExpandableMenu(headerContent = headerContent, coroutineScope = coroutineScope, frame) {UISettings.shadowInstance.mainMenuDisplayMode != MainMenuDisplayMode.MERGED_WITH_MAIN_TOOLBAR}
+    val expandableMenu = ExpandableMenu(headerContent = headerContent, coroutineScope = coroutineScope, frame)
     mainMenuButton.expandableMenu = expandableMenu
     mainMenuButton.rootPane = frame.rootPane
   }
 
   override fun addWidget() {
-    addWidget(widget = mainMenuButton.button, parent = headerContent, position = HorizontalLayout.Group.LEFT)
+    addWidget(widget = mainMenuWithButton, parent = headerContent, position = HorizontalLayout.Group.LEFT)
   }
+
 }
 
 private data object DefaultMainToolbarFlavor : MainToolbarFlavor
@@ -117,12 +120,19 @@ class MainToolbar(
     }
     (layout as HorizontalLayout).apply {
       preferredSizeFunction = { component ->
-        if (component is ActionToolbar) {
-          val availableSize = Dimension(this@MainToolbar.width - 4 * JBUI.scale(layoutGap), this@MainToolbar.height)
-          CompressingLayoutStrategy.distributeSize(availableSize, components.filterIsInstance<ActionToolbar>()).getValue(component)
-        }
-        else {
-          component.preferredSize
+        when (component) {
+          is ActionToolbar -> {
+            val availableSize = Dimension(this@MainToolbar.width - 4 * JBUI.scale(layoutGap), this@MainToolbar.height)
+
+            val event = ToolbarCompressedEvent(this@MainToolbar)
+            val application = ApplicationManager.getApplication()
+            application.messageBus.syncPublisher(ToolbarCompressedNotifier.TOPIC).onToolbarCompressed(event)
+
+            CompressingLayoutStrategy.distributeSize(availableSize, components.filterIsInstance<ActionToolbar>()).getValue(component)
+          }
+          else -> {
+            component.preferredSize
+          }
         }
       }
     }

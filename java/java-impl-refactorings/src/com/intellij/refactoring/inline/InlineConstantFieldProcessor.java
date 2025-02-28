@@ -86,11 +86,11 @@ public class InlineConstantFieldProcessor extends BaseRefactoringProcessor {
   }
 
   @Override
-  public UsageInfo @NotNull [] findUsages() {
+  protected UsageInfo @NotNull [] findUsages() {
     if (myInlineThisOnly) return new UsageInfo[]{new UsageInfo(myRefExpr)};
 
     List<UsageInfo> usages = new ArrayList<>();
-    for (PsiReference ref : ReferencesSearch.search(myField, myRefactoringScope, false)) {
+    for (PsiReference ref : ReferencesSearch.search(myField, myRefactoringScope, false).asIterable()) {
       PsiElement element = ref.getElement();
       UsageInfo info = new UsageInfo(element);
       if (element instanceof PsiDocMethodOrFieldRef) {

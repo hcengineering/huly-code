@@ -7,7 +7,7 @@ import com.intellij.driver.sdk.remoteDev.BeControlBuilder
 import com.intellij.driver.sdk.remoteDev.BeControlClass
 import com.intellij.driver.sdk.remoteDev.BeControlComponentBase
 import com.intellij.driver.sdk.ui.Finder
-import com.intellij.driver.sdk.ui.UiText.Companion.allText
+import com.intellij.driver.sdk.ui.UiText.Companion.asString
 import com.intellij.driver.sdk.ui.components.ComponentData
 import com.intellij.driver.sdk.ui.components.UiComponent
 import com.intellij.driver.sdk.ui.remote.Component
@@ -30,7 +30,7 @@ class IdeStatusBarUI(data: ComponentData) : UiComponent(data) {
     private val items = xx("//div[@class='NavBarItemComponent']")
 
     private val path: List<String>
-      get() = items.list().sortedBy { it.component.x }.map { it.getAllTexts().allText(" ") }
+      get() = items.list().sortedBy { it.component.x }.map { it.getAllTexts().asString(" ") }
 
     val pathString: String
       get() = path.joinToString(" -> ") { it }
@@ -64,6 +64,8 @@ class IdeStatusBarUI(data: ComponentData) : UiComponent(data) {
         val editorConfig = WidgetFinder("Editor Config") { it.text.contains("spaces") }
         val readOnly = widgetByTooltipContains("Make file read-only")
         val gitBranch = widgetByTooltipContains("Git Branch")
+        val projectStatus = widgetByTooltipContains("Project is configured")
+        val projectStatusWarning = widgetByTooltipContains("This file does not belong to any project target")
       }
 
       data class WidgetFinder(val name: String, val predicate: (WidgetUI) -> Boolean)
@@ -71,7 +73,7 @@ class IdeStatusBarUI(data: ComponentData) : UiComponent(data) {
       class WidgetUI(data: ComponentData) : UiComponent(data) {
         private val textPanelComponent by lazy { driver.cast(component, TextPanel::class) }
         val text: String
-          get() = getAllTexts().allText(" ")
+          get() = getAllTexts().asString(" ")
 
         val toolTipText: String
           get() = driver.withContext(OnDispatcher.EDT) { textPanelComponent.getToolTipText() ?: "" }

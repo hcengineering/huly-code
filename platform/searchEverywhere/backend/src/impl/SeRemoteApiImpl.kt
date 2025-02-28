@@ -9,6 +9,7 @@ import com.intellij.platform.searchEverywhere.SeProviderId
 import com.intellij.platform.searchEverywhere.SeSessionEntity
 import com.intellij.platform.searchEverywhere.impl.SeRemoteApi
 import fleet.kernel.DurableRef
+import fleet.util.openmap.SerializedValue
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.annotations.ApiStatus
 
@@ -25,7 +26,8 @@ class SeRemoteApiImpl: SeRemoteApi {
   override suspend fun getItems(projectId: ProjectId,
                                 sessionRef: DurableRef<SeSessionEntity>,
                                 providerId: SeProviderId,
-                                params: SeParams): Flow<SeItemData> {
-    return SeBackendService.getInstance(projectId.findProject()).getItems(sessionRef, providerId, params)
+                                params: SeParams,
+                                serializedDataContext: SerializedValue?): Flow<SeItemData> {
+    return SeBackendService.getInstance(projectId.findProject()).getItems(sessionRef, providerId, params, serializedDataContext)
   }
 }

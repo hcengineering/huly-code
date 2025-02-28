@@ -11,6 +11,7 @@ import fleet.kernel.DurableRef
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
 import fleet.rpc.remoteApiDescriptor
+import fleet.util.openmap.SerializedValue
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.annotations.ApiStatus
 
@@ -20,7 +21,8 @@ interface SeRemoteApi: RemoteApi<Unit> {
   suspend fun getItems(projectId: ProjectId,
                        sessionRef: DurableRef<SeSessionEntity>,
                        providerId: SeProviderId,
-                       params: SeParams): Flow<SeItemData>
+                       params: SeParams,
+                       serializedDataContext: SerializedValue?): Flow<SeItemData>
 
   suspend fun itemSelected(projectId: ProjectId,
                            sessionRef: DurableRef<SeSessionEntity>,

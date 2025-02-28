@@ -98,6 +98,9 @@
     <initProjectActivity id="dumbServiceStartup" implementation="com.intellij.openapi.project.DumbServiceStartupActivity" order="last"/>
     <initProjectActivity id="vfsStartup" implementation="com.intellij.psi.impl.file.impl.PsiVfsInitProjectActivity" order="first"/>
 
+    <projectService serviceInterface="com.intellij.codeInsight.multiverse.ProjectModelContextBridge"
+                    serviceImplementation="com.intellij.codeInsight.multiverse.ProjectModelContextBridgeImpl"/>
+
     <applicationService serviceInterface="com.intellij.util.indexing.EntityIndexingService"
                         serviceImplementation="com.intellij.util.indexing.EntityIndexingServiceImpl"/>
     <!--suppress PluginXmlCapitalization -->
@@ -119,8 +122,6 @@
                  description="Limits size of orphan dirty files queue."/>
     <registryKey defaultValue="true" key="indexing.over.fast.attributes" restartRequired="true"
                  description="Store indexing data (including IndexingStamps) in regular (false) or fast (true) attributes storage"/>
-    <registryKey defaultValue="10" key="indexing.max.indexing.reason.explanations.per.type" restartRequired="false"
-                 description="Configures the number of messages about indexing reason in logs"/>
     <registryKey defaultValue="true" key="vfs.refresh.should.pause.dumb.queue" restartRequired="true"
                  description="Pause dumb queue (including indexing) while bulk VFS update is in progress."/>
     <registryKey defaultValue="true" key="vfs.try.eel.for.content.loading"
@@ -269,11 +270,6 @@
 
     <rearranger.ui implementation="com.intellij.application.options.codeStyle.arrangement.component.DefaultArrangementUiComponentFactory"/>
 
-    <applicationService serviceInterface="com.intellij.util.gist.GistManager"
-                        serviceImplementation="com.intellij.util.gist.GistManagerImpl"/>
-    <applicationService serviceInterface="com.intellij.util.gist.storage.GistStorage"
-                        serviceImplementation="com.intellij.util.gist.storage.GistStorageImpl"/>
-
     <formattingService implementation="com.intellij.formatting.service.ExternalFormatProcessorAdapter" order="first"/>
     <postFormatProcessor implementation="com.intellij.formatting.LineCommentAddSpacePostFormatProcessor"/>
     <postFormatProcessor implementation="com.intellij.formatting.LineWrappingPostFormatProcessor" order="first"/>
@@ -332,6 +328,16 @@
                     serviceImplementation="com.intellij.workspaceModel.ide.impl.legacyBridge.library.ProjectLibraryTableBridgeImpl"/>
     <workspace.bridgeInitializer
       implementation="com.intellij.workspaceModel.ide.impl.legacyBridge.library.ProjectLibraryTableBridgeInitializer"/>
+
+    <projectService
+      serviceInterface="com.intellij.openapi.module.ModuleManager"
+      serviceImplementation="com.intellij.workspaceModel.ide.impl.legacyBridge.module.ModuleManagerComponentBridge"
+      overrides="true"/>
+    <workspace.bridgeInitializer
+      implementation="com.intellij.workspaceModel.ide.impl.legacyBridge.module.ModuleManagerComponentBridgeInitializer"/>
+    <initProjectActivity
+      implementation="com.intellij.workspaceModel.ide.impl.legacyBridge.module.ModuleManagerComponentBridge$ModuleManagerInitProjectActivity"
+      order="first"/>
 
     <projectService serviceInterface="com.intellij.psi.search.ProjectScopeBuilder"
                     serviceImplementation="com.intellij.psi.search.ProjectScopeBuilderImpl"/>
@@ -728,7 +734,8 @@
                             id="liveTemplates" order="first"/>
     <completion.contributor id="reference" language="any" order="last"
                             implementationClass="com.intellij.codeInsight.completion.ReferenceBasedCompletionContributor"/>
-
+    <completion.contributor language="any" id="commands" order="first, after liveTemplates"
+                            implementationClass="com.intellij.codeInsight.completion.command.CommandCompletionContributor"/>
     <applicationService serviceImplementation="com.intellij.execution.console.ConsoleFoldingSettings"/>
     <applicationSettings service="com.intellij.execution.console.ConsoleFoldingSettings"/>
 
@@ -738,6 +745,13 @@
     <lookup.charFilter implementation="com.intellij.codeInsight.completion.DefaultCharFilter" order="last" id="default"/>
     <lookup.charFilter implementation="com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceCharFilter" id="fileRef"
                        order="before completion"/>
+    <lookup.charFilter implementation="com.intellij.codeInsight.completion.command.CommandCompletionCharFilter" order="first" id="commandCompletion"/>
+    <lookup.customizer implementation="com.intellij.codeInsight.completion.command.CommandCompletionLookupCustomizer" order="last" id="commandCompletionLookupCustomizer"/>
+
+    <codeInsight.completion.command.provider language="" implementationClass="com.intellij.codeInsight.completion.command.commands.ExtensionPointCommandProvider" />
+    <codeInsight.completion.command.provider language="" implementationClass="com.intellij.codeInsight.completion.command.commands.DirectIntentionCommandProvider" order="last"/>
+
+    <nonWriteAccessTypedHandler implementation="com.intellij.codeInsight.completion.command.CommandCompletionNonWriteAccessTypedHandler" id="commandCompletion"/>
 
     <searchEverywhereClassifier implementation="com.intellij.ide.actions.DefaultSearchEverywhereClassifier"/>
     <gotoFileContributor implementation="com.intellij.ide.util.gotoByName.DefaultFileNavigationContributor"/>
@@ -1022,6 +1036,7 @@
 
     <projectService serviceInterface="com.intellij.ide.structureView.StructureViewFactory"
                     serviceImplementation="com.intellij.ide.structureView.impl.StructureViewFactoryImpl"/>
+    <statistics.counterUsagesCollector implementationClass="com.intellij.ide.structureView.StructureViewEventsCollector"/>
     <projectService serviceInterface="com.intellij.codeInspection.InspectionManager"
                     serviceImplementation="com.intellij.codeInspection.ex.InspectionManagerEx"/>
     <documentationProvider implementation="com.intellij.codeInspection.actions.InspectionDescriptionDocumentationProvider"/>
@@ -1397,9 +1412,6 @@
                             order="last"/>
     <statusBarWidgetFactory id="Memory" implementation="com.intellij.openapi.wm.impl.status.MemoryIndicatorWidgetFactory"
                             order="last"/>
-    <registryKey key="idea.memory.usage.tooltip.show.more"
-                 description="Show additional info in a memory-usage bar's tooltip"
-                 defaultValue="true"/>
     <registryKey key="idea.memory.usage.show.total.memory.estimation"
                  description="Show total memory usage estimation (instead of -Xmx) info in a memory-usage bar"
                  defaultValue="true"/>
@@ -1477,6 +1489,8 @@
     <projectService serviceInterface="com.intellij.ide.actions.searcheverywhere.SearchEverywhereManager"
                     serviceImplementation="com.intellij.ide.actions.searcheverywhere.SearchEverywhereManagerImpl"/>
 
+    <advancedSetting id="se.text.search" default="true" groupKey="group.advanced.settings.se"/>
+    <searchEverywhereContributor implementation="com.intellij.find.impl.TextSearchContributor$Companion$Factory"/>
     <searchEverywhereContributor implementation="com.intellij.ide.actions.searcheverywhere.ClassSearchEverywhereContributor$Factory"/>
     <searchEverywhereContributor implementation="com.intellij.ide.actions.searcheverywhere.FileSearchEverywhereContributorFactory"/>
     <searchEverywhereContributor implementation="com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor$Factory"/>
@@ -1557,10 +1571,24 @@
       id="inline.completion.escape" action="EditorEscape"
       implementationClass="com.intellij.codeInsight.inline.completion.EscapeInlineCompletionHandler"
       order="before hide-hints"/>
+
     <editorActionHandler
       id="inline.completion.backspace" action="EditorBackSpace"
-      implementationClass="com.intellij.codeInsight.inline.completion.BackSpaceInlineCompletionHandler"
+      implementationClass="com.intellij.codeInsight.inline.completion.BackspaceDeleteInlineCompletionHandler"
       order="first"/>
+    <editorActionHandler
+      id="inline.completion.delete" action="EditorDelete"
+      implementationClass="com.intellij.codeInsight.inline.completion.BackspaceDeleteInlineCompletionHandler"
+      order="first"/>
+    <editorActionHandler
+      id="inline.completion.backspace.word" action="EditorDeleteToWordEnd"
+      implementationClass="com.intellij.codeInsight.inline.completion.BackspaceDeleteInlineCompletionHandler"
+      order="first"/>
+    <editorActionHandler
+      id="inline.completion.delete.word" action="EditorDeleteToWordStart"
+      implementationClass="com.intellij.codeInsight.inline.completion.BackspaceDeleteInlineCompletionHandler"
+      order="first"/>
+
     <editorActionHandler
       id="inline.completion.enter"
       action="EditorEnter"
@@ -1686,6 +1714,11 @@
     <registryKey defaultValue="2000"
                  description="Amount in milliseconds to wait for completion contributors till decide whether to insert the single item"
                  key="ide.completion.auto.insert.item.timeout"/>
+    <registryKey key="ide.completion.command.enabled" defaultValue="false"
+                 description="Enable experimental support command completion" restartRequired="true"/>
+    <registryKey key="ide.completion.command.full.line.enabled" defaultValue="false"
+                 description="Enable experimental support command completion" restartRequired="true"/>
+
     <indexableEntityProvider implementation="com.intellij.util.indexing.roots.LibraryPropertyEntityIndexableEntityProvider"/>
     <indexableEntityProvider implementation="com.intellij.util.indexing.roots.CustomSourceRootPropertyIndexableEntityProvider"/>
     <indexableEntityProvider implementation="com.intellij.util.indexing.roots.ModuleDependencyEntitiesIndexableEntityProvider"/>
@@ -1739,6 +1772,7 @@
     <lang.formatter.restriction implementation="com.intellij.lang.InvalidPsiAutoFormatRestriction"/>
     <findInProjectExtension implementation="com.intellij.psi.search.PredefinedSearchScopeProviderImpl$SelectedFilesFindInProjectExtension" />
 
+    <registryKey defaultValue="false" description="Shows all inheritors and override methods in line markers" key="intellij.platform.shared.source.line.markers.show.all.inheritors"/>
     <!--  Inspection results -->
     <inspectionResultsExportActionProvider implementation="com.intellij.codeInspection.ui.actions.ExportToHTMLAction"/>
     <inspectionResultsExportActionProvider implementation="com.intellij.codeInspection.ui.actions.ExportToXMLAction"/>
@@ -1828,6 +1862,19 @@
     <registryKey key="client.generator.inlay.action" defaultValue="false"
                  description="Enable open in client generator action"/>
   </extensions>
+
+  <!--suppress PluginXmlDynamicPlugin -->
+  <module-components>
+    <component>
+      <interface-class>com.intellij.openapi.roots.ModuleRootManager</interface-class>
+      <implementation-class>com.intellij.workspaceModel.ide.impl.legacyBridge.module.roots.ModuleRootComponentBridge</implementation-class>
+    </component>
+    <component>
+      <interface-class>com.intellij.facet.FacetManager</interface-class>
+      <implementation-class>com.intellij.workspaceModel.ide.impl.legacyBridge.facet.FacetManagerBridge</implementation-class>
+    </component>
+  </module-components>
+
   <extensions defaultExtensionNs="com.intellij.platform.backend">
     <documentation.targetProvider
       implementation="com.intellij.lang.documentation.symbol.impl.DefaultTargetSymbolDocumentationTargetProvider"/>
@@ -1864,5 +1911,7 @@
               topic="com.intellij.platform.backend.workspace.WorkspaceModelChangeListener"/>
     <listener class="com.intellij.workspaceModel.ide.impl.legacyBridge.module.ModuleBridgeCleaner"
               topic="com.intellij.platform.backend.workspace.WorkspaceModelChangeListener"/>
+    <listener class="com.intellij.codeInsight.completion.command.CommandCompletionListener"
+              topic="com.intellij.codeInsight.lookup.LookupManagerListener"/>
   </projectListeners>
 </idea-plugin>

@@ -118,6 +118,7 @@ class KotlinK2QuickFixRegistrar : KotlinQuickFixRegistrar() {
         registerFactory(ConvertCollectionLiteralToIntArrayOfFixFactory.convertCollectionLiteralToIntArrayOfFixFactory)
         registerFactory(AddReturnExpressionFixFactory.addReturnExpressionFixFactory)
         registerFactory(RemoveArgumentFixFactory.removeArgumentFixFactory)
+        registerFactory(RemoveReturnLabelFixFactory.removeReturnLabelFixFactory)
         registerFactory(AddJvmInlineAnnotationFixFactory.addJvmInlineAnnotationFixFactory)
         registerFactory(RemoveNoConstructorFixFactory.removeNoConstructorFixFactory)
         registerFactory(ArgumentTypeMismatchFactory.addArrayOfTypeFixFactory)
@@ -277,6 +278,9 @@ class KotlinK2QuickFixRegistrar : KotlinQuickFixRegistrar() {
     private val imports = KtQuickFixesListBuilder.registerPsiQuickFix {
         registerPsiQuickFixes(KaFirDiagnostic.ConflictingImport::class, RemovePsiElementSimpleFix.RemoveImportFactory)
         registerPsiQuickFixes(KaFirDiagnostic.UnresolvedImport::class, AddDependencyQuickFixHelper)
+        
+        registerFactory(ImportQuickFixFactories.delegateSpecialFunctionMissingFactory)
+        registerFactory(ImportQuickFixFactories.delegateSpecialFunctionNoneApplicableFactory)
     }
 
     private val mutability = KtQuickFixesListBuilder.registerPsiQuickFix {

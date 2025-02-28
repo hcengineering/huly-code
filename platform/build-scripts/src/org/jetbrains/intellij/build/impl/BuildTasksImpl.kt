@@ -50,7 +50,7 @@ internal class BuildTasksImpl(private val context: BuildContextImpl) : BuildTask
     checkProductProperties(context)
     checkPluginModules(mainPluginModules, "mainPluginModules", context)
     copyDependenciesFile(context)
-    val pluginsToPublish = getPluginLayoutsByJpsModuleNames(mainPluginModules, context.productProperties.productLayout)
+    val pluginsToPublish = getPluginLayoutsByJpsModuleNames(mainPluginModules, context.productProperties.productLayout, toPublish = true)
     val distState = createDistributionBuilderState(pluginsToPublish, context)
     context.compileModules(null)
 
@@ -324,7 +324,7 @@ private suspend fun buildSourcesArchive(contentReport: ContentReport, context: B
 
 private suspend fun createDistributionState(context: BuildContext): DistributionBuilderState {
   val productLayout = context.productProperties.productLayout
-  val pluginsToPublish = getPluginLayoutsByJpsModuleNames(productLayout.pluginModulesToPublish, productLayout)
+  val pluginsToPublish = getPluginLayoutsByJpsModuleNames(productLayout.pluginModulesToPublish, productLayout, toPublish = true)
   filterPluginsToPublish(pluginsToPublish, context)
 
   val enabledPluginModules = getEnabledPluginModules(pluginsToPublish, context)
@@ -398,11 +398,10 @@ suspend fun buildDistributions(context: BuildContext): Unit = block("build distr
   copyDependenciesFile(context)
 
   logFreeDiskSpace("before compilation", context)
-  // compile all
-  context.compileModules(null)
+  context.compileModules(moduleNames = null) // compile all
+  logFreeDiskSpace("after compilation", context)
 
   val distributionState = createDistributionState(context)
-  logFreeDiskSpace("after compilation", context)
 
   coroutineScope {
     createMavenArtifactJob(context, distributionState)
@@ -412,13 +411,14 @@ suspend fun buildDistributions(context: BuildContext): Unit = block("build distr
       val pluginsToPublish = getPluginLayoutsByJpsModuleNames(
         context.productProperties.productLayout.pluginModulesToPublish,
         context.productProperties.productLayout,
+        toPublish = true
       )
       buildNonBundledPlugins(pluginsToPublish, context.options.compressZipFiles, buildPlatformLibJob = null, distributionState, buildSearchableOptions(context), context)
       return@coroutineScope
     }
 
     val contentReport = spanBuilder("build platform and plugin JARs").use {
-      val contentReport = buildDistribution(state = distributionState, context)
+      val contentReport = buildDistribution(distributionState, context)
       if (context.productProperties.buildSourcesArchive) {
         buildSourcesArchive(contentReport, context)
       }
@@ -1063,12 +1063,14 @@ internal suspend fun setLastModifiedTime(directory: Path, context: BuildContext)
 /**
  * @return list of all modules which output is included in the plugin's JARs
  */
-internal fun collectIncludedPluginModules(enabledPluginModules: Collection<String>, result: MutableSet<String>, context: BuildContext) {
+internal suspend fun collectIncludedPluginModules(enabledPluginModules: Collection<String>, result: MutableSet<String>, context: BuildContext) {
   result.addAll(enabledPluginModules)
   val pluginLayouts = getPluginLayoutsByJpsModuleNames(modules = enabledPluginModules, productLayout = context.productProperties.productLayout)
+  val contentModuleFilter = context.getContentModuleFilter()
   for (plugin in pluginLayouts) {
     plugin.includedModules.mapTo(result) { it.moduleName }
-    result.addAll((context as BuildContextImpl).jarPackagerDependencyHelper.readPluginIncompleteContentFromDescriptor(context.findRequiredModule(plugin.mainModule)))
+    val mainModule = context.findRequiredModule(plugin.mainModule)
+    result.addAll((context as BuildContextImpl).jarPackagerDependencyHelper.readPluginIncompleteContentFromDescriptor(mainModule, contentModuleFilter))
   }
 }
 

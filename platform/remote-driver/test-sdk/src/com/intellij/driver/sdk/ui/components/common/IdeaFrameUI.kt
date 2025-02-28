@@ -1,7 +1,5 @@
 package com.intellij.driver.sdk.ui.components.common
 
-import com.intellij.driver.sdk.ui.components.common.toolwindows.ToolWindowRightToolbarUi
-import com.intellij.driver.sdk.ui.components.common.toolwindows.ToolWindowLeftToolbarUi
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
@@ -10,11 +8,11 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.Finder
 import com.intellij.driver.sdk.ui.components.ComponentData
 import com.intellij.driver.sdk.ui.components.UiComponent
-import com.intellij.driver.sdk.ui.components.elements.tree
+import com.intellij.driver.sdk.ui.components.common.toolwindows.ToolWindowLeftToolbarUi
+import com.intellij.driver.sdk.ui.components.common.toolwindows.ToolWindowRightToolbarUi
 import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.remote.Window
 import com.intellij.driver.sdk.ui.ui
-import com.intellij.driver.sdk.ui.xQuery
 import java.awt.Frame
 import javax.swing.JFrame
 
@@ -37,8 +35,6 @@ fun Driver.projectIdeFrame(projectName: String, action: IdeaFrameUI.() -> Unit) 
 }
 
 open class IdeaFrameUI(data: ComponentData) : UiComponent(data) {
-  val projectViewTree = tree(xQuery { byType("com.intellij.ide.projectView.impl.ProjectViewTree") })
-
   private val ideaFrameComponent by lazy { driver.cast(component, IdeFrameImpl::class) }
 
   val project: Project?
@@ -53,10 +49,6 @@ open class IdeaFrameUI(data: ComponentData) : UiComponent(data) {
   val leftToolWindowToolbar: ToolWindowLeftToolbarUi = x(ToolWindowLeftToolbarUi::class.java) { byClass("ToolWindowLeftToolbar") }
 
   val rightToolWindowToolbar: ToolWindowRightToolbarUi = x(ToolWindowRightToolbarUi::class.java) { byClass("ToolWindowRightToolbar") }
-
-  val settingsButton = x("//div[@myicon='settings.svg']")
-
-  val runActionButton = x("//div[@myicon='run.svg']")
 
   fun maximize() = driver.withContext(OnDispatcher.EDT) {
     ideaFrameComponent.setExtendedState(ideaFrameComponent.getExtendedState().or(JFrame.MAXIMIZED_BOTH))

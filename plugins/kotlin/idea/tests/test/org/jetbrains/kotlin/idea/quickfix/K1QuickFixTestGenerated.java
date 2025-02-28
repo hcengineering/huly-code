@@ -3885,6 +3885,11 @@ public abstract class K1QuickFixTestGenerated extends AbstractK1QuickFixTest {
                 runTest("testData/quickfix/checkArguments/addNameToArgument/invokeOnString.kt");
             }
 
+            @TestMetadata("missingParameterName.kt")
+            public void testMissingParameterName() throws Exception {
+                runTest("testData/quickfix/checkArguments/addNameToArgument/missingParameterName.kt");
+            }
+
             @TestMetadata("mixedNamedAndPositionalArguments.kt")
             public void testMixedNamedAndPositionalArguments() throws Exception {
                 runTest("testData/quickfix/checkArguments/addNameToArgument/mixedNamedAndPositionalArguments.kt");
@@ -5662,6 +5667,11 @@ public abstract class K1QuickFixTestGenerated extends AbstractK1QuickFixTest {
                     @TestMetadata("funWithNullableTypeParameter.kt")
                     public void testFunWithNullableTypeParameter() throws Exception {
                         runTest("testData/quickfix/createFromUsage/createFunction/call/member/funWithNullableTypeParameter.kt");
+                    }
+
+                    @TestMetadata("funWithSameTypesParams.kt")
+                    public void testFunWithSameTypesParams() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createFunction/call/member/funWithSameTypesParams.kt");
                     }
 
                     @TestMetadata("implicitThisInLocalClassWithTypeParameterFromExtensionParent.kt")
@@ -7528,6 +7538,16 @@ public abstract class K1QuickFixTestGenerated extends AbstractK1QuickFixTest {
                     @TestMetadata("valWithNullableType.kt")
                     public void testValWithNullableType() throws Exception {
                         runTest("testData/quickfix/createFromUsage/createVariable/property/valWithNullableType.kt");
+                    }
+
+                    @TestMetadata("varOnLibType.kt")
+                    public void testVarOnLibType() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/varOnLibType.kt");
+                    }
+
+                    @TestMetadata("varOnTypeParameter.kt")
+                    public void testVarOnTypeParameter() throws Exception {
+                        runTest("testData/quickfix/createFromUsage/createVariable/property/varOnTypeParameter.kt");
                     }
 
                     @TestMetadata("varOnUserType.kt")
@@ -14317,6 +14337,11 @@ public abstract class K1QuickFixTestGenerated extends AbstractK1QuickFixTest {
         @TestMetadata("simple2.kt")
         public void testSimple2() throws Exception {
             runTest("testData/quickfix/removeRedundantLabel/simple2.kt");
+        }
+
+        @TestMetadata("simple3.kt")
+        public void testSimple3() throws Exception {
+            runTest("testData/quickfix/removeRedundantLabel/simple3.kt");
         }
     }
 

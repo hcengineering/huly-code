@@ -16,7 +16,6 @@ import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.EditorWindow
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider
 import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.parameterInfo.ParameterInfoHandler
 import com.intellij.model.psi.PsiSymbolReference
 import com.intellij.model.psi.impl.referencesAt
 import com.intellij.openapi.actionSystem.IdeActions
@@ -518,6 +517,7 @@ fun CodeInsightTestFixture.getParameterInfoAtCaret(): String? {
     return hintFixture.currentHintText
       ?.removePrefix("<html>")
       ?.removeSuffix("</html>")
+      ?.replace(Regex("</?span[^>]*>"), "")
   } finally {
     Disposer.dispose(disposable)
   }

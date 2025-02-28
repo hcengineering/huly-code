@@ -6,8 +6,6 @@ import com.intellij.diff.util.DiffUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.application.runWriteAction
-import com.intellij.openapi.application.writeAction
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.command.executeCommand
 import com.intellij.openapi.command.writeCommandAction
 import com.intellij.openapi.editor.Document
@@ -17,12 +15,12 @@ import com.intellij.openapi.editor.FoldingModel
 import com.intellij.openapi.editor.markup.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.kotlin.idea.KotlinJvmBundle
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
-import org.jetbrains.kotlin.idea.scratch.actions.RunScratchAction
+import org.jetbrains.kotlin.idea.scratch.actions.RunScratchActionK2
 import java.util.*
 import kotlin.math.max
 
@@ -45,7 +43,7 @@ class PreviewEditorScratchOutputHandler(
         printToPreviewEditor(expression, output)
     }
 
-    override fun handle(file: ScratchFile, infos: List<RunScratchAction.ExplainInfo>, scope: CoroutineScope) {
+    override fun handle(file: ScratchFile, infos: List<RunScratchActionK2.ExplainInfo>, scope: CoroutineScope) {
         previewOutputBlocksManager.addOutput(infos, scope)
     }
 
@@ -105,11 +103,11 @@ class PreviewOutputBlocksManager(editor: Editor) {
         }
     }
 
-    fun addOutput(infos: List<RunScratchAction.ExplainInfo>, scope: CoroutineScope) {
+    fun addOutput(infos: List<RunScratchActionK2.ExplainInfo>, scope: CoroutineScope) {
         val project = project ?: return
 
         scope.launch {
-            writeCommandAction(project, "processing kotlin scratches results") {
+            writeCommandAction(project, KotlinJvmBundle.message("command.name.processing.kotlin.scratch.output")) {
                 targetDocument.setText("")
                 infos.groupBy { it.line }.forEach { (line, values) ->
                     if (line != null) {

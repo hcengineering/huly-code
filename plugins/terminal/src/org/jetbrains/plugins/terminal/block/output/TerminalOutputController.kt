@@ -11,12 +11,14 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.platform.util.coroutines.childScope
 import com.intellij.terminal.JBTerminalSystemSettingsProviderBase
+import com.intellij.terminal.session.StyleRange
 import com.intellij.util.Alarm
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.jediterm.terminal.TextStyle
 import kotlinx.coroutines.cancel
+import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.plugins.terminal.block.TerminalFocusModel
-import org.jetbrains.plugins.terminal.block.hyperlinks.TerminalHyperlinkHighlighter
+import org.jetbrains.plugins.terminal.block.hyperlinks.Gen1TerminalHyperlinkHighlighter
 import org.jetbrains.plugins.terminal.block.output.highlighting.CompositeTerminalTextHighlighter
 import org.jetbrains.plugins.terminal.block.prompt.TerminalPromptRenderingInfo
 import org.jetbrains.plugins.terminal.block.session.*
@@ -33,7 +35,8 @@ import kotlin.math.max
  * @see TerminalOutputView
  * @see TerminalOutputController
  */
-internal class TerminalOutputController(
+@ApiStatus.Internal
+class TerminalOutputController(
   private val project: Project,
   private val editor: EditorEx,
   private val session: BlockTerminalSession,
@@ -55,7 +58,7 @@ internal class TerminalOutputController(
   @Volatile
   private var runningCommandInteractivity: RunningCommandInteractivity? = null
 
-  private val hyperlinkHighlighter: TerminalHyperlinkHighlighter = TerminalHyperlinkHighlighter(project, outputModel, session)
+  private val hyperlinkHighlighter: Gen1TerminalHyperlinkHighlighter = Gen1TerminalHyperlinkHighlighter(project, outputModel, session)
 
   private val nextBlockCanBeStartedQueue: Queue<() -> Unit> = LinkedList()
 

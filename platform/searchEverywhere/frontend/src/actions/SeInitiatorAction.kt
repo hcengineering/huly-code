@@ -23,7 +23,7 @@ class SeInitiatorAction : DumbAwareAction(), ActionRemoteBehaviorSpecification.F
     val project = e.project ?: return
     val service = SeFrontendService.getInstance(project)
     service.coroutineScope.launch {
-      service.showPopup()
+      service.showPopup(null, e.dataContext)
     }
   }
 }

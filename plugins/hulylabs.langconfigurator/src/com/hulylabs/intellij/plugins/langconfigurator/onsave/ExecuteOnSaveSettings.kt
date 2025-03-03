@@ -7,9 +7,6 @@ import com.intellij.openapi.components.*
 @State(name = "ExecuteOnSaveSettings", storages = [Storage(StoragePathMacros.WORKSPACE_FILE)])
 class ExecuteOnSaveSettings : SimplePersistentStateComponent<ExecuteOnSaveSettingsState>(ExecuteOnSaveSettingsState())
 
-class ExecuteOnSaveSettingsState : BaseState() {
-  var isEnabled by property(false)
+class ExecuteOnSaveSettingsState : BaseOnSaveSettingsState() {
   var toolActionId by string("")
-  var languageIds by stringSet()
-  var allLanguageIdsSelected by property(true)
 }

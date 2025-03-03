@@ -22,6 +22,8 @@
     <editorNotificationProvider
       implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerConfigSetupNotificationProvider"/>
     <notificationGroup id="Language Server Configuration" displayType="BALLOON"/>
+    <notificationGroup id="Prettier" displayType="BALLOON"/>
+    <notificationGroup id="ESLint" displayType="BALLOON"/>
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
     <workspaceModel.fileIndexContributor
       implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
@@ -34,25 +36,18 @@
     <bundledKeymap file="VSCode OSX.xml"/>
     <consoleFilterProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.terminal.FileLinkTerminalFilterProvider"/>
 
+    <actionOnSaveInfoProvider id="PrettierOnSaveInfoProvider"
+                              implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.PrettierOnSaveInfoProvider"/>
+    <actionOnSaveInfoProvider id="ESLintOnSaveInfoProvider"
+                              implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ESLintOnSaveInfoProvider"/>
     <actionOnSaveInfoProvider id="ExecuteOnSaveInfoProvider"
                               implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ExecuteOnSaveInfoProvider"/>
-    <actionOnSave id="ExecuteOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ExecuteOnSaveAction"/>
+
+    <actionOnSave id="PrettierOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.PrettierOnSaveAction"/>
+    <actionOnSave id="ESLintOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ESLintOnSaveAction" order="after PrettierOnSaveAction"/>
+    <actionOnSave id="ExecuteOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ExecuteOnSaveAction" order="last"/>
+
     <macro implementation="com.hulylabs.intellij.plugins.langconfigurator.macro.NodeJsModuleRootMacro"/>
-
-    <!-- LSP4IJ related extensions -->
-
-    <!-- LSP file view provider to yield some PSI structure to otherwise flat files -->
-    <!-- Copied from this PR https://github.com/redhat-developer/lsp4ij/pull/703 -->
-    <!--<lang.fileViewProviderFactory-->
-    <!--  language="TEXT"-->
-    <!--  implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentFileViewProviderFactory"/>-->
-    <!--<lang.fileViewProviderFactory-->
-    <!--  language="textmate"-->
-    <!--  implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentFileViewProviderFactory"/>-->
-    <!--<lang.fileViewProviderFactory-->
-    <!--  language="TreeSitter"-->
-    <!--  implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentFileViewProviderFactory"/>-->
-    <!-- end of copied code -->
 
     <lang.psiStructureViewFactory
       id="LSPDocumentSymbolStructureViewFactoryForTextMate"

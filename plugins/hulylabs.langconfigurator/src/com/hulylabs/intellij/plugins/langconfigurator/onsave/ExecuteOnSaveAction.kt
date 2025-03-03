@@ -1,7 +1,6 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.langconfigurator.onsave
 
-import com.hulylabs.intellij.plugins.langconfigurator.LSPFileTypesRegistry
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.executors.DefaultRunExecutor
@@ -16,9 +15,7 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.tools.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,11 +33,11 @@ class ExecuteOnSaveAction() : DocumentUpdatingActionOnSave() {
 
   override suspend fun updateDocument(project: Project, document: Document) {
     val file = FileDocumentManager.getInstance().getFile(document)
-    if (file == null || !isFileSupported(project, file)) {
+    val settings = project.service<ExecuteOnSaveSettings>().state
+    if (file == null || !settings.isFileSupported(project, file)) {
       return
     }
 
-    val settings = project.service<ExecuteOnSaveSettings>().state
     val toolActionId = settings.toolActionId!!
     val tool = ToolManager.getInstance().tools.firstOrNull { it.actionId == toolActionId }
     if (tool != null) {
@@ -50,24 +47,6 @@ class ExecuteOnSaveAction() : DocumentUpdatingActionOnSave() {
         .build()
       executeTool(project, tool, context)
     }
-  }
-
-  private fun isFileSupported(project: Project, file: VirtualFile): Boolean {
-    val state = project.service<ExecuteOnSaveSettings>().state
-    if (state.allLanguageIdsSelected) {
-      return true
-    }
-    val fileType = file.fileType
-    if (fileType is LanguageFileType) {
-      if (state.languageIds.contains(fileType.language.id)) {
-        return true
-      }
-      val languageId = LSPFileTypesRegistry.instance.getLanguageId(file)
-      if (languageId != null && state.languageIds.contains(languageId)) {
-        return true
-      }
-    }
-    return false
   }
 
   private suspend fun executeTool(project: Project, tool: Tool, context: DataContext): Boolean {

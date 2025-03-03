@@ -145,11 +145,14 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
       is SupermavenResponseMessage -> {
         states[message.stateId.toLong()]?.apply {
           message.items?.forEach { item ->
-            when (item.kind) {
-              ResponseItemKind.TEXT -> chunks += item.text
-              ResponseItemKind.DEDENT -> dedent += item.text
-              ResponseItemKind.END -> end = true
-              else -> {}
+            if (!end) {
+              when (item.kind) {
+                ResponseItemKind.TEXT -> chunks += item.text
+                ResponseItemKind.DEDENT -> dedent += item.text
+                ResponseItemKind.END -> end = true
+                ResponseItemKind.BARRIER -> end = true
+                else -> {}
+              }
             }
           }
         }

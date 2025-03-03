@@ -105,7 +105,7 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
         // try removing prefix from start
         if (isStart && str.isNotEmpty()) {
           var idxOffset = max(0, cursorOffset - 20)
-          var pattern = content.substring(idxOffset, cursorOffset)
+          var pattern = content.substring(idxOffset, cursorOffset).trimEnd(' ', '\t')
           while (idxOffset < cursorOffset && pattern.isNotEmpty()) {
             if (str.startsWith(pattern)) {
               break

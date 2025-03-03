@@ -67,7 +67,7 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.CERTIFICATES_P12 }}
           p12-password: ${{ secrets.CERTIFICATES_P12_PASSWORD }}
-      - name: Build macos artifacts
+      - name: Build macos aarch64 artifacts
         env:
           APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
@@ -77,14 +77,38 @@ jobs:
         run: |
           chmod +x ./installers-huly.cmd
           ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=aarch64 -Dintellij.build.dev.mode=false -Dbuild.number=251.${{github.run_number}}
-      - name: Upload .dmg
+      - name: Upload aarch64.dmg
+        uses: ./.github/actions/upload_ide
+        with:
+          os: mac
+          extension: aarch64.dmg
+          artifacts_dir: ${{env.artifacts_dir}}
+          name-prefix: artifact-
+      - name: Upload aarch64.sit
+        uses: ./.github/actions/upload_ide
+        with:
+          os: mac
+          extension: aarch64.sit
+          artifacts_dir: ${{env.artifacts_dir}}
+          name-prefix: artifact-
+      - name: Build macos x64 artifacts
+        env:
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+        shell: bash
+        # language=bash
+        run: |
+          chmod +x ./installers-huly.cmd
+          ./installers-huly.cmd -Dintellij.build.target.os=mac -Dintellij.build.target.arch=x64 -Dintellij.build.dev.mode=false -Dbuild.number=251.${{github.run_number}}
+      - name: Upload x64.dmg
         uses: ./.github/actions/upload_ide
         with:
           os: mac
           extension: dmg
           artifacts_dir: ${{env.artifacts_dir}}
           name-prefix: artifact-
-      - name: Upload .sit
+      - name: Upload x64.sit
         uses: ./.github/actions/upload_ide
         with:
           os: mac

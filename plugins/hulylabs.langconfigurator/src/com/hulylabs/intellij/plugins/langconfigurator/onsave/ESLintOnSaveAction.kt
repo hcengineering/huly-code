@@ -12,6 +12,7 @@ import com.intellij.execution.process.ProcessOutputType
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.DocumentUpdatingActionOnSave
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.command.writeCommandAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
@@ -86,9 +87,12 @@ class ESLintOnSaveAction : DocumentUpdatingActionOnSave() {
       }
 
       override fun processTerminated(event: ProcessEvent) {
-        if (event.exitCode != 0) {
-          NotificationGroupManager.getInstance().getNotificationGroup("ESLint")
-            .createNotification("ESLint", errorText, NotificationType.ERROR)
+        if (event.exitCode != 0 && errorText != "") {
+          NotificationsManager.getNotificationsManager().showNotification(
+            NotificationGroupManager.getInstance().getNotificationGroup("ESLint")
+              .createNotification("ESLint", errorText, NotificationType.ERROR),
+            project
+          )
         }
         else {
           isSuccess = true
@@ -116,9 +120,11 @@ class ESLintOnSaveAction : DocumentUpdatingActionOnSave() {
         }
       }
       catch (e: Exception) {
-        NotificationGroupManager.getInstance().getNotificationGroup("ESLint")
-          .createNotification("ESLint", e.message
-                                        ?: "Error while formatting", NotificationType.ERROR)
+        NotificationsManager.getNotificationsManager().showNotification(
+          NotificationGroupManager.getInstance().getNotificationGroup("ESLint")
+            .createNotification("ESLint", e.message
+                                          ?: "Error while formatting", NotificationType.ERROR), project
+        )
       }
     }
   }

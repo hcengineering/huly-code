@@ -9,6 +9,7 @@ import com.intellij.execution.process.*
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.DocumentUpdatingActionOnSave
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.command.writeCommandAction
 import com.intellij.openapi.components.service
@@ -81,8 +82,11 @@ class PrettierOnSaveAction : DocumentUpdatingActionOnSave() {
 
       override fun processTerminated(event: ProcessEvent) {
         if (event.exitCode != 0) {
-          NotificationGroupManager.getInstance().getNotificationGroup("Prettier")
-            .createNotification("Prettier", errorText, NotificationType.ERROR)
+          NotificationsManager.getNotificationsManager().showNotification(
+            NotificationGroupManager.getInstance().getNotificationGroup("Prettier")
+              .createNotification("Prettier", errorText, NotificationType.ERROR),
+            project
+          )
         }
         else {
           isSuccess = true

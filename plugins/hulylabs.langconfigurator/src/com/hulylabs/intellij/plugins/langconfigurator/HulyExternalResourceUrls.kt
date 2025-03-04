@@ -14,6 +14,9 @@ class HulyExternalResourceUrls : ExternalProductResourceUrls {
   override val updateMetadataUrl: Url
     get() = Urls.newFromEncoded(baseUrl).resolve("updates.xml")
 
+  override val helpPageUrl: ((String) -> Url)?
+    get() = { id -> Urls.newFromEncoded("https://github.com/hcengineering/huly-code") }
+
   override fun computePatchUrl(from: BuildNumber, to: BuildNumber): Url {
     val product = ApplicationInfo.getInstance().build.productCode
     val runtime = if (CpuArch.isArm64()) "-aarch64" else ""

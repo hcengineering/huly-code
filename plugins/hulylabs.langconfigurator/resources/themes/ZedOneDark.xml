@@ -5,8 +5,6 @@
     <property name="ideVersion">2025.1.0.0</property>
   </metaInfo>
   <option name="LINE_SPACING" value="1.2" />
-  <option name="EDITOR_FONT_SIZE" value="14" />
-  <option name="EDITOR_FONT_NAME" value="JetBrains Mono" />
   <colors>
     <option name="CONSOLE_BACKGROUND_KEY" value="282C33" />
     <option name="GUTTER_BACKGROUND" value="282C33" />

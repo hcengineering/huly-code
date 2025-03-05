@@ -56,10 +56,17 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
   internal var newStateId = 1L
 
   init {
-    val logPath = agentPath.parent.resolve("sm-agent.log")
-    Files.deleteIfExists(logPath)
     val processBuilder = ProcessBuilder(agentPath.toString(), "stdio")
-    processBuilder.environment()["SM_LOG_PATH"] = logPath.toString()
+    if (LOG.isDebugEnabled) {
+      val logPath = agentPath.parent.resolve("sm-agent.log")
+      try {
+        Files.deleteIfExists(logPath)
+      }
+      catch (_: Exception) {
+        // ignore exception
+      }
+      processBuilder.environment()["SM_LOG_PATH"] = logPath.toString()
+    }
     process = processBuilder.start()
     stdout = BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8))
     stderr = BufferedReader(InputStreamReader(process.errorStream, Charsets.UTF_8))

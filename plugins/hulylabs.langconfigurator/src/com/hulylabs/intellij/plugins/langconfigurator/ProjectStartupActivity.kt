@@ -13,6 +13,6 @@ class ProjectStartupActivity() : ProjectActivity {
     val service: GitIgnoreSyncService = project.service()
     service.syncState()
     PropertiesComponent.getInstance().setValue("ide.try.ultimate.disabled", true)
-    EarlyAccessRegistryManager.setString("idea.plugins.compatible.build", "243.1")
+    EarlyAccessRegistryManager.setString("idea.plugins.compatible.build", "243.23654")
   }
 }

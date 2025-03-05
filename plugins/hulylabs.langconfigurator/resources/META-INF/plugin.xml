@@ -27,6 +27,8 @@
     <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.ProjectStartupActivity"/>
     <workspaceModel.fileIndexContributor
       implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.ContentRootFileIndexIgnoreContributor"/>
+    <workspaceModel.fileIndexContributor
+      implementation="com.hulylabs.intellij.plugins.langconfigurator.gitignore.NodeModulesExcludeContributor"/>
     <fileIconProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.CustomFileIconProvider" order="first"/>
     <themeProvider id="HulyCode Dark" path="themes/dark.theme.json" parentTheme="ExperimentalDark" targetUi="new"/>
     <themeProvider id="HulyCode Light" path="themes/light.theme.json" parentTheme="ExperimentalLight" targetUi="new"/>

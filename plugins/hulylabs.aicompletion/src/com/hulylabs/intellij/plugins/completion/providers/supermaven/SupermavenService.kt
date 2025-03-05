@@ -7,12 +7,12 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-private val LOG = logger<SupermavenService>()
+private val LOG = Logger.getInstance("#supermaven.service")
 
 @Service(Service.Level.PROJECT)
 class SupermavenService(val project: Project, val scope: CoroutineScope) : Disposable {

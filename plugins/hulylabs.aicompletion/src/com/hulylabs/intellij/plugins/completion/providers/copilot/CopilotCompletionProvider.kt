@@ -8,12 +8,15 @@ import com.hulylabs.intellij.plugins.completion.providers.copilot.actions.SignIn
 import com.hulylabs.intellij.plugins.completion.providers.copilot.lsp.AuthStatusKind
 import com.intellij.codeInsight.inline.completion.elements.InlineCompletionElement
 import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
+
+private val LOG = Logger.getInstance("#copilot.completion-provider")
 
 class CopilotCompletionProvider(project: Project) : InlineCompletionProviderService {
   private val copilot: CopilotService = CopilotService.getInstance(project)
@@ -83,6 +86,7 @@ class CopilotCompletionProvider(project: Project) : InlineCompletionProviderServ
 
   override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int, tabSize: Int, insertTabs: Boolean): Flow<InlineCompletionElement>? {
     var completionResult = copilot.completion(file, document, cursorOffset, tabSize, insertTabs)
+    LOG.debug("completionResult: $completionResult")
     if (completionResult == null || completionResult.completions.isEmpty()) {
       return null
     }

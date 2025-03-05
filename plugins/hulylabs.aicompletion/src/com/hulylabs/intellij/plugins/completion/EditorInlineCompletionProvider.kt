@@ -12,12 +12,15 @@ import com.intellij.codeInsight.lookup.LookupManagerListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.swing.JComponent
 import javax.swing.JLabel
+
+private val LOG = Logger.getInstance("#hulycode-inline")
 
 class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerListener {
   var lookupListenerAdded = false
@@ -34,6 +37,7 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
     }
 
   override suspend fun getSuggestion(request: InlineCompletionRequest): InlineCompletionSuggestion {
+    LOG.trace("getSuggestion")
     if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(request.editor.virtualFile)) {
       return InlineCompletionSuggestion.Empty
     }
@@ -42,6 +46,7 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
       lookupListenerAdded = true
     }
     if (lookupShown) {
+      LOG.trace("hide suggestion because lookup is shown")
       InlineCompletionSuggestion.Empty
     }
     return object : InlineCompletionSuggestion {
@@ -77,6 +82,7 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
       return false
     }
     return event is InlineCompletionEvent.DocumentChange
+           || event is InlineCompletionEvent.LookupCancelled
            || event is InlineCompletionEvent.DirectCall
            || event is InlineCompletionEvent.SuggestionInserted
   }

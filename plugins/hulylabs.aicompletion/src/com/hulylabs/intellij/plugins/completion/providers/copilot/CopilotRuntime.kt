@@ -3,7 +3,7 @@ package com.hulylabs.intellij.plugins.completion.providers.copilot
 
 import com.hulylabs.intellij.plugins.langconfigurator.utils.DecompressUtils
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.util.download.DownloadableFileService
@@ -14,7 +14,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-private val LOG = logger<CopilotRuntime>()
+private val LOG = Logger.getInstance("#copilot.runtime")
 private const val COPILOT_LSP_VERSION = "0.7.0"
 private const val COPILOT_LSP_BINARY_URL = "https://github.com/zed-industries/copilot/releases/download/v$COPILOT_LSP_VERSION/copilot.tar.gz"
 private val copilotDirectory = Path.of(PathManager.getConfigPath(), "copilot")

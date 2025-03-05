@@ -21,7 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 private val supermavenDirectory = Path.of(PathManager.getConfigPath(), "supermaven")
-private val LOG = Logger.getInstance(SupermavenRuntime::class.java)
+private val LOG = Logger.getInstance("#supermaven.runtime")
 
 private const val WEEK_PERIOD_IN_MILLIS = 1000 * 60 * 60 * 24 * 7
 

@@ -60,15 +60,17 @@ class CopilotAgent(
     processBuilder.environment()["PATH"] = nodeBinaryPath.parent.toString().replace('\\', '/')
     processBuilder.directory(agentPath.parent.toFile())
     process = processBuilder.start()
-    val launcher: Launcher<CopilotLSPServer> =
-      Launcher.Builder<CopilotLSPServer>()
-        .setLocalService(CopilotService.getInstance(project))
-        .setRemoteInterface(CopilotLSPServer::class.java)
-        .setInput(process.inputStream)
-        .setOutput(process.outputStream)
-        .validateMessages(false)
-        //.traceMessages(PrintWriter(System.out))
-        .create()
+
+    var builder = Launcher.Builder<CopilotLSPServer>()
+      .setLocalService(CopilotService.getInstance(project))
+      .setRemoteInterface(CopilotLSPServer::class.java)
+      .setInput(process.inputStream)
+      .setOutput(process.outputStream)
+      .validateMessages(false)
+    //if (LOG.isTraceEnabled) {
+    //  builder = builder.traceMessages(PrintWriter(System.out))
+    //}
+    val launcher = builder.create()
     launcherResult = launcher.startListening()
     //val h = LogMessageHandler()
     //h.registerTo(GenericEndpoint::class.java.name)

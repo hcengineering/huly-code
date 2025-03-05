@@ -19,7 +19,7 @@ import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import kotlin.concurrent.thread
 
-private val LOG = Logger.getInstance(SupermavenAgent::class.java)
+private val LOG = Logger.getInstance("#supermaven.agent")
 
 data class SupermavenCompletionState(
   val path: String,

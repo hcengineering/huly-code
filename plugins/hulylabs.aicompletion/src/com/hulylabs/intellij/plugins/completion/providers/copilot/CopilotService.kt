@@ -27,7 +27,7 @@ import kotlinx.coroutines.future.await
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import java.util.concurrent.CompletableFuture
 
-private val LOG = Logger.getInstance("#copilot")
+private val LOG = Logger.getInstance("#copilot.service")
 
 enum class AgentStatus {
   Starting,

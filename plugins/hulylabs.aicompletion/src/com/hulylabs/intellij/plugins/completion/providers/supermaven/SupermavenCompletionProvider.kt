@@ -10,6 +10,7 @@ import com.intellij.codeInsight.inline.completion.elements.InlineCompletionGrayT
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -17,6 +18,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.math.max
+
+private val LOG = Logger.getInstance("#supermaven.completion-provider")
 
 class SupermavenCompletionProvider(val project: Project) : InlineCompletionProviderService {
   private val supermaven: SupermavenService = SupermavenService.getInstance(project)
@@ -83,16 +86,20 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
   }
 
   override suspend fun suggest(file: VirtualFile, document: Document, cursorOffset: Int, tabSize: Int, insertTabs: Boolean): Flow<InlineCompletionElement>? {
+    LOG.debug("suggest")
     if (!isFileSupported(file)) {
+      LOG.debug("isFileSupported ${file.extension} false")
       return null
     }
     val path = file.path
     val content = document.text
     return flow {
-      delay(20)
+      delay(50)
       val stateId = supermaven.completion(path, content, cursorOffset) ?: return@flow
+      LOG.debug("found completion state ${stateId}")
       val now = System.currentTimeMillis()
       var i = 0
+      var firstLineEmitted = false
       while (System.currentTimeMillis() - now < 10000) {
         val state = supermaven.completionState(stateId) ?: break
         var str = ""
@@ -114,16 +121,22 @@ class SupermavenCompletionProvider(val project: Project) : InlineCompletionProvi
             idxOffset++
           }
           if (pattern.isNotEmpty()) {
+            LOG.debug("found pattern $pattern")
             str = str.substring(pattern.length)
           }
         }
         if (str.contains('\n') || isEnd) {
           var lineEndOffset = document.getLineEndOffset(document.getLineNumber(cursorOffset))
           var lineSuffix = document.immutableCharSequence.subSequence(cursorOffset, lineEndOffset).toString()
+          if (LOG.isDebugEnabled) {
+            LOG.debug("splitCompletion ${str.trimEnd('\n')} $lineSuffix")
+          }
           CompletionUtils.splitCompletion(str.trimEnd('\n'), lineSuffix).forEach { emit(it) }
           str = ""
+          firstLineEmitted = true
         }
-        else if (str.isNotEmpty()) {
+        else if (firstLineEmitted && str.isNotEmpty()) {
+          LOG.debug("emit str $str")
           emit(InlineCompletionGrayTextElement(str))
         }
         if (state.end) break

@@ -9,7 +9,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
-import com.intellij.openapi.application.runInEdt
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.observable.properties.AtomicProperty
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
@@ -67,7 +67,8 @@ class JComboboxAction(val project: Project, val onChanged: () -> Unit) : AnActio
       addItemListener { rebuild() }
 
       findModel.addObserver {
-        runInEdt {
+        // Should use invokeLater to prevent writing during notification processing
+        invokeLater {
           if (findModel.fileFilter == null) selectedItem = emptyText
         }
       }

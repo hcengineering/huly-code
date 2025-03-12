@@ -9,6 +9,7 @@ import com.intellij.workspaceModel.core.fileIndex.WorkspaceFileIndexContributor
 import com.intellij.workspaceModel.core.fileIndex.WorkspaceFileSetRegistrar
 import com.intellij.workspaceModel.core.fileIndex.impl.PlatformInternalWorkspaceFileIndexContributor
 import com.intellij.workspaceModel.ide.legacyBridge.findModule
+import com.intellij.workspaceModel.ide.toPath
 
 class ContentRootFileIndexIgnoreContributor : WorkspaceFileIndexContributor<ContentRootEntity>, PlatformInternalWorkspaceFileIndexContributor {
   override val entityClass: Class<ContentRootEntity>
@@ -17,25 +18,22 @@ class ContentRootFileIndexIgnoreContributor : WorkspaceFileIndexContributor<Cont
   override fun registerFileSets(entity: ContentRootEntity, registrar: WorkspaceFileSetRegistrar, storage: EntityStorage) {
     val module = entity.module.findModule(storage)
     if (module != null) {
-      val moduleRoot = entity.url.url
       val gitIgnoreService = module.project.service<GitIgnoreSyncService>()
       gitIgnoreService.syncState()
       registrar.registerExclusionCondition(entity.url, fun(file: VirtualFile): Boolean {
-        val relativePath = file.url.substring(moduleRoot.length)
-        if (relativePath.isEmpty()) return false
-        return gitIgnoreService.excludeFolders.any {
-          if (file.isDirectory) {
-            if (it[0] == '/') relativePath.startsWith(it)
-            else {
-              ("$relativePath/").contains(it)
-            }
+        var isExcluded = false
+        val directoryGitIgnore = gitIgnoreService.contentEntryGitIgnores.get(entity.url) ?: return false
+        val entryPath = entity.url.toPath()
+        val relativePath = entryPath.relativize(file.toNioPath()).toString()
+        for ((pattern, regex) in directoryGitIgnore.regexs) {
+          if (isExcluded != pattern.negated) {
+            continue
           }
-          else {
-            false
+          if (regex.matches(relativePath)) {
+            isExcluded = !pattern.negated
           }
-        } || gitIgnoreService.excludeFiles.any {
-          relativePath.endsWith(it)
         }
+        return isExcluded
       }, entity)
     }
   }

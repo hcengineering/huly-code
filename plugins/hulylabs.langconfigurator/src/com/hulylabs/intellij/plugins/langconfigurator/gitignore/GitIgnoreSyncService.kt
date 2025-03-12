@@ -7,76 +7,50 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
 import com.intellij.openapi.project.rootManager
-import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ModuleRootModificationUtil
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.readText
+import com.intellij.platform.backend.workspace.WorkspaceModel
+import com.intellij.platform.backend.workspace.toVirtualFileUrl
+import com.intellij.platform.workspace.storage.url.VirtualFileUrl
 
 private val LOG = Logger.getInstance(GitIgnoreSyncService::class.java)
 
 @Service(Service.Level.PROJECT)
 class GitIgnoreSyncService(val project: Project) {
-  private var modificationStamp = 0L
-  var excludeFolders = HashSet<String>()
-    private set
-  var excludeFiles = HashSet<String>()
-    private set
-  var excludePatterns = HashSet<String>()
-    private set
-
-  private fun reloadGitIgnore(file: VirtualFile) {
-    LOG.info("Reloading .gitignore file")
-    modificationStamp = file.timeStamp
-    excludeFolders.clear()
-    excludePatterns.clear()
-    file.readText().lines().forEach { pLine ->
-      var line = pLine.trim()
-      if (!line.startsWith("#") && line.isNotBlank()) {
-        if (!line.contains('/') && line.contains('*')) {
-          excludePatterns.add(line)
-        }
-        else {
-          // normalize some patterns
-          if (line.startsWith("**/")) {
-            line = line.substring(3)
-          }
-          if (line.startsWith("*/")) {
-            line = line.substring(2)
-          }
-          if (line.endsWith("/**")) {
-            line = line.substring(0, line.length - 2)
-          }
-          if (line.endsWith("/*")) {
-            line = line.substring(0, line.length - 1)
-          }
-          if (line.contains("*")) {
-            LOG.warn("Unsupported pattern '$line' contains '*' in the middle of the string")
-          }
-          else {
-            if (line.lastIndexOf('.') > 0) {
-              excludeFiles.add(line)
-            }
-            else {
-              excludeFolders.add(line)
-            }
-          }
-        }
-      }
-    }
-  }
+  var contentEntryGitIgnores = mutableMapOf<VirtualFileUrl, GitIgnoreFile>()
 
   fun syncState() {
-    LOG.info("Syncing .gitignore file with project exclude folders")
-    // TODO: add support for multiple .gitignore files
-    val module = project.modules.firstOrNull()
-    if (module != null) {
-      val gitIgnoreFile = module.rootManager.contentRoots.first().findChild(".gitignore")
-      if (gitIgnoreFile != null && gitIgnoreFile.timeStamp != modificationStamp) {
-        reloadGitIgnore(gitIgnoreFile)
-        for ((index, _) in ModuleRootManager.getInstance(module).contentEntries.withIndex()) {
-          runInEdt {
-            ModuleRootModificationUtil.updateModel(module) { model ->
-              model.contentEntries[index].excludePatterns = excludePatterns.toList()
+    LOG.info("Syncing .gitignore file with project exclude folders") // TODO: add support for multiple .gitignore files
+    val virtualFileUrlManager = WorkspaceModel.getInstance(project).getVirtualFileUrlManager()
+    for (module in project.modules) {
+      val newContentEntryGitIgnores = mutableMapOf<VirtualFileUrl, GitIgnoreFile>()
+      for (contentEntry in module.rootManager.contentEntries) {
+        val root = contentEntry.file
+        if (root == null || !root.isDirectory) {
+          continue
+        }
+        val gitIgnoreFile = root.findChild(".gitignore") ?: continue
+        val rootUrl = root.toVirtualFileUrl(virtualFileUrlManager)
+        if (contentEntryGitIgnores.containsKey(rootUrl)) {
+          val oldEntry = contentEntryGitIgnores[rootUrl]!!
+          if (gitIgnoreFile.timeStamp == oldEntry.modificationStamp) {
+            continue
+          }
+        }
+        val directoryIgnore = GitIgnoreFile.parse(gitIgnoreFile)
+        newContentEntryGitIgnores[rootUrl] = directoryIgnore
+      }
+      contentEntryGitIgnores = newContentEntryGitIgnores
+      runInEdt {
+        ModuleRootModificationUtil.updateModel(module) { model ->
+          for (contentEntry in model.contentEntries) {
+            val baseDir = contentEntry.file ?: continue
+            for ((dir, patterns) in contentEntryGitIgnores) {
+              if (dir.url == baseDir.url) {
+                for (path in patterns.paths) {
+                  contentEntry.addExcludeFolder(dir.url + if (path.startsWith("/")) path else "/$path")
+                }
+                contentEntry.excludePatterns = patterns.simplePatterns
+              }
             }
           }
         }

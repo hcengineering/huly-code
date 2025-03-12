@@ -5,12 +5,13 @@ import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.util.PathUtil
 
 class GitIgnoreFileListener : BulkFileListener {
   override fun after(events: MutableList<out VFileEvent>) {
     if (events.isEmpty()) return
     // TODO: add support for multiple .gitignore files
-    val hasGitIgnoreFile = events.any { event -> event.path.endsWith(".gitignore")}
+    val hasGitIgnoreFile = events.any { event -> PathUtil.getFileName(event.path) == ".gitignore" }
     if (hasGitIgnoreFile) {
       ProjectUtil.getActiveProject()?.let { project ->
         val service: GitIgnoreSyncService = project.service()

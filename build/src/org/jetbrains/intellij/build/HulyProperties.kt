@@ -73,6 +73,7 @@ val HULY_BUNDLED_PLUGINS: PersistentList<String> = DEFAULT_BUNDLED_PLUGINS + seq
   "hulylabs.langconfigurator",
   "hulylabs.treesitter",
   "hulylabs.aicompletion",
+  "hulylabs.aichat",
 )
 
 internal suspend fun createHulyBuildContext(

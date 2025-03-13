@@ -1,0 +1,26 @@
+/** Default dark theme */
+:root {
+  --bg-color: #2b2d30;
+  --text-color: #dfe1e5;
+  --text-color-rgb: 51, 51, 51;
+  --role-user-color: #4caf50;
+  --role-assistant-color: #2196f3;
+  --role-system-color: #ff9800;
+  --component-focus-color: #3574f0;
+  --component-border-color: #4e5157;
+
+  --prism-background: #282c33ff;
+  --prism-color: #acb2beff;
+  --prism-selection-background: #214283ff;
+  --prism-color-comment: #878e98ff;
+  --prism-color-dot: #cc7832ff;
+  --prism-color-symbol: #6eb4bfff;
+  --prism-color-function-call: #73ade9ff;
+  --prism-color-string: #a1c181ff;
+  --prism-color-operator: #6eb4bfff;
+  --prism-color-keyword: #b477cfff;
+  --prism-color-class-name: #73ade9ff;
+  --prism-color-variable: #acb2beff;
+  --prism-color-tag: #bf956aff;
+  --inline-code-bg: rgba(127, 127, 127, 0.1);
+}

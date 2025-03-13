@@ -1,0 +1,27 @@
+<idea-plugin>
+  <id>com.hulylabs.aichat</id>
+
+  <name>Huly Code AI Chat</name>
+
+  <vendor url="https://hulylabs.com/">Huly Labs</vendor>
+
+  <description>AI Chat</description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.lang</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="AI Chat" anchor="right" icon="/icons/balloon.svg"
+                factoryClass="com.hulylabs.intellij.plugins.chat.ui.ChatToolWindowFactory"/>
+    <defaultToolWindowLayout
+      id="ChatToolWindowLayoutPlatformExtension"
+      implementation="com.hulylabs.intellij.plugins.chat.ChatToolWindowLayoutPlatformExtension"
+      order="last"
+    />
+    <applicationConfigurable groupId="tools"
+                             id="preferences.aichat"
+                             instance="com.hulylabs.intellij.plugins.chat.settings.ChatSettingsConfigurable"
+                             displayName="AI Chat"/>
+  </extensions>
+
+</idea-plugin>

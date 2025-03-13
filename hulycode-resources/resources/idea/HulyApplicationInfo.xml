@@ -8,6 +8,8 @@
   <names product="HulyCode" fullname="Huly Code" edition="" script="huly-code" motto="Huly Code"/>
 
   <essential-plugin>hulylabs.hulycode.plugins.hulylangconfigurator</essential-plugin>
+  <essential-plugin>com.hulylabs.aicompletion</essential-plugin>
+  <essential-plugin>com.hulylabs.aichat</essential-plugin>
   <essential-plugin>com.hulylabs.TreeSitter</essential-plugin>
 
   <default-laf dark="HulyCode Dark" light="HulyCode Light"/>

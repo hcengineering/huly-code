@@ -16,6 +16,7 @@
       <module fileurl="file://$PROJECT_DIR$/fleet/util/logging/api/fleet.util.logging.api.iml" filepath="$PROJECT_DIR$/fleet/util/logging/api/fleet.util.logging.api.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/util/multiplatform/fleet.util.multiplatform.iml" filepath="$PROJECT_DIR$/fleet/util/multiplatform/fleet.util.multiplatform.iml" />
       <module fileurl="file://$PROJECT_DIR$/fleet/util/os/fleet.util.os.iml" filepath="$PROJECT_DIR$/fleet/util/os/fleet.util.os.iml" />
+      <module fileurl="file://$PROJECT_DIR$/plugins/hulylabs.aichat/hulylabs.aichat.iml" filepath="$PROJECT_DIR$/plugins/hulylabs.aichat/hulylabs.aichat.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/hulylabs.aicompletion/hulylabs.aicompletion.iml" filepath="$PROJECT_DIR$/plugins/hulylabs.aicompletion/hulylabs.aicompletion.iml" />
       <module fileurl="file://$PROJECT_DIR$/hulycode-resources/hulylabs.intellij.customization.iml" filepath="$PROJECT_DIR$/hulycode-resources/hulylabs.intellij.customization.iml" />
       <module fileurl="file://$PROJECT_DIR$/plugins/hulylabs.langconfigurator/hulylabs.langconfigurator.iml" filepath="$PROJECT_DIR$/plugins/hulylabs.langconfigurator/hulylabs.langconfigurator.iml" />

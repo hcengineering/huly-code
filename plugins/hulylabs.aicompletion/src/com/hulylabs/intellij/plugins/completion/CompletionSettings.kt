@@ -14,9 +14,17 @@ class CompletionSettings : SimplePersistentStateComponent<SettingsState>(Setting
   fun isCompletionEnabled(file: VirtualFile): Boolean {
     return state.completionEnabled && !state.disabledExtensions.contains(file.extension)
   }
+
+  companion object {
+    @JvmStatic
+    fun getInstance(): CompletionSettings {
+      return service()
+    }
+  }
 }
 
 class SettingsState : BaseState() {
+  var onlyDirectCalls by property(false)
   var completionEnabled by property(true)
   var disabledExtensions by stringSet()
   var activeProviderIdx by property(0)

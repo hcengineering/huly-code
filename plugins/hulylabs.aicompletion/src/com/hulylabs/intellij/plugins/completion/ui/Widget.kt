@@ -7,12 +7,12 @@ import com.hulylabs.intellij.plugins.completion.InlineCompletionProviderRegistry
 import com.hulylabs.intellij.plugins.completion.actions.EnableAction
 import com.hulylabs.intellij.plugins.completion.actions.FileEnableAction
 import com.hulylabs.intellij.plugins.completion.actions.SwitchProviderAction
+import com.hulylabs.intellij.plugins.completion.actions.ToggleDirectCallAction
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupFactory.ActionSelectionAid
@@ -35,7 +35,7 @@ class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
   }
 
   override fun getWidgetState(file: VirtualFile?): WidgetState {
-    if (ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
+    if (CompletionSettings.getInstance().isCompletionEnabled()) {
       val provider = InlineCompletionProviderRegistry.getProvider(project)
       val title = "${provider.name}: ${provider.getStatus()}"
       return WidgetState(title, title, true)
@@ -62,7 +62,8 @@ class Widget(project: Project) : EditorBasedStatusBarPopup(project, false) {
     val actionGroup = DefaultActionGroup()
     val provider = InlineCompletionProviderRegistry.getProvider(project)
     actionGroup.add(EnableAction(project))
-    if (ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
+    if (CompletionSettings.getInstance().isCompletionEnabled()) {
+      actionGroup.add(ToggleDirectCallAction(project))
       actionGroup.add(SwitchProviderAction(project))
       actionGroup.add(Separator())
       val file = this.statusBar?.currentEditor?.invoke()?.file

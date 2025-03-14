@@ -75,10 +75,14 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
   }
 
   override fun isEnabled(event: InlineCompletionEvent): Boolean {
-    if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled()) {
+    var settings = CompletionSettings.getInstance()
+    if (!settings.isCompletionEnabled()) {
       return false
     }
     if (lookupShown) {
+      return false
+    }
+    if (event !is InlineCompletionEvent.DirectCall && settings.state.onlyDirectCalls) {
       return false
     }
     return event is InlineCompletionEvent.DocumentChange

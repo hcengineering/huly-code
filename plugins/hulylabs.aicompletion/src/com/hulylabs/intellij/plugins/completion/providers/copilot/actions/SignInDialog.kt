@@ -26,6 +26,7 @@ class SignInDialog(
     isModal = false
     okAction.putValue(Action.NAME, "Connect to GitHub")
     init()
+    pack()
   }
 
   override fun createActions(): Array<out Action?> {
@@ -101,7 +102,7 @@ class SignInDialog(
 
     gb.apply {
       gridy = 3
-      insets = JBUI.insets(8)
+      insets = JBUI.insets(8, 8, 24, 8)
     }
     val instructionsLabel = JLabel("Paste this code into GitHub after clicking the button below")
     panel.add(instructionsLabel, gb)

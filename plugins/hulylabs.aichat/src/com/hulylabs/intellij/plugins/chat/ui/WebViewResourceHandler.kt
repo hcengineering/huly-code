@@ -114,8 +114,11 @@ class CustomResourceHandler : CefResourceHandler {
       "DEFAULT_LOCAL_VARIABLE" to "--prism-color-variable",
       "DEFAULT_TAG" to "--prism-color-tag",
     )
+    val font = UIManager.getFont("Panel.font")
     val scheme = EditorColorsManager.getInstance().activeVisibleScheme!!
     css.append(":root {\n")
+    css.append("  --text-font-family: \"${font.family}\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto;\n")
+    css.append("  --text-font-size: ${font.size}px;\n")
     css.append("  --inline-code-bg: rgba(127, 127, 127, 0.1);\n")
     css.append("  --text-color-rgb: ${scheme.defaultForeground.red}, ${scheme.defaultForeground.green}, ${scheme.defaultForeground.blue};\n")
     css.append("  --role-user-color: #4caf50;\n")

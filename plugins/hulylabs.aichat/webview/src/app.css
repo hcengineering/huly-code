@@ -1,7 +1,8 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+    font-family: var(--text-font-family);
+    font-size: var(--text-font-size);
     margin: 0;
     padding: 0;
 }

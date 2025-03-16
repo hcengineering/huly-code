@@ -14,15 +14,11 @@ import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-const val LM_STUDIO_DEFAULT_API_URL = "http://localhost:1234/api/v0"
+const val LM_STUDIO_DEFAULT_API_URL = "http://localhost:1234/v1"
 
 @Serializable
-@OptIn(ExperimentalSerializationApi::class)
 data class LMStudioModel(
   val id: String,
-  val type: String,
-  @JsonNames("max_context_length")
-  val maxContextLength: Int,
 )
 
 @Serializable
@@ -84,7 +80,7 @@ object LMStudioService {
     val uri = "${apiUrl}/models"
     val response = HttpRequests.request(uri).accept(HttpRequests.JSON_CONTENT_TYPE).readString()
     val models = json.decodeFromString<LMStudioModels>(response)
-    return models.data.filter { it.type != "embeddings" }
+    return models.data.filter { !it.id.contains("-embeddings-") }
   }
 
   fun loadModel(model: String) {

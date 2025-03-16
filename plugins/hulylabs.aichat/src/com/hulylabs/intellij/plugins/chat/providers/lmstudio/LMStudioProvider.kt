@@ -73,7 +73,7 @@ class LMStudioProvider : LanguageModelProvider {
   }
 
   private fun fetchModels() {
-    val models = LMStudioService.getModels().map { LanguageModel(this@LMStudioProvider, it.id, it.id.take(30), it.maxContextLength) }.sortedBy { it.id }
+    val models = LMStudioService.getModels().map { LanguageModel(this@LMStudioProvider, it.id, it.id.take(30), 0) }.sortedBy { it.id }
     availableModels.clear()
     availableModels.addAll(models)
   }

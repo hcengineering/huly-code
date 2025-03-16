@@ -7,28 +7,16 @@ import com.hulylabs.intellij.plugins.chat.api.LanguageModelProvider
 import com.hulylabs.intellij.plugins.chat.api.SettingsPanel
 import com.hulylabs.intellij.plugins.completion.providers.copilot.AgentStatus
 import com.hulylabs.intellij.plugins.completion.providers.copilot.lsp.AuthStatusKind
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBHtmlPane
-import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.FormBuilder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
-import java.awt.FlowLayout
 import java.util.concurrent.CompletableFuture
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 class CopilotProvider : LanguageModelProvider {
   override val id: String = "copilot"
   override val name: String = "GitHub Copilot"
   override val enabled: Boolean = true
-  private val description = """
-    To use GitHub Copilot in Huly Code Chat, you need to be logged in to GitHub.<br>
-    Note that your GitHub account must have an active Copilot Chat subscription.
-    """
+
   private val scope = MainScope().plus(CoroutineName("Copilot"))
 
   private val providedModels: List<LanguageModel> = listOf(
@@ -107,43 +95,6 @@ class CopilotProvider : LanguageModelProvider {
   }
 
   override fun createSettingsPanel(): SettingsPanel {
-    return object : SettingsPanel {
-      private var authenticateButton: JButton? = null
-      private var statusLabel: JBLabel? = null
-
-      fun updateConnectionStatus(e: Throwable? = null) {
-        authenticateButton?.isVisible = !authenticated
-        statusLabel?.text = if (authenticated) "Authorised" else if (e != null) e.message else "Not authorised"
-        statusLabel?.icon = if (authenticated) AllIcons.General.InspectionsOK else if (e != null) AllIcons.General.InspectionsWarning else AllIcons.General.InspectionsError
-      }
-
-      override fun createComponent(): JComponent? {
-        val descriptionLabel = JBHtmlPane().apply {
-          foreground = JBColor.getColor("Label.infoForeground")
-          background = JBColor.background()
-          text = description
-        }
-        authenticateButton = JButton("Sign In").apply {
-          addActionListener {
-            authenticateButton?.isEnabled = false
-            statusLabel?.text = "Processing..."
-            statusLabel?.icon = AllIcons.General.Web
-            authenticate().whenComplete { v, e ->
-              authenticateButton?.isEnabled = true
-              updateConnectionStatus(e)
-            }
-          }
-        }
-        statusLabel = JBLabel("Authorised")
-        val formBuilder = FormBuilder.createFormBuilder()
-          .addComponent(descriptionLabel)
-          .addComponent(JPanel(FlowLayout(FlowLayout.LEFT)).apply {
-            add(authenticateButton)
-            add(statusLabel)
-          })
-        updateConnectionStatus()
-        return formBuilder.panel
-      }
-    }
+    return CopilotSettingsPanel(this)
   }
 }

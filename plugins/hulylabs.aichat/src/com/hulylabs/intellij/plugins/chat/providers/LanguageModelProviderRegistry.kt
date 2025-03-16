@@ -4,6 +4,7 @@ package com.hulylabs.intellij.plugins.chat.providers
 import com.hulylabs.intellij.plugins.chat.api.LanguageModelProvider
 import com.hulylabs.intellij.plugins.chat.providers.copilot.CopilotProvider
 import com.hulylabs.intellij.plugins.chat.providers.lmstudio.LMStudioProvider
+import com.hulylabs.intellij.plugins.chat.providers.openrouter.OpenRouterProvider
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 
@@ -14,6 +15,7 @@ class LanguageModelProviderRegistry() {
   init {
     providers.add(LMStudioProvider())
     providers.add(CopilotProvider())
+    providers.add(OpenRouterProvider())
   }
 
   fun getProviders(): List<LanguageModelProvider> {

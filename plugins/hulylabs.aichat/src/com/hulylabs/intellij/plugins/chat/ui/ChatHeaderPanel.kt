@@ -67,6 +67,7 @@ class ChatHeaderPanel : JPanel(BorderLayout()) {
 
   fun setTokenCount(used: Int, total: Int) {
     val totalStr = if (total > 1000) "${total / 1000}k" else "$total"
-    tokenCountLabel.text = "$used/$totalStr"
+    val usedStr = if (used > 1000) "${used / 1000}k" else "$used"
+    tokenCountLabel.text = "$usedStr/$totalStr"
   }
 }

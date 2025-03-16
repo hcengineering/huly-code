@@ -11,7 +11,7 @@ class ChatSettings : SimplePersistentStateComponent<SettingsState>(SettingsState
   var activeLanguageModel: LanguageModel?
     get() {
       val id = state.activeLanguageModelId ?: return null
-      val (providerId, modelId) = id.split(':')
+      val (providerId, modelId) = id.split(':', limit = 2)
       val provider = LanguageModelProviderRegistry.getInstance().getProvider(providerId)
       return provider?.providedModels()?.find { it.id == modelId }
     }
@@ -28,4 +28,5 @@ class ChatSettings : SimplePersistentStateComponent<SettingsState>(SettingsState
 class SettingsState : BaseState() {
   var activeLanguageModelId by string(null)
   var lmsBaseUrl by string(null)
+  var openRoutersModels by stringSet()
 }

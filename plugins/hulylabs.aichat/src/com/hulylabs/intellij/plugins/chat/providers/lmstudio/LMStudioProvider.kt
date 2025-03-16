@@ -5,33 +5,15 @@ import com.hulylabs.intellij.plugins.chat.api.ChatMessage
 import com.hulylabs.intellij.plugins.chat.api.LanguageModel
 import com.hulylabs.intellij.plugins.chat.api.LanguageModelProvider
 import com.hulylabs.intellij.plugins.chat.api.SettingsPanel
-import com.hulylabs.intellij.plugins.chat.settings.ChatSettings
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.ui.setEmptyState
-import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBHtmlPane
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTextField
-import com.intellij.util.ui.FormBuilder
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
-import java.awt.FlowLayout
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 class LMStudioProvider : LanguageModelProvider {
   override val id: String = "lmstudio"
   override val name: String = "LM Studio"
   override val enabled: Boolean = true
-
-  private val description = """
-    Run local LLMs. <br>
-    To use LM Studio, you need to install the <a href="https://lmstudio.ai">LM Studio</a> and add at least one model.<br>
-    To get a model, you can run the following command in the terminal: <code>lms get qwen-2.5-coder-7b</code>
-  """
 
   private val availableModels = Collections.synchronizedList(mutableListOf<LanguageModel>())
   private val scope = MainScope().plus(CoroutineName("LMStudio"))
@@ -87,65 +69,7 @@ class LMStudioProvider : LanguageModelProvider {
   }
 
   override fun createSettingsPanel(): SettingsPanel {
-    return object : SettingsPanel {
-      private var baseUrlField: JBTextField? = null
-      private var connectButton: JButton? = null
-      private var statusLabel: JBLabel? = null
-
-      fun updateConnectionStatus() {
-        connectButton?.isVisible = !authenticated
-        statusLabel?.text = if (authenticated) "Connected" else "Not connected"
-        statusLabel?.icon = if (authenticated) AllIcons.General.InspectionsOK else AllIcons.General.InspectionsWarning
-      }
-
-      override fun reset() {
-        baseUrlField?.text = ChatSettings.getInstance().state.lmsBaseUrl
-      }
-
-      override fun apply() {
-        ChatSettings.getInstance().state.lmsBaseUrl = baseUrlField?.text
-      }
-
-      override fun isModified(): Boolean {
-        return baseUrlField?.text != ChatSettings.getInstance().state.lmsBaseUrl
-      }
-
-      override fun createComponent(): JComponent? {
-        val descriptionLabel = JBHtmlPane().apply {
-          foreground = JBColor.getColor("Label.infoForeground")
-          background = JBColor.background()
-          text = description
-        }
-        baseUrlField = JBTextField().apply {
-          text = ChatSettings.getInstance().state.lmsBaseUrl
-          setEmptyState(LM_STUDIO_DEFAULT_API_URL)
-        }
-
-        connectButton = JButton("Reconnect").apply {
-          addActionListener {
-            authenticate().whenComplete { v, e ->
-              updateConnectionStatus()
-              if (e != null) {
-                statusLabel?.text = e.message
-              }
-            }
-          }
-        }
-
-        statusLabel = JBLabel("Connected")
-        statusLabel!!.icon = AllIcons.General.InspectionsOK
-
-        val formBuilder = FormBuilder.createFormBuilder()
-          .addComponent(descriptionLabel)
-          .addLabeledComponent("Base URL:", baseUrlField!!)
-          .addComponent(JPanel(FlowLayout(FlowLayout.LEFT)).apply {
-            add(connectButton)
-            add(statusLabel)
-          })
-        updateConnectionStatus()
-        return formBuilder.panel
-      }
-    }
+    return LMStudioSettingsPanel(this)
   }
 
   private fun fetchModels() {

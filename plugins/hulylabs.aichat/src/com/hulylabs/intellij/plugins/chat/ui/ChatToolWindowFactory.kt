@@ -8,7 +8,10 @@ import com.hulylabs.intellij.plugins.chat.actions.SettingsAction
 import com.hulylabs.intellij.plugins.chat.api.ChatMessage
 import com.hulylabs.intellij.plugins.chat.settings.ChatHistory
 import com.hulylabs.intellij.plugins.chat.settings.ChatSettings
+import com.intellij.ide.ui.LafManager
+import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
@@ -160,6 +163,13 @@ class ChatToolWindowFactory : ToolWindowFactory {
         loadHistory(ChatHistory.getInstance().currentConversationId)
       }
     }, browser.cefBrowser)
+    ApplicationManager.getApplication().messageBus
+      .connect(toolWindow.disposable)
+      .subscribe(LafManagerListener.TOPIC, object : LafManagerListener {
+        override fun lookAndFeelChanged(source: LafManager) {
+          reloadStyles()
+        }
+      })
   }
 
   private fun loadHistory(conversationId: Long) {
@@ -194,6 +204,19 @@ class ChatToolWindowFactory : ToolWindowFactory {
     """.trimIndent()
     LOG.info("sendToWebView $js")
     browser.cefBrowser.executeJavaScript(js, browser.cefBrowser.url, 0)
+  }
+
+  private fun reloadStyles() {
+    browser.cefBrowser.executeJavaScript("""
+      document.querySelectorAll("link[rel=stylesheet]").forEach(
+        link => {
+          if (link.href.startsWith("http://hulychat/hulycode.css")) { 
+            console.log(link.href); 
+            link.href = link.href.replace(/\?.*|$\{'$'\}/, "?" + Date.now());
+          }
+        }
+      )
+    """.trimIndent(), browser.cefBrowser.url, 0)
   }
 
   private fun postNewMessage(message: ChatMessage, systemMessage: ChatMessage) {

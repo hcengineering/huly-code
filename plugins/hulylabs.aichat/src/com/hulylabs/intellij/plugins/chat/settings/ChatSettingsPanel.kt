@@ -9,7 +9,6 @@ import java.awt.BorderLayout
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 
 class ChatSettingsPanel : JPanel(BorderLayout()) {
   private val providerPanels = mutableMapOf<String, SettingsPanel>()
@@ -26,7 +25,7 @@ class ChatSettingsPanel : JPanel(BorderLayout()) {
       providerPanels[provider.id] = providerSettingsPanel
       val providerPanel = JPanel(BorderLayout()).apply {
         alignmentX = LEFT_ALIGNMENT
-        border = IdeBorderFactory.createTitledBorder(provider.name, false)
+        border = IdeBorderFactory.createTitledBorder(provider.name, true)
       }
       providerPanel.add(providerSettingsPanel.createComponent()!!, BorderLayout.CENTER)
       mainPanel.add(providerPanel)
@@ -36,10 +35,7 @@ class ChatSettingsPanel : JPanel(BorderLayout()) {
     val wrapperPanel = JPanel(BorderLayout()).apply {
       add(mainPanel, BorderLayout.NORTH)
     }
-
-    add(JScrollPane(wrapperPanel).apply {
-      border = JBUI.Borders.empty()
-    }, BorderLayout.CENTER)
+    add(wrapperPanel, BorderLayout.CENTER)
   }
 
   fun isModified(): Boolean {

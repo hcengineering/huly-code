@@ -97,8 +97,8 @@ class CustomResourceHandler : CefResourceHandler {
   private fun generateIdeCss(): String {
     val css = StringBuilder()
     val themeToCssMap = mutableMapOf<String, String>(
-      "Editor.background" to "--bg-color",
-      "Editor.foreground" to "--text-color",
+      "TextPane.background" to "--bg-color",
+      "TextPane.foreground" to "--text-color",
       "Button.default.focusColor" to "--component-focus-color",
       "Component.borderColor" to "--component-border-color",
     )
@@ -117,7 +117,7 @@ class CustomResourceHandler : CefResourceHandler {
     val font = UIManager.getFont("Panel.font")
     val scheme = EditorColorsManager.getInstance().activeVisibleScheme!!
     css.append(":root {\n")
-    css.append("  --text-font-family: \"${font.family}\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto;\n")
+    css.append("  --text-font-family: \"${font.family}\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Noto Sans\", \"Ubuntu Sans\", \"Liberation Sans\";\n")
     css.append("  --text-font-size: ${font.size}px;\n")
     css.append("  --inline-code-bg: rgba(127, 127, 127, 0.1);\n")
     css.append("  --text-color-rgb: ${scheme.defaultForeground.red}, ${scheme.defaultForeground.green}, ${scheme.defaultForeground.blue};\n")

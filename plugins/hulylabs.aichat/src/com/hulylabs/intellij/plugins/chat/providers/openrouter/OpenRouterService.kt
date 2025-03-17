@@ -6,6 +6,7 @@ import com.hulylabs.intellij.plugins.chat.api.LanguageModel
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.generateServiceName
 import com.intellij.ide.passwordSafe.PasswordSafe
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -17,6 +18,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.nio.file.Files
+import kotlin.io.path.createDirectories
+import kotlin.io.path.notExists
 
 
 private const val OPEN_ROUTER_API_URL = "https://openrouter.ai/api/v1"
@@ -60,14 +63,16 @@ class OpenRouterService {
   }
 
   init {
-    scope.launch {
-      withContext(Dispatchers.IO) {
-        loadModels()
-        val passwordSafe = PasswordSafe.Companion.instance
-        val attributes = CredentialAttributes(
-          generateServiceName("HulyChat", "OpenRouterApiKey")
-        )
-        apiKey = passwordSafe.getPassword(attributes)
+    if (!ApplicationManager.getApplication().isHeadlessEnvironment) {
+      scope.launch {
+        withContext(Dispatchers.IO) {
+          loadModels()
+          val passwordSafe = PasswordSafe.Companion.instance
+          val attributes = CredentialAttributes(
+            generateServiceName("HulyChat", "OpenRouterApiKey")
+          )
+          apiKey = passwordSafe.getPassword(attributes)
+        }
       }
     }
   }
@@ -90,6 +95,10 @@ class OpenRouterService {
       val response = HttpRequests.request(uri).accept(HttpRequests.JSON_CONTENT_TYPE).readString()
       val modelsJson: JsonElement = json.decodeFromString(response)
       models.addAll(json.decodeFromJsonElement<List<OpenRouterModel>>(modelsJson.jsonObject["data"]!!))
+      val dir = MODELS_CACHE_FILE.parent
+      if (dir.notExists()) {
+        dir.createDirectories()
+      }
       MODELS_CACHE_FILE.toFile().writeText(json.encodeToString(models), Charsets.UTF_8)
     }
   }

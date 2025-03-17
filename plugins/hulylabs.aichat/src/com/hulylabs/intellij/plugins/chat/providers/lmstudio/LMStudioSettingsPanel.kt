@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
+import kotlinx.coroutines.*
 import java.awt.FlowLayout
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -25,6 +26,7 @@ class LMStudioSettingsPanel(val provider: LMStudioProvider) : SettingsPanel {
     To use LM Studio, you need to install the <a href="https://lmstudio.ai">LM Studio</a> and add at least one model.<br>
     To get a model, you can run the following command in the terminal: <code>lms get qwen-2.5-coder-7b</code>
   """
+  private val scope = MainScope().plus(CoroutineName("LMStudioSettings"))
 
   fun updateConnectionStatus() {
     connectButton?.isVisible = !provider.authenticated
@@ -60,10 +62,18 @@ class LMStudioSettingsPanel(val provider: LMStudioProvider) : SettingsPanel {
 
     connectButton = JButton("Reconnect").apply {
       addActionListener {
-        provider.authenticate().whenComplete { v, e ->
-          updateConnectionStatus()
-          if (e != null) {
-            statusLabel?.text = e.message
+        scope.launch {
+          withContext(Dispatchers.IO) {
+            connectButton?.isEnabled = false
+            try {
+              val baseUrl = if (baseUrlField?.text.isNullOrEmpty()) LM_STUDIO_DEFAULT_API_URL else baseUrlField?.text
+              provider.fetchModels(baseUrl)
+              updateConnectionStatus()
+            }
+            catch (e: Exception) {
+              statusLabel?.text = e.message
+            }
+            connectButton?.isEnabled = true
           }
         }
       }

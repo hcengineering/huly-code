@@ -76,8 +76,8 @@ object LMStudioService {
       return ChatSettings.getInstance().state.lmsBaseUrl ?: LM_STUDIO_DEFAULT_API_URL
     }
 
-  fun getModels(): List<LMStudioModel> {
-    val uri = "${apiUrl}/models"
+  fun getModels(customApiUrl: String? = null): List<LMStudioModel> {
+    val uri = "${customApiUrl ?: apiUrl}/models"
     val response = HttpRequests.request(uri).accept(HttpRequests.JSON_CONTENT_TYPE).readString()
     val models = json.decodeFromString<LMStudioModels>(response)
     return models.data.filter { !it.id.contains("-embeddings-") }

@@ -55,15 +55,6 @@
       id="LSPDocumentSymbolStructureViewFactoryForTextMate"
       language="TreeSitter"
       implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
-    <lang.foldingBuilder
-      id="LSPFoldingBuilderForTextMate"
-      language="TreeSitter"
-      implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
-      order="first"/>
-    <codeBlockProvider
-      language="TreeSitter"
-      implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPCodeBlockProvider"
-      order="first"/>
     <codeInsight.parameterInfo
       id="LSPParameterInfoHandlerForTextMate"
       language="TreeSitter"

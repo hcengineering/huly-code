@@ -82,6 +82,7 @@ class ChatToolWindowFactory : ToolWindowFactory {
     val postMessageQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     val setRoleQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     val copyCodeQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    val cancelProcessingQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     postMessageQuery.addHandler(Function { msg: String? ->
       LOG.info("postMessageQuery $msg")
       msg?.let {
@@ -112,6 +113,7 @@ class ChatToolWindowFactory : ToolWindowFactory {
               LOG.warn(e)
               postSystemMessage("Provider Error: ${e.message}", "assistant", true)
             }
+            postProcessCompleted()
             messages.add(systemMessage)
             ChatHistory.getInstance().updateConversationMessages(messages)
           }
@@ -133,6 +135,11 @@ class ChatToolWindowFactory : ToolWindowFactory {
       msg?.let {
         CopyPasteManager.copyTextToClipboard(msg)
       }
+      null
+    })
+    cancelProcessingQuery.addHandler(Function { msg: String? ->
+      val model = ChatSettings.getInstance().activeLanguageModel
+      model?.provider?.cancelProcessing()
       null
     })
 
@@ -158,6 +165,9 @@ class ChatToolWindowFactory : ToolWindowFactory {
           window.hulyChat.copyCode = function(text) {
             ${copyCodeQuery.inject("text")}
             return Promise.resolve();
+          };
+          window.hulyChat.cancelProcessing = function() {
+            ${cancelProcessingQuery.inject(null)}
           };
         """, browser.url, 0)
         loadHistory(ChatHistory.getInstance().currentConversationId)
@@ -211,7 +221,6 @@ class ChatToolWindowFactory : ToolWindowFactory {
       document.querySelectorAll("link[rel=stylesheet]").forEach(
         link => {
           if (link.href.startsWith("http://hulychat/hulycode.css")) { 
-            console.log(link.href); 
             link.href = link.href.replace(/\?.*|$\{'$'\}/, "?" + Date.now());
           }
         }
@@ -227,6 +236,10 @@ class ChatToolWindowFactory : ToolWindowFactory {
 
   private fun postNewChat() {
     sendToWebView("new-chat")
+  }
+
+  private fun postProcessCompleted() {
+    sendToWebView("process-completed")
   }
 
   private fun postAddLoadedMessage(message: ChatMessage) {

@@ -79,8 +79,17 @@
     setTimeout(scrollToBottom, 0);
   }
 
+  export function processCompleted() {
+    chatInput.setProcessing(false);
+  }
+
   function handleMessage(message: { content: string; role: string }) {
-    window.hulyChat.postMessage(message);
+    chatInput.setProcessing(true);
+    if (message.role == null) {
+      window.hulyChat.cancelProcessing();
+    } else {
+      window.hulyChat.postMessage(message);
+    }
   }
 
   function handleChangeRole(message: Message) {
@@ -101,6 +110,28 @@
 
   function formatText(text: string) {
     try {
+      let thinkIndex = text.indexOf("<think>");
+      if (thinkIndex !== -1) {
+        let endIndex = text.indexOf("</think>", thinkIndex);
+        if (endIndex === -1) endIndex = text.length;
+
+        const beforeThink = text.substring(0, thinkIndex);
+        const thinkContent = text.substring(thinkIndex + 7, endIndex);
+        const afterThink = endIndex < text.length - 8 ? text.substring(endIndex + 8) : "";
+
+        const id = `think-${Math.random().toString(36).substr(2, 9)}`;
+
+        return (
+          marked.parse(beforeThink) +
+          `<details class="collapsible-block" id="${id}">
+          <summary>Thinking...</summary>
+          <div class="collapsible-content">
+            ${marked.parse(thinkContent)}
+          </div>
+        </details>` +
+          marked.parse(afterThink)
+        );
+      }
       return marked.parse(text);
     } catch (e) {
       console.error("Markdown parsing error:", e);
@@ -114,7 +145,15 @@
       addLoadedMessage,
       addNewUserMessage,
       updateMessage,
+      processCompleted,
     });
+
+    window.toggleCollapsible = (id: string) => {
+      const details = document.getElementById(id) as any;
+      if (details) {
+        details.open = !details.open;
+      }
+    };
 
     window.copyCode = (id: string) => {
       const codeElement = document.getElementById(id);
@@ -409,6 +448,30 @@
     padding: 0.2em 0.4em;
     border-radius: 3px;
     background: var(--inline-code-bg);
+  }
+
+  .message-content :global(.collapsible-block) {
+    border: 1px solid var(--component-border-color);
+    border-radius: 4px;
+    margin: 1em 0;
+    overflow: hidden;
+  }
+
+  .message-content :global(.collapsible-block summary) {
+    padding: 0.75em 1em;
+    background-color: rgba(var(--text-color-rgb), 0.05);
+    cursor: pointer;
+    font-weight: 500;
+    user-select: none;
+  }
+
+  .message-content :global(.collapsible-block summary:hover) {
+    background-color: rgba(var(--text-color-rgb), 0.1);
+  }
+
+  .message-content :global(.collapsible-content) {
+    padding: 0.75em 1em;
+    border-top: 1px solid var(--component-border-color);
   }
 
   /* Basic markdown styles */

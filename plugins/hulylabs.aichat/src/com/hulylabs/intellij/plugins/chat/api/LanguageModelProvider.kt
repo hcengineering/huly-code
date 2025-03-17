@@ -17,4 +17,5 @@ interface LanguageModelProvider {
   suspend fun sendChatRequest(model: LanguageModel,request: List<ChatMessage>): Flow<ChatMessage>
 
   fun createSettingsPanel(): SettingsPanel
+  fun cancelProcessing()
 }

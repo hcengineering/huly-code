@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.util.concurrent.atomic.AtomicBoolean
 
 const val LM_STUDIO_DEFAULT_API_URL = "http://localhost:1234/v1"
 
@@ -66,15 +67,17 @@ data class LMStudioChoiceDelta(
   val finishReason: String? = null,
 )
 
-object LMStudioService {
-  val json = Json {
+class LMStudioService {
+  private val json = Json {
     ignoreUnknownKeys = true
   }
 
-  val apiUrl: String
+  private val apiUrl: String
     get() {
       return ChatSettings.getInstance().state.lmsBaseUrl ?: LM_STUDIO_DEFAULT_API_URL
     }
+
+  private val processingCancelled = AtomicBoolean(false)
 
   fun getModels(customApiUrl: String? = null): List<LMStudioModel> {
     val uri = "${customApiUrl ?: apiUrl}/models"
@@ -109,6 +112,7 @@ object LMStudioService {
     val uri = "${apiUrl}/chat/completions"
     val request = LMStudioChatRequest(model, messages.map { LMStudioChatMessage(it.role, it.content) }, true, -1, emptyList(), 0.0f, emptyList())
     val jsonRequest = json.encodeToString(request)
+    processingCancelled.set(false)
     return callbackFlow {
       HttpRequests
         .post(uri, HttpRequests.JSON_CONTENT_TYPE)
@@ -118,6 +122,9 @@ object LMStudioService {
         .connect { request ->
           request.write(jsonRequest)
           for (line in request.reader.lines()) {
+            if (processingCancelled.get()) {
+              break
+            }
             val line = line.removePrefix("data: ")
             if (line.isEmpty()) {
               continue
@@ -140,5 +147,9 @@ object LMStudioService {
           close()
         }
     }
+  }
+
+  fun cancelProcessing() {
+    processingCancelled.set(true)
   }
 }

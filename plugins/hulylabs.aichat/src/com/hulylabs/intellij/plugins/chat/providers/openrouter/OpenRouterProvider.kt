@@ -31,6 +31,10 @@ class OpenRouterProvider : LanguageModelProvider {
     return OpenRouterService.getInstance().sendChatRequest(model, request)
   }
 
+  override fun cancelProcessing() {
+    OpenRouterService.getInstance().cancelProcessing()
+  }
+
   override fun loadModel(model: LanguageModel) {
     // not used
   }

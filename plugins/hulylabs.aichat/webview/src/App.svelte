@@ -21,6 +21,9 @@
       case "add-loaded-message":
         chatWindow.addLoadedMessage(msg.message);
         break;
+      case "process-completed":
+        chatWindow.processCompleted();
+        break;
       default:
         break;
     }

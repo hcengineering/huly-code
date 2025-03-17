@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.createDirectories
 import kotlin.io.path.notExists
 
@@ -57,6 +58,7 @@ class OpenRouterService {
   private val scope = MainScope().plus(CoroutineName("OpenRouter"))
   private var apiKey: String? = null
   private var tokensCount = 0
+  private val processingCancelled = AtomicBoolean(false)
 
   val json = Json {
     ignoreUnknownKeys = true
@@ -111,6 +113,7 @@ class OpenRouterService {
     val uri = "${OPEN_ROUTER_API_URL}/chat/completions"
     val request = OpenRouterChatRequest(model.id, messages.map { OpenRouterChatMessage(it.role, it.content) }, true)
     val jsonRequest = json.encodeToString(request)
+    processingCancelled.set(false)
     return callbackFlow {
       HttpRequests
         .post(uri, HttpRequests.JSON_CONTENT_TYPE)
@@ -125,6 +128,9 @@ class OpenRouterService {
         .connect { request ->
           request.write(jsonRequest)
           for (line in request.reader.lines()) {
+            if (processingCancelled.get()) {
+              break
+            }
             val line = line.removePrefix("data: ")
             if (line.isEmpty()) {
               continue
@@ -160,6 +166,10 @@ class OpenRouterService {
           close()
         }
     }
+  }
+
+  fun cancelProcessing() {
+    processingCancelled.set(true)
   }
 
   companion object {

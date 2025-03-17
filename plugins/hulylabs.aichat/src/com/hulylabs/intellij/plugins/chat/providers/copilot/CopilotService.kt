@@ -14,6 +14,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import java.io.IOException
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.HttpsURLConnection
 import kotlin.io.path.exists
 import kotlin.io.path.readText
@@ -91,6 +92,7 @@ class CopilotService {
 
   }
   val copilotConfigDirPath: Path
+  val processingCancelled = AtomicBoolean(false)
 
   init {
     if (SystemInfo.isWindows) {
@@ -151,6 +153,7 @@ class CopilotService {
   }
 
   fun sendChatRequest(model: LanguageModel, messages: List<ChatMessage>): Flow<ChatMessage> {
+    processingCancelled.set(false)
     if (apiToken == null || apiToken!!.expiresAt < System.currentTimeMillis() - API_TOKEN_EXPIRE_THRESHOLD_MS) {
       apiToken = requestApiToken()
     }
@@ -181,6 +184,9 @@ class CopilotService {
           }
           if (model.useStreaming) {
             for (line in request.reader.lines()) {
+              if (processingCancelled.get()) {
+                break
+              }
               val line = line.removePrefix("data: ")
               if (line.isEmpty()) {
                 continue
@@ -216,5 +222,9 @@ class CopilotService {
           close()
         }
     }
+  }
+
+  fun cancelProcessing() {
+    processingCancelled.set(true)
   }
 }

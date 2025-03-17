@@ -1,12 +1,9 @@
 <script lang="ts">
   import RoleSelect from "./RoleSelect.svelte";
-  /*
-  const dispatch = createEventDispatcher<{
-    send: { text: string; role: string };
-  }>();
-*/
+
   let text = $state("");
   let role = $state("user");
+  let isProcessing = $state(false);
   let { message } = $props();
   let textarea: HTMLTextAreaElement;
 
@@ -18,13 +15,20 @@
     textarea.focus();
   }
 
+  export function setProcessing(processing: boolean) {
+    isProcessing = processing;
+  }
+
   function handleSubmit() {
-    if (text.trim()) {
+    if (text.trim() && !isProcessing) {
       message({ content: text, role });
-      //$host().dispatchEvent(new CustomEvent({ text, role }));
       text = "";
       textarea.style.height = "auto";
     }
+  }
+
+  function handleCancel() {
+    message({ content: null, role: null });
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -50,23 +54,43 @@
       onkeydown={handleKeydown}
       oninput={adjustHeight}
       rows="1"
+      disabled={isProcessing}
     ></textarea>
-    <button onclick={handleSubmit} class:active={text.trim().length > 0} aria-label="Send message">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <line x1="22" y1="2" x2="11" y2="13"></line>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-      </svg>
-    </button>
+    {#if isProcessing}
+      <button onclick={handleCancel} class="cancel-button" aria-label="Cancel processing">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    {:else}
+      <button onclick={handleSubmit} class:active={text.trim().length > 0} aria-label="Send message">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    {/if}
   </div>
 </div>
 
@@ -139,5 +163,19 @@
   button svg {
     width: 24px;
     height: 24px;
+  }
+
+  textarea:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .cancel-button {
+    color: #dc3545 !important;
+    opacity: 1 !important;
+  }
+
+  .cancel-button:hover {
+    color: #bd2130 !important;
   }
 </style>

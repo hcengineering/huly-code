@@ -17,6 +17,7 @@ class LMStudioProvider : LanguageModelProvider {
 
   private val availableModels = Collections.synchronizedList(mutableListOf<LanguageModel>())
   private val scope = MainScope().plus(CoroutineName("LMStudio"))
+  private val service = LMStudioService()
 
   override val authenticated: Boolean
     get() {
@@ -57,7 +58,7 @@ class LMStudioProvider : LanguageModelProvider {
   }
 
   override fun loadModel(model: LanguageModel) {
-    LMStudioService.loadModel(model.id)
+    service.loadModel(model.id)
   }
 
   override fun getTokenCount(request: List<ChatMessage>): Int {
@@ -65,7 +66,11 @@ class LMStudioProvider : LanguageModelProvider {
   }
 
   override suspend fun sendChatRequest(model: LanguageModel, request: List<ChatMessage>): Flow<ChatMessage> {
-    return LMStudioService.sendChatRequest(model.id, request)
+    return service.sendChatRequest(model.id, request)
+  }
+
+  override fun cancelProcessing() {
+    service.cancelProcessing()
   }
 
   override fun createSettingsPanel(): SettingsPanel {
@@ -73,7 +78,7 @@ class LMStudioProvider : LanguageModelProvider {
   }
 
   fun fetchModels(apiUrl: String? = null) {
-    val models = LMStudioService.getModels(apiUrl).map { LanguageModel(this@LMStudioProvider, it.id, it.id.take(30), 0) }.sortedBy { it.id }
+    val models = service.getModels(apiUrl).map { LanguageModel(this@LMStudioProvider, it.id, it.id.take(30), 0) }.sortedBy { it.id }
     availableModels.clear()
     availableModels.addAll(models)
   }

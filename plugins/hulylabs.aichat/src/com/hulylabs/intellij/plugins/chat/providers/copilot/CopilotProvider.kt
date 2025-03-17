@@ -94,6 +94,10 @@ class CopilotProvider : LanguageModelProvider {
     return copilot.sendChatRequest(model, request)
   }
 
+  override fun cancelProcessing() {
+    copilot.cancelProcessing()
+  }
+
   override fun createSettingsPanel(): SettingsPanel {
     return CopilotSettingsPanel(this)
   }

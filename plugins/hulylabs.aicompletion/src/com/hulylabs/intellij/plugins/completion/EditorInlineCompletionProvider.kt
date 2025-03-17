@@ -19,10 +19,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.swing.JComponent
 import javax.swing.JLabel
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 private val LOG = Logger.getInstance("#hulycode-inline")
 
-class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerListener {
+class EditorInlineCompletionProvider : DebouncedInlineCompletionProvider(), LookupManagerListener {
   var lookupListenerAdded = false
   var lookupShown = false
 
@@ -36,7 +38,11 @@ class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerLi
       }
     }
 
-  override suspend fun getSuggestion(request: InlineCompletionRequest): InlineCompletionSuggestion {
+  override suspend fun getDebounceDelay(request: InlineCompletionRequest): Duration {
+    return 1.seconds
+  }
+
+  override suspend fun getSuggestionDebounced(request: InlineCompletionRequest): InlineCompletionSuggestion {
     LOG.trace("getSuggestion")
     if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(request.editor.virtualFile)) {
       return InlineCompletionSuggestion.Empty

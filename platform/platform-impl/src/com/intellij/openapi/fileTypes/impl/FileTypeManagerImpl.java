@@ -82,7 +82,7 @@ public class FileTypeManagerImpl extends FileTypeManagerEx implements Persistent
   @ApiStatus.Internal
   public static final List<String> DEFAULT_IGNORED = List.of("*.pyc", "*.pyo", "*.rbc", "*.yarb", "*~", ".DS_Store", ".git", ".hg",
                                                       ".mypy_cache", ".pytest_cache", ".ruff_cache",
-                                                      ".svn", "CVS", "__pycache__", "_svn", "vssver.scc", "vssver2.scc");
+                                                      ".svn", "CVS", "__pycache__", "_svn", "node_modules", "vssver.scc", "vssver2.scc");
 
   static final String FILE_SPEC = "filetypes";
   private static final String ELEMENT_EXTENSION_MAP = "extensionMap";

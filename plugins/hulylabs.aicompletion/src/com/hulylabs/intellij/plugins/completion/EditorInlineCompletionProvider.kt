@@ -9,9 +9,7 @@ import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupEvent
 import com.intellij.codeInsight.lookup.LookupListener
 import com.intellij.codeInsight.lookup.LookupManagerListener
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
-import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
@@ -19,12 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.swing.JComponent
 import javax.swing.JLabel
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 private val LOG = Logger.getInstance("#hulycode-inline")
 
-class EditorInlineCompletionProvider : DebouncedInlineCompletionProvider(), LookupManagerListener {
+class EditorInlineCompletionProvider : InlineCompletionProvider, LookupManagerListener {
   var lookupListenerAdded = false
   var lookupShown = false
 
@@ -38,13 +34,9 @@ class EditorInlineCompletionProvider : DebouncedInlineCompletionProvider(), Look
       }
     }
 
-  override suspend fun getDebounceDelay(request: InlineCompletionRequest): Duration {
-    return 1.seconds
-  }
-
-  override suspend fun getSuggestionDebounced(request: InlineCompletionRequest): InlineCompletionSuggestion {
+  override suspend fun getSuggestion(request: InlineCompletionRequest): InlineCompletionSuggestion {
     LOG.trace("getSuggestion")
-    if (!ApplicationManager.getApplication().service<CompletionSettings>().isCompletionEnabled(request.editor.virtualFile)) {
+    if (!CompletionSettings.getInstance().isCompletionEnabled(request.editor.virtualFile)) {
       return InlineCompletionSuggestion.Empty
     }
     if (!lookupListenerAdded && request.editor.project != null) {
@@ -95,6 +87,7 @@ class EditorInlineCompletionProvider : DebouncedInlineCompletionProvider(), Look
            || event is InlineCompletionEvent.LookupCancelled
            || event is InlineCompletionEvent.DirectCall
            || event is InlineCompletionEvent.SuggestionInserted
+           || event is InlineCompletionEvent.Backspace
   }
 
   override fun activeLookupChanged(oldLookup: Lookup?, newLookup: Lookup?) {

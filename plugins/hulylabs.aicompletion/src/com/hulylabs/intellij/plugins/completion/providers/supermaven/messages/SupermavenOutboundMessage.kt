@@ -17,6 +17,12 @@ sealed class SupermavenOutboundMessage
 sealed class StateUpdateMessage
 
 @Serializable
+@SerialName("inform_file_changed")
+data class SupermavenInformFileChangedMessage(
+  val path: String,
+) : SupermavenOutboundMessage()
+
+@Serializable
 @SerialName("state_update")
 data class SupermavenStateUpdateMessage(
   val newId: String,

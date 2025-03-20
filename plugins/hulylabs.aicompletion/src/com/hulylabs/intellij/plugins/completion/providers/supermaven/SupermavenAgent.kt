@@ -4,6 +4,7 @@ package com.hulylabs.intellij.plugins.completion.providers.supermaven
 import com.hulylabs.intellij.plugins.completion.CompletionProviderStateChangedListener
 import com.hulylabs.intellij.plugins.completion.providers.supermaven.messages.*
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -21,16 +22,8 @@ import kotlin.concurrent.thread
 
 private val LOG = Logger.getInstance("#supermaven.agent")
 
-data class SupermavenCompletionState(
-  val path: String,
-  val prefixOffset: Int,
-  var chunks: List<String> = listOf(),
-  var dedent: String = "",
-  var end: Boolean = false,
-)
-
 enum class SupermavenAccountStatus {
-  UNKNOWN, NEEDS_ACTIVATION, READY;
+  UNKNOWN, NEEDS_ACTIVATION, CONNECTING, READY;
 }
 
 private const val SM_MESSAGE_PREFIX = "SM-MESSAGE"
@@ -47,18 +40,21 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
 
   private val json = Json {
     ignoreUnknownKeys = true
+    coerceInputValues = true
   }
 
   internal val states: TreeMap<Long, SupermavenCompletionState> = TreeMap()
   internal var accountStatus: SupermavenAccountStatus = SupermavenAccountStatus.UNKNOWN
+  internal var dustStrings: List<String> = emptyList()
   internal var serviceTier: String? = null
+  internal var repoName: String? = null
   internal var activationUrl: String? = null
   internal var newStateId = 1L
 
   init {
     val processBuilder = ProcessBuilder(agentPath.toString(), "stdio")
     if (LOG.isDebugEnabled) {
-      val logPath = agentPath.parent.resolve("sm-agent.log")
+      val logPath = PathManager.getLogDir().resolve("sm-agent-${System.currentTimeMillis()}.log")
       try {
         Files.deleteIfExists(logPath)
       }
@@ -75,6 +71,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
       while (true) {
         val msg = outputMessages.take()
         try {
+          LOG.trace("sending message: ${json.encodeToString(msg)}")
           stdin.write(json.encodeToString(msg) + '\n')
           stdin.flush()
         }
@@ -93,10 +90,11 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
           break
         }
         if (str == null) {
-          Thread.sleep(10)
+          Thread.sleep(100)
           continue
         }
         var line = str
+        LOG.trace("received message: $line")
         if (!line.startsWith(SM_MESSAGE_PREFIX)) {
           LOG.warn("stdout: $line")
           continue
@@ -119,7 +117,7 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
           break
         }
         if (str == null) {
-          Thread.sleep(10)
+          Thread.sleep(100)
           continue
         }
         LOG.warn("stderr: ${str}")
@@ -137,7 +135,10 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         Thread.sleep(50)
       }
     }
-    accountStatus = SupermavenAccountStatus.READY
+    accountStatus = SupermavenAccountStatus.CONNECTING
+    send(SupermavenGreetingsMessage(SupermavenSettings.getInstance().state.gitignoreAllowed))
+    send(SupermavenStateUpdateMessage(newId = "0", updates = listOf(FileUpdateMessage(path = "/dummy", content = "dummy"),
+                                                                    CursorPositionUpdateMessage(path = "/dummy", offset = 0))))
   }
 
   fun drainOutput() {
@@ -152,16 +153,21 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
       is SupermavenResponseMessage -> {
         states[message.stateId.toLong()]?.apply {
           message.items?.forEach { item ->
-            if (!end) {
-              when (item.kind) {
-                ResponseItemKind.TEXT -> chunks += item.text
-                ResponseItemKind.DEDENT -> dedent += item.text
-                ResponseItemKind.END -> end = true
-                ResponseItemKind.BARRIER -> end = true
-                else -> {}
-              }
+            completion += item
+            if (item.kind == ResponseItemKind.END
+                || item.kind == ResponseItemKind.BARRIER
+                || item.kind == ResponseItemKind.FINISH_EDIT) {
+              end = true
             }
           }
+        }
+      }
+      is SupermavenConnectionStatus -> {
+        accountStatus = if (message.isConnected) {
+          SupermavenAccountStatus.READY
+        }
+        else {
+          SupermavenAccountStatus.CONNECTING
         }
       }
       is SupermavenActivationRequestMessage -> {
@@ -184,20 +190,24 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
         serviceTier = message.serviceTier
         accountStatus = SupermavenAccountStatus.READY
       }
+      is SupermavenUserStatus -> {
+        serviceTier = message.tier
+        accountStatus = SupermavenAccountStatus.READY
+      }
+      is SupermavenActiveRepo -> {
+        repoName = message.displayText
+      }
       is SupermavenPassthroughMessage -> {
         handleMessage(message.passthrough)
       }
       is SupermavenMetadataMessage -> {
-        // begin communication with agent
-        ApplicationManager.getApplication()?.invokeLater {
-          val settings = ApplicationManager.getApplication().service<SupermavenSettings>()
-          send(SupermavenGreetingsMessage(settings.state.gitignoreAllowed))
-          // send dummy update to start communication
-          send(SupermavenStateUpdateMessage(newId = "0", updates = listOf(FileUpdateMessage(path = "/dummy", content = "dummy"),
-                                                                          CursorPositionUpdateMessage(path = "/dummy", offset = 0))))
-        }
+        dustStrings = message.dustStrings
       }
       is SupermavenSetMessage -> {
+        LOG.info("set ${message.key} ${message.value}")
+      }
+      is SupermavenSetV2Message -> {
+        LOG.info("setV2 ${message.key} ${message.value}")
       }
       else -> {
         LOG.warn("unhandled message: $message")
@@ -208,10 +218,10 @@ class SupermavenAgent(val project: Project, agentPath: Path) {
     }
   }
 
-  fun newCompletionState(path: String, cursorOffset: Int) {
+  fun newCompletionState(path: String, prefix: String) {
     newStateId++
-    states[newStateId] = SupermavenCompletionState(path, cursorOffset)
-    if (states.size > 1000) {
+    states[newStateId] = SupermavenCompletionState(path, prefix)
+    if (states.size > 50) {
       states.remove(states.firstKey())
     }
   }

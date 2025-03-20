@@ -1,4 +1,6 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package com.hulylabs.intellij.plugins.completion.providers.supermaven.messages
 
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -7,7 +9,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 
-@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("kind")
 sealed class SupermavenMessage
@@ -21,15 +22,15 @@ data class SupermavenResponseMessage(
 ) : SupermavenMessage()
 
 @Serializable
-data class ResponseItem(val kind: ResponseItemKind, val text: String)
+data class ResponseItem(val kind: ResponseItemKind, val text: String? = null)
 
 @Serializable
 enum class ResponseItemKind {
   @SerialName("text")
   TEXT,
 
-  @SerialName("del")
-  DEL,
+  @SerialName("delete")
+  DELETE,
 
   @SerialName("dedent")
   DEDENT,
@@ -38,13 +39,51 @@ enum class ResponseItemKind {
   END,
 
   @SerialName("barrier")
-  BARRIER;
+  BARRIER,
+
+  @SerialName("skip")
+  SKIP,
+
+  @SerialName("jump")
+  JUMP,
+
+  @SerialName("finish_edit")
+  FINISH_EDIT,
 }
 
 @Serializable
 @SerialName("metadata")
 data class SupermavenMetadataMessage(
   val dustStrings: List<String>,
+) : SupermavenMessage()
+
+@Serializable
+@SerialName("connection_status")
+data class SupermavenConnectionStatus(
+  @SerialName("is_connected")
+  val isConnected: Boolean,
+  @SerialName("status_text")
+  val statusText: String?,
+) : SupermavenMessage()
+
+@Serializable
+@SerialName("user_status")
+data class SupermavenUserStatus(
+  val tier: String,
+  val email: String?,
+) : SupermavenMessage()
+
+@Serializable
+@SerialName("active_repo")
+data class SupermavenActiveRepo(
+  @SerialName("display_text")
+  val displayText: String?,
+  @SerialName("commit_hash")
+  val commitHash: String? = null,
+  @SerialName("repo_display_name")
+  val repoDisplayName: String? = null,
+  @SerialName("tooltip_text")
+  val tooltipText: String? = null,
 ) : SupermavenMessage()
 
 @Serializable
@@ -105,28 +144,25 @@ enum class TaskStatusKind {
 @SerialName("task_status")
 data class SupermavenTaskStatusMessage(
   val task: String,
-  @SerialName("percent_complete")
   val percentComplete: Float?,
   val status: TaskStatusKind,
 ) : SupermavenMessage()
 
 @Serializable
-@SerialName("active_repo")
-data class SupermavenActiveRepoMessage(
-  @SerialName("repo_simple_name")
-  val repoSimpleName: String?,
-) : SupermavenMessage()
-
-@Serializable
 @SerialName("service_tier")
 data class SupermavenServiceTierMessage(
-  @SerialName("service_tier")
   val serviceTier: String,
 ) : SupermavenMessage()
 
 @Serializable
 @SerialName("set")
 data class SupermavenSetMessage(
+  val key: String,
+  val value: JsonElement,
+) : SupermavenMessage()@Serializable
+
+@SerialName("set_v2")
+data class SupermavenSetV2Message(
   val key: String,
   val value: JsonElement,
 ) : SupermavenMessage()

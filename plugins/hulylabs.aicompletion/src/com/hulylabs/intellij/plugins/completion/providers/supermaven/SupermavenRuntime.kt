@@ -20,10 +20,11 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-private val supermavenDirectory = Path.of(PathManager.getConfigPath(), "supermaven")
+private val supermavenDirectory = PathManager.getSystemDir().resolve("supermaven")
 private val LOG = Logger.getInstance("#supermaven.runtime")
 
 private const val WEEK_PERIOD_IN_MILLIS = 1000 * 60 * 60 * 24 * 7
+private const val FORCE_CHECK_VERSION = 1
 
 class SupermavenRuntime {
 
@@ -33,7 +34,7 @@ class SupermavenRuntime {
   @Throws(IOException::class)
   private suspend fun getDownloadInfo(project: Project, platform: String, arch: String): SupermavenDownloadInfo {
     return withBackgroundProgress(project, "Retrieve Supermaven agent download URL", false) {
-      val url = "https://supermaven.com/api/download-path?platform=${platform}&arch=${arch}"
+      val url = "https://supermaven.com/api/download-path-v2?platform=${platform}&arch=${arch}&editor=hulycode"
       val response = try {
         LOG.info("requesting $url")
         HttpRequests.request(url).readString()
@@ -64,9 +65,11 @@ class SupermavenRuntime {
       throw IOException("Unsupported architecture")
     }
     var settings = ApplicationManager.getApplication().service<SupermavenSettings>()
-    if (settings.state.agentVersionLastCheckTime + WEEK_PERIOD_IN_MILLIS < System.currentTimeMillis()) {
+    if (settings.state.agentVersionLastCheckTime + WEEK_PERIOD_IN_MILLIS < System.currentTimeMillis()
+        || settings.state.forceCheckVersion != FORCE_CHECK_VERSION) {
       LOG.info("Checking for new Supermaven Agent version")
       val info = getDownloadInfo(project, platform, arch)
+      settings.state.forceCheckVersion = FORCE_CHECK_VERSION
       settings.state.agentVersion = info.version
       settings.state.agentDownloadUrl = info.downloadUrl
       settings.state.agentVersionLastCheckTime = System.currentTimeMillis()

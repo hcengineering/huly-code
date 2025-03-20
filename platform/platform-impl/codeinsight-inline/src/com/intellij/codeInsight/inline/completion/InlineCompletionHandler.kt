@@ -2,6 +2,7 @@
 package com.intellij.codeInsight.inline.completion
 
 import com.intellij.codeInsight.inline.completion.elements.InlineCompletionElement
+import com.intellij.codeInsight.inline.completion.elements.InlineCompletionReplaceElement
 import com.intellij.codeInsight.inline.completion.listeners.InlineSessionWiseCaretListener
 import com.intellij.codeInsight.inline.completion.listeners.typing.InlineCompletionDocumentChangesTrackerImpl
 import com.intellij.codeInsight.inline.completion.logs.InlineCompletionLogsListener
@@ -209,8 +210,14 @@ abstract class InlineCompletionHandler @ApiStatus.Internal constructor(
     context.copyUserDataTo(insertEnvironment)
     hide(context, FinishType.SELECTED)
 
-    editor.document.insertString(offset, textToInsert)
-    editor.caretModel.moveToOffset(insertEnvironment.insertedRange.endOffset)
+    if (elements.size == 1 && elements.first() is InlineCompletionReplaceElement) {
+      val element = elements.first() as InlineCompletionReplaceElement
+      editor.document.replaceString(element.startOffset, element.endOffset, element.replaceText)
+      editor.caretModel.moveToOffset(element.startOffset + element.replaceText.length)
+    } else {
+      editor.document.insertString(offset, textToInsert)
+      editor.caretModel.moveToOffset(insertEnvironment.insertedRange.endOffset)
+    }
     PsiDocumentManager.getInstance(session.request.file.project).commitDocument(editor.document)
     session.provider.insertHandler.afterInsertion(insertEnvironment, elements)
     editor.scrollingModel.scrollToCaret(ScrollType.RELATIVE)

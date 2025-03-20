@@ -68,6 +68,7 @@
   }
 
   export function updateMessage(content: string, role: string, isError: boolean) {
+    const isAtEnd = Math.abs(messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight) < 1;
     currentMessage.content += content;
     currentMessage.role = role;
     currentMessage.isError = isError;
@@ -76,7 +77,9 @@
     }
     waitingResponse = false;
     messages = messages;
-    setTimeout(scrollToBottom, 0);
+    if (isAtEnd) {
+      setTimeout(scrollToBottom, 0);
+    }
   }
 
   export function processCompleted() {
@@ -118,6 +121,10 @@
         const beforeThink = text.substring(0, thinkIndex);
         const thinkContent = text.substring(thinkIndex + 7, endIndex);
         const afterThink = endIndex < text.length - 8 ? text.substring(endIndex + 8) : "";
+
+        if (!thinkContent.trim()) {
+          return marked.parse(beforeThink + afterThink);
+        }
 
         const id = `think-${Math.random().toString(36).substr(2, 9)}`;
 

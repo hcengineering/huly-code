@@ -44,6 +44,9 @@
                               implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ESLintOnSaveInfoProvider"/>
     <actionOnSaveInfoProvider id="ExecuteOnSaveInfoProvider"
                               implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ExecuteOnSaveInfoProvider"/>
+    <externalAnnotator id="ESLintAnnotator"
+                       language=""
+                       implementationClass="com.hulylabs.intellij.plugins.langconfigurator.onsave.ESLintAnnotator"/>
 
     <actionOnSave id="PrettierOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.PrettierOnSaveAction"/>
     <actionOnSave id="ESLintOnSaveAction" implementation="com.hulylabs.intellij.plugins.langconfigurator.onsave.ESLintOnSaveAction" order="after PrettierOnSaveAction"/>

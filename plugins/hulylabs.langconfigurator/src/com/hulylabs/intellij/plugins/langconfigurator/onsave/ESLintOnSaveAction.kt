@@ -4,6 +4,7 @@ package com.hulylabs.intellij.plugins.langconfigurator.onsave
 import com.hulylabs.intellij.plugins.langconfigurator.nodejs.NodeRuntime
 import com.hulylabs.intellij.plugins.langconfigurator.utils.NodeUtils
 import com.hulylabs.intellij.plugins.langconfigurator.utils.TTLCache
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.KillableProcessHandler
 import com.intellij.execution.process.ProcessAdapter
@@ -13,12 +14,15 @@ import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListe
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.notification.NotificationsManager
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.command.writeCommandAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.removeUserData
+import com.intellij.psi.PsiManager
 import kotlinx.serialization.json.*
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -117,6 +121,19 @@ class ESLintOnSaveAction : DocumentUpdatingActionOnSave() {
               document.setText(formattedText)
             }
           }
+        }
+        if (responseObj.containsKey("messages")) {
+          val messages = responseObj["messages"]!!.jsonArray
+          document.putUserData(ESLINT_MESSAGES_KEY, messages)
+        }
+        else {
+          document.removeUserData(ESLINT_MESSAGES_KEY)
+        }
+        val psiFile = readAction {
+          PsiManager.getInstance(project).findFile(file)
+        }
+        if (psiFile != null) {
+          DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
         }
       }
       catch (e: Exception) {

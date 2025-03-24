@@ -1,7 +1,7 @@
 /** Default dark theme */
 :root {
   --text-font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  --text-font-size: 13pt;
+  --text-font-size: 13px;
   --bg-color: #2b2d30;
   --text-color: #dfe1e5;
   --text-color-rgb: 51, 51, 51;

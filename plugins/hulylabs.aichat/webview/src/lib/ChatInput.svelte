@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import RoleSelect from "./RoleSelect.svelte";
 
   let text = $state("");
   let role = $state("user");
+  let placeholder = $state("Type a message... (Shift + Enter for new line)");
   let isProcessing = $state(false);
   let { message } = $props();
   let textarea: HTMLTextAreaElement;
@@ -42,6 +44,26 @@
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight - 32}px`;
   }
+
+  function adjustPlaceholder(width: any) {
+    console.log(textarea.clientWidth);
+    placeholder = `Type a message... (Shift + Enter for new line)`;
+  }
+
+  onMount(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries.at(0);
+      if (entry) {
+        if (entry.contentRect.width >= 300) {
+          placeholder = `Type a message... (Shift + Enter for new line)`;
+        } else {
+          placeholder = `Type a message...`;
+        }
+      }
+    });
+
+    resizeObserver.observe(textarea);
+  });
 </script>
 
 <div class="input-wrapper">
@@ -50,7 +72,7 @@
     <textarea
       bind:value={text}
       bind:this={textarea}
-      placeholder="Type a message... (Shift + Enter for new line)"
+      {placeholder}
       onkeydown={handleKeydown}
       oninput={adjustHeight}
       rows="1"
@@ -123,9 +145,9 @@
     max-height: 200px;
     overflow-y: auto;
     line-height: 1;
-    font-family: inherit;
-    font-size: 1rem;
     z-index: 1;
+    font-family: var(--text-font-family);
+    font-size: var(--text-font-size);
   }
 
   textarea:focus-visible {
@@ -141,7 +163,7 @@
   button {
     position: absolute;
     right: 1rem;
-    bottom: 12px;
+    bottom: 6px;
     background: none;
     border: none;
     cursor: pointer;

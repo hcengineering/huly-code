@@ -2,10 +2,17 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
-    plugins: [svelte()],
-    build: {
-        minify: 'esbuild',
-        outDir: '../resources/webview',
-        emptyOutDir: true
-    }
+  plugins: [svelte()],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`
+      }
+    },
+    minify: 'esbuild',
+    outDir: '../resources/webview',
+    emptyOutDir: true
+  }
 });

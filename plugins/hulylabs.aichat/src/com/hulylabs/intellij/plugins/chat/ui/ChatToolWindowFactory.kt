@@ -99,6 +99,7 @@ class ChatToolWindowFactory : ToolWindowFactory {
         postNewMessage(message, systemMessage)
         if (model == null) {
           postSystemMessage("No language model is selected", "assistant", true)
+          postProcessCompleted()
         }
         else {
           GlobalScope.launch {

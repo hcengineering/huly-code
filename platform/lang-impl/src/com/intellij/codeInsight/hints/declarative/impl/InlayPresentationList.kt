@@ -118,9 +118,9 @@ class InlayPresentationList(
 
   private val marginAndPadding: Pair<Int, Int> get() = MARGIN_PADDING_BY_FORMAT[model.hintFormat.horizontalMarginPadding]!!
   @get:ApiStatus.Internal
-  override val marginLeft: Int get() = if (model.hintFormat.marginLeftEnabled) marginAndPadding.first else 0
+  override val marginLeft: Int get() = if (model.hintFormat.horizontalMarginPadding != HintMarginPadding.SplitMargin || model.hintFormat.marginLeftEnabled) marginAndPadding.first else 0
   @get:ApiStatus.Internal
-  override val marginRight: Int get() = if (model.hintFormat.marginRightEnabled) marginAndPadding.first else 0
+  override val marginRight: Int get() = if (model.hintFormat.horizontalMarginPadding != HintMarginPadding.SplitMargin || model.hintFormat.marginRightEnabled) marginAndPadding.first else 0
   private val padding: Int get() = marginAndPadding.second
   private fun getTextWidth(storage: InlayTextMetricsStorage, forceUpdate: Boolean): Int {
     return getPartialWidthSums(storage, forceUpdate).lastOrNull() ?: 0

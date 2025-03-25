@@ -34,7 +34,8 @@ import java.awt.geom.Rectangle2D
 
 @ApiStatus.Internal
 interface DeclarativeHintViewWithMargins: DeclarativeHintView<InlayData> {
-  val margin: Int
+  val marginLeft: Int
+  val marginRight: Int
   fun getBoxWidth(storage: InlayTextMetricsStorage, forceUpdate: Boolean = false): Int
 }
 
@@ -117,7 +118,9 @@ class InlayPresentationList(
 
   private val marginAndPadding: Pair<Int, Int> get() = MARGIN_PADDING_BY_FORMAT[model.hintFormat.horizontalMarginPadding]!!
   @get:ApiStatus.Internal
-  override val margin: Int get() = marginAndPadding.first
+  override val marginLeft: Int get() = if (model.hintFormat.marginLeftEnabled) marginAndPadding.first else 0
+  @get:ApiStatus.Internal
+  override val marginRight: Int get() = if (model.hintFormat.marginRightEnabled) marginAndPadding.first else 0
   private val padding: Int get() = marginAndPadding.second
   private fun getTextWidth(storage: InlayTextMetricsStorage, forceUpdate: Boolean): Int {
     return getPartialWidthSums(storage, forceUpdate).lastOrNull() ?: 0
@@ -276,6 +279,7 @@ class InlayPresentationList(
 private val MARGIN_PADDING_BY_FORMAT = enumMapOf<HintMarginPadding, Pair<Int, Int>>().apply {
   put(HintMarginPadding.OnlyPadding, 0 to 7)
   put(HintMarginPadding.MarginAndSmallerPadding, 2 to 6)
+  put(HintMarginPadding.SplitMargin, 7 to 0)
 }
 private const val ARC_WIDTH = 8
 private const val ARC_HEIGHT = 8

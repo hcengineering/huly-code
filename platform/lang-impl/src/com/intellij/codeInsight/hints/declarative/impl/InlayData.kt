@@ -150,12 +150,22 @@ internal object InlayDataExternalizer : DataExternalizer<InlayData> {
     writeUTF(output, hintFormat.colorKind.name)
     writeUTF(output, hintFormat.fontSize.name)
     writeUTF(output, hintFormat.horizontalMarginPadding.name)
+    if (hintFormat.horizontalMarginPadding == HintMarginPadding.SplitMargin) {
+      output.writeBoolean(hintFormat.marginLeftEnabled)
+      output.writeBoolean(hintFormat.marginRightEnabled)
+    }
   }
 
   private fun readHintFormat(input: DataInput): HintFormat {
     val hintColorKind= HintColorKind.valueOf(readUTF(input))
     val hintFontSize= HintFontSize.valueOf(readUTF(input))
     val padding= HintMarginPadding.valueOf(readUTF(input))
+    if (padding == HintMarginPadding.SplitMargin) {
+      val marginLeftEnabled= input.readBoolean()
+      val marginRightEnabled= input.readBoolean()
+      return HintFormat(hintColorKind, hintFontSize, padding, marginLeftEnabled, marginRightEnabled)
+    }
+
     return HintFormat(hintColorKind, hintFontSize, padding)
   }
 

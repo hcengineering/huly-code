@@ -127,20 +127,18 @@ abstract class CompositeDeclarativeHintWithMarginsView<Model, SubView>(private v
     var xSoFar = 0
     var previousMargin = 0
     getSubView(0).let { subView ->
-      val margin = subView.margin
-      sortedBounds[0] = if (ignoreInitialMargin) 0 else subView.margin
+      sortedBounds[0] = if (ignoreInitialMargin) 0 else subView.marginLeft
       sortedBounds[1] = sortedBounds[0] + subView.getBoxWidth(fontMetricsStorage, forceUpdate)
-      previousMargin = margin
+      previousMargin = subView.marginRight
     }
     xSoFar = sortedBounds[1]
     for (index in 1..<subViewCount) {
       val subView = getSubView(index)
-      val margin = subView.margin
-      val leftBound = xSoFar + maxOf(previousMargin, margin)
+      val leftBound = xSoFar + maxOf(previousMargin, subView.marginLeft)
       val rightBound = leftBound + subView.getBoxWidth(fontMetricsStorage, forceUpdate)
       sortedBounds[2 * index] = leftBound
       sortedBounds[2 * index + 1] = rightBound
-      previousMargin = margin
+      previousMargin = subView.marginRight
       xSoFar = rightBound
     }
     return SubViewMetrics(sortedBounds, sortedBounds.last() + previousMargin)

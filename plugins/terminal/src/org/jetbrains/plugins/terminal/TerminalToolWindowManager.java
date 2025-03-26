@@ -256,8 +256,8 @@ public final class TerminalToolWindowManager implements Disposable {
     createNewSession(terminalRunner, null);
   }
 
-  public void createNewSession(@NotNull AbstractTerminalRunner<?> terminalRunner, @Nullable TerminalTabState tabState) {
-    createNewSession(terminalRunner, tabState, true);
+  public @NotNull TerminalWidget createNewSession(@NotNull AbstractTerminalRunner<?> terminalRunner, @Nullable TerminalTabState tabState) {
+    return createNewSession(terminalRunner, tabState, true);
   }
 
   @ApiStatus.Internal
@@ -309,10 +309,10 @@ public final class TerminalToolWindowManager implements Disposable {
     return createNewSession(myTerminalRunner, tabState, null, requestFocus, deferSessionStartUntilUiShown);
   }
 
-  private void createNewSession(@NotNull AbstractTerminalRunner<?> terminalRunner,
+  private @NotNull TerminalWidget createNewSession(@NotNull AbstractTerminalRunner<?> terminalRunner,
                                 @Nullable TerminalTabState tabState,
                                 boolean requestFocus) {
-    createNewSession(terminalRunner, tabState, null, requestFocus, true);
+    return createNewSession(terminalRunner, tabState, null, requestFocus, true);
   }
 
   private @NotNull TerminalWidget createNewSession(@NotNull AbstractTerminalRunner<?> terminalRunner,

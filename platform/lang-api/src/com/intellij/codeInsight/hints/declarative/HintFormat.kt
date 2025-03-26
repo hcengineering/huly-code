@@ -5,7 +5,11 @@ data class HintFormat(
   val colorKind: HintColorKind,
   val fontSize: HintFontSize,
   val horizontalMarginPadding: HintMarginPadding,
+  val marginLeftEnabled: Boolean,
+  val marginRightEnabled: Boolean,
 ) {
+  constructor(colorKind: HintColorKind, fontSize: HintFontSize, horizontalMarginPadding: HintMarginPadding) : this(colorKind, fontSize, horizontalMarginPadding, true, true)
+
   companion object {
     val default = HintFormat(
       HintColorKind.Default,
@@ -36,4 +40,5 @@ enum class HintFontSize {
 enum class HintMarginPadding {
   OnlyPadding,
   MarginAndSmallerPadding,
+  SplitMargin,
 }

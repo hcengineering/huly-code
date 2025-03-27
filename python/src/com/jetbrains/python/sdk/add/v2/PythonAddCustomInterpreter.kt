@@ -14,6 +14,14 @@ import com.jetbrains.python.newProject.collector.InterpreterStatisticsInfo
 import com.jetbrains.python.sdk.ModuleOrProject
 import com.jetbrains.python.sdk.add.v2.PythonSupportedEnvironmentManagers.*
 import com.jetbrains.python.errorProcessing.ErrorSink
+import com.jetbrains.python.sdk.add.v2.conda.CondaExistingEnvironmentSelector
+import com.jetbrains.python.sdk.add.v2.conda.CondaNewEnvironmentCreator
+import com.jetbrains.python.sdk.add.v2.hatch.HatchExistingEnvironmentSelector
+import com.jetbrains.python.sdk.add.v2.hatch.HatchNewEnvironmentCreator
+import com.jetbrains.python.sdk.add.v2.poetry.EnvironmentCreatorPoetry
+import com.jetbrains.python.sdk.add.v2.poetry.PoetryExistingEnvironmentSelector
+import com.jetbrains.python.sdk.add.v2.uv.EnvironmentCreatorUv
+import com.jetbrains.python.sdk.add.v2.uv.UvExistingEnvironmentSelector
 import kotlinx.coroutines.flow.Flow
 import java.nio.file.Path
 
@@ -32,13 +40,17 @@ class PythonAddCustomInterpreter(val model: PythonMutableTargetAddInterpreterMod
     PIPENV to EnvironmentCreatorPip(model),
     POETRY to EnvironmentCreatorPoetry(model, moduleOrProject),
     UV to EnvironmentCreatorUv(model),
+    HATCH to HatchNewEnvironmentCreator(model),
   )
 
   private val existingInterpreterSelectors = buildMap {
     put(PYTHON, PythonExistingEnvironmentSelector(model))
     put(CONDA, CondaExistingEnvironmentSelector(model, errorSink))
-    if (moduleOrProject != null) put(POETRY, PoetryExistingEnvironmentSelector(model, moduleOrProject))
-    if (moduleOrProject != null) put(UV, UvExistingEnvironmentSelector(model, moduleOrProject))
+    if (moduleOrProject != null) {
+      put(POETRY, PoetryExistingEnvironmentSelector(model, moduleOrProject))
+      put(UV, UvExistingEnvironmentSelector(model, moduleOrProject))
+      put(HATCH, HatchExistingEnvironmentSelector(model, moduleOrProject))
+    }
   }
 
   val currentSdkManager: PythonAddEnvironment

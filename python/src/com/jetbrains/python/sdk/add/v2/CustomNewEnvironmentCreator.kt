@@ -9,21 +9,22 @@ import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.ui.validation.DialogValidationRequestor
 import com.intellij.platform.ide.progress.ModalTaskOwner
 import com.intellij.platform.ide.progress.runWithModalProgressBlocking
+import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.dsl.builder.Align
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.jetbrains.python.PyBundle.message
 import com.jetbrains.python.PythonHelpersLocator
-import com.jetbrains.python.execution.PyExecutionFailure
+import com.jetbrains.python.Result
+import com.jetbrains.python.errorProcessing.ErrorSink
+import com.jetbrains.python.errorProcessing.PyError
+import com.jetbrains.python.errorProcessing.emit
 import com.jetbrains.python.newProject.collector.InterpreterStatisticsInfo
 import com.jetbrains.python.sdk.*
 import com.jetbrains.python.sdk.flavors.PythonSdkFlavor
 import com.jetbrains.python.statistics.InterpreterCreationMode
 import com.jetbrains.python.statistics.InterpreterType
-import com.jetbrains.python.errorProcessing.ErrorSink
-import com.jetbrains.python.errorProcessing.PyError
-import com.jetbrains.python.errorProcessing.emit
 import kotlinx.coroutines.flow.first
 import org.jetbrains.annotations.ApiStatus.Internal
 import java.nio.file.Path
@@ -55,7 +56,7 @@ internal abstract class CustomNewEnvironmentCreator(private val name: String, mo
     basePythonComboBox.setItems(model.baseInterpreters)
   }
 
-  override suspend fun getOrCreateSdk(moduleOrProject: ModuleOrProject): com.jetbrains.python.Result<Sdk, PyError> {
+  override suspend fun getOrCreateSdk(moduleOrProject: ModuleOrProject): Result<Sdk, PyError> {
     savePathToExecutableToProperties(null)
 
     // todo think about better error handling
@@ -66,19 +67,24 @@ internal abstract class CustomNewEnvironmentCreator(private val name: String, mo
       is ModuleOrProject.ModuleAndProject -> moduleOrProject.module
       is ModuleOrProject.ProjectOnly -> null
     }
-    val newSdk = setupEnvSdk(moduleOrProject.project,
-                             module,
-                             ProjectJdkTable.getInstance().allJdks.asList(),
-                             model.myProjectPathFlows.projectPathWithDefault.first().toString(),
-                             homePath,
-                             false)
-      .getOrElse { return com.jetbrains.python.Result.failure(if (it is PyExecutionFailure) PyError.ExecException(it) else PyError.Message(it.localizedMessage)) }
+
+    val newSdk = withBackgroundProgress(moduleOrProject.project, message("python.sdk.progress.setting.up.environment", name), false) {
+      setupEnvSdk(
+        project = moduleOrProject.project,
+        module = module,
+        baseSdks = ProjectJdkTable.getInstance().allJdks.asList(),
+        projectPath = model.myProjectPathFlows.projectPathWithDefault.first().toString(),
+        homePath = homePath,
+        installPackages = false
+      )
+    }.getOr { return it }
+
     newSdk.persist()
 
     module?.excludeInnerVirtualEnv(newSdk)
     model.addInterpreter(newSdk)
 
-    return com.jetbrains.python.Result.success(newSdk)
+    return Result.success(newSdk)
   }
 
   override fun createStatisticsInfo(target: PythonInterpreterCreationTargets): InterpreterStatisticsInfo =
@@ -100,7 +106,7 @@ internal abstract class CustomNewEnvironmentCreator(private val name: String, mo
    * 5. Reruns `detectExecutable`
    */
   @RequiresEdt
-  private fun createInstallFix(errorSink: ErrorSink): ActionLink {
+  protected fun createInstallFix(errorSink: ErrorSink): ActionLink {
     return ActionLink(message("sdk.create.custom.venv.install.fix.title", name, "via pip")) {
       PythonSdkFlavor.clearExecutablesCache()
       installExecutable(errorSink)
@@ -122,12 +128,12 @@ internal abstract class CustomNewEnvironmentCreator(private val name: String, mo
     val pythonExecutable = model.state.baseInterpreter.get()?.homePath ?: getPythonExecutableString()
     runWithModalProgressBlocking(ModalTaskOwner.guess(), message("sdk.create.custom.venv.install.fix.title", name, "via pip")) {
       if (installationScript != null) {
-        val versionArgs: List<String> = installationVersion?.let { listOf("-v", it)  } ?: emptyList()
+        val versionArgs: List<String> = installationVersion?.let { listOf("-v", it) } ?: emptyList()
         val executablePath = installExecutableViaPythonScript(installationScript, pythonExecutable, "-n", name, *versionArgs.toTypedArray())
         executablePath.onSuccess {
-        savePathToExecutableToProperties(it)
-      }.onFailure {
-        errorSink.emit(it.localizedMessage)
+          savePathToExecutableToProperties(it)
+        }.onFailure {
+          errorSink.emit(it.localizedMessage)
         }
       }
     }
@@ -154,7 +160,7 @@ internal abstract class CustomNewEnvironmentCreator(private val name: String, mo
    */
   internal abstract fun savePathToExecutableToProperties(path: Path?)
 
-  protected abstract suspend fun setupEnvSdk(project: Project?, module: Module?, baseSdks: List<Sdk>, projectPath: String, homePath: String?, installPackages: Boolean): Result<Sdk>
+  protected abstract suspend fun setupEnvSdk(project: Project, module: Module?, baseSdks: List<Sdk>, projectPath: String, homePath: String?, installPackages: Boolean): Result<Sdk, PyError>
 
   internal abstract suspend fun detectExecutable()
 }

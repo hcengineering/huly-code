@@ -23,6 +23,9 @@ private class ApplicationInfoServiceDelegate : ApplicationInfoEx() {
   override fun getCompanyName(): String? = delegate.companyName
   override fun getShortCompanyName(): String? = delegate.shortCompanyName
   override fun getCompanyURL(): String? = delegate.companyURL
+  override fun getOriginalCompanyName(): String? = delegate.originalCompanyName
+  override fun getOriginalShortCompanyName(): String? = delegate.originalShortCompanyName
+  override fun getOriginalCompanyURL(): String? = delegate.originalCompanyURL
   override fun getProductUrl(): String? = delegate.productUrl
   override fun getJetBrainsTvUrl(): String? = delegate.jetBrainsTvUrl
   override fun hasHelp(): Boolean = delegate.hasHelp()
@@ -34,6 +37,7 @@ private class ApplicationInfoServiceDelegate : ApplicationInfoEx() {
   override fun getApplicationSvgIconUrl(): String = delegate.applicationSvgIconUrl
   override fun getSmallApplicationSvgIconUrl(): String = delegate.smallApplicationSvgIconUrl
   override fun getCopyrightStart(): String? = delegate.copyrightStart
+  override fun getOriginalCopyrightStart(): String? = delegate.originalCopyrightStart
   override fun isMajorEAP(): Boolean = delegate.isMajorEAP()
   override fun isPreview(): Boolean = delegate.isPreview()
   override fun getFullIdeProductCode(): String? = delegate.fullIdeProductCode

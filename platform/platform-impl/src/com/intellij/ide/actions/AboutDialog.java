@@ -229,6 +229,14 @@ public final class AboutDialog extends DialogWrapper {
 
     //Copyright
     var year = Integer.toString(LocalDate.now().getYear());
+    var originalCopyright = hyperlinkLabel(IdeBundle.message("about.box.copyright", appInfo.getOriginalCopyrightStart(), year, appInfo.getOriginalCompanyName()));
+    originalCopyright.addHyperlinkListener(new HyperlinkAdapter() {
+      @Override
+      protected void hyperlinkActivated(@NotNull HyperlinkEvent e) {
+        BrowserUtil.browse(appInfo.getOriginalCompanyURL());
+      }
+    });
+    box.add(originalCopyright);
     var copyright = hyperlinkLabel(IdeBundle.message("about.box.copyright", appInfo.getCopyrightStart(), year, appInfo.getCompanyName()));
     copyright.addHyperlinkListener(new HyperlinkAdapter() {
       @Override

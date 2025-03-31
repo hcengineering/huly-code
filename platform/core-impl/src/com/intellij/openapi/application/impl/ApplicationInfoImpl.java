@@ -54,6 +54,10 @@ public final class ApplicationInfoImpl extends ApplicationInfoEx {
   private String myCopyrightStart = "2000";
   private String myShortCompanyName;
   private String myCompanyUrl = "https://www.jetbrains.com/";
+  private String myOriginalCompanyName = "JetBrains s.r.o.";
+  private String myOriginalCopyrightStart = "2000";
+  private String myOriginalShortCompanyName;
+  private String myOriginalCompanyUrl = "https://www.jetbrains.com/";
   private @Nullable String splashImageUrl;
   private @Nullable String eapSplashImageUrl;
   private String svgIconUrl;
@@ -115,6 +119,14 @@ public final class ApplicationInfoImpl extends ApplicationInfoEx {
           myCodeName = child.getAttributeValue("codename");
           isEap = Boolean.parseBoolean(child.getAttributeValue("eap"));
           myVersionSuffix = child.getAttributeValue("suffix", isEap ? "EAP" : null);
+        }
+        break;
+
+        case "original-company": {
+          myOriginalCompanyName = child.getAttributeValue("name", myOriginalCompanyName);
+          myOriginalShortCompanyName = child.getAttributeValue("shortName", myOriginalCompanyName == null ? null : shortenCompanyName(myOriginalCompanyName));
+          myOriginalCompanyUrl = child.getAttributeValue("url", myOriginalCompanyUrl);
+          myOriginalCopyrightStart = child.getAttributeValue("copyrightStart", myOriginalCopyrightStart);
         }
         break;
 
@@ -429,6 +441,21 @@ public final class ApplicationInfoImpl extends ApplicationInfoEx {
   }
 
   @Override
+  public String getOriginalShortCompanyName() {
+    return myOriginalShortCompanyName;
+  }
+
+  @Override
+  public String getOriginalCompanyName() {
+    return myOriginalCompanyName;
+  }
+
+  @Override
+  public String getOriginalCompanyURL() {
+    return IdeUrlTrackingParametersProvider.getInstance().augmentUrl(myOriginalCompanyUrl);
+  }
+
+  @Override
   public @Nullable String getSplashImageUrl() {
     return isEap && eapSplashImageUrl != null ? eapSplashImageUrl : splashImageUrl;
   }
@@ -566,6 +593,11 @@ public final class ApplicationInfoImpl extends ApplicationInfoEx {
   @Override
   public String getFullApplicationName() {
     return getVersionName() + " " + getFullVersion();
+  }
+
+  @Override
+  public String getOriginalCopyrightStart() {
+    return myOriginalCopyrightStart;
   }
 
   @Override

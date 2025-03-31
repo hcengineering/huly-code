@@ -1,6 +1,7 @@
 <component xmlns="http://jetbrains.org/intellij/schema/application-info">
   <version major="2025" minor="1" eap="true"/>
-  <company name="Huly Labs" shortName="HulyLabs" url="https://hulylabs.com"/>
+  <original-company name="JetBrains s.r.o." url="https://www.jetbrains.com"/>
+  <company name="Huly Labs" shortName="HulyLabs" url="https://hulylabs.com" copyrightStart="2024"/>
   <build number="IC-__BUILD__" date="__BUILD_DATE__"/> <!--majorReleaseDate="20170321"-->
   <logo url="/SplashScreen.png"/>
   <icon svg="/huly-code.svg" svg-small="/huly-code_16.svg"/>

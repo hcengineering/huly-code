@@ -70,6 +70,7 @@ public abstract class ApplicationInfo {
    * @see #getShortCompanyName()
    */
   public abstract @NlsSafe String getCompanyName();
+  public abstract @NlsSafe String getOriginalCompanyName();
 
   /**
    * Use this method to refer to the company in a less formal way, e.g., in UI messages or directory names.
@@ -78,8 +79,10 @@ public abstract class ApplicationInfo {
    * @see #getCompanyName()
    */
   public abstract @NlsSafe String getShortCompanyName();
+  public abstract @NlsSafe String getOriginalShortCompanyName();
 
   public abstract String getCompanyURL();
+  public abstract String getOriginalCompanyURL();
 
   /**
    * @deprecated use properties from {@link com.intellij.platform.ide.customization.ExternalProductResourceUrls} instead

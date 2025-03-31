@@ -32,6 +32,7 @@ public abstract class ApplicationInfoEx extends ApplicationInfo {
   public abstract @NotNull String getSmallApplicationSvgIconUrl();
 
   public abstract String getCopyrightStart();
+  public abstract String getOriginalCopyrightStart();
 
   /**
    * Returns {@code true} only for EAP builds of "major" releases (i.e. for {@code 2018.3}, but not for {@code 2018.3.1}).

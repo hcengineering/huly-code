@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import RoleSelect from "./RoleSelect.svelte";
 
   let text = $state("");
   let role = $state("user");
-  let placeholder = $state("Type a message... (Shift + Enter for new line)");
+  let placeholder = $state("Type a message...");
   let isProcessing = $state(false);
   let { message } = $props();
   let textarea: HTMLTextAreaElement;
@@ -44,31 +43,10 @@
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight - 32}px`;
   }
-
-  function adjustPlaceholder(width: any) {
-    console.log(textarea.clientWidth);
-    placeholder = `Type a message... (Shift + Enter for new line)`;
-  }
-
-  onMount(() => {
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries.at(0);
-      if (entry) {
-        if (entry.contentRect.width >= 300) {
-          placeholder = `Type a message... (Shift + Enter for new line)`;
-        } else {
-          placeholder = `Type a message...`;
-        }
-      }
-    });
-
-    resizeObserver.observe(textarea);
-  });
 </script>
 
 <div class="input-wrapper">
   <div class="input-container">
-    <RoleSelect bind:role changed />
     <textarea
       bind:value={text}
       bind:this={textarea}
@@ -80,64 +58,39 @@
     ></textarea>
     {#if isProcessing}
       <button onclick={handleCancel} class="cancel-button" aria-label="Cancel processing">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+        <img src="/assets/icon-cancel.svg" alt="Cancel" width="32" height="32" />
       </button>
     {:else}
       <button onclick={handleSubmit} class:active={text.trim().length > 0} aria-label="Send message">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
+        <img src="/assets/icon-send.svg" alt="Send" width="32" height="32" />
       </button>
     {/if}
   </div>
+  <div class="input-hint">Shift + Enter a for new line</div>
 </div>
 
 <style>
   .input-wrapper {
-    position: relative;
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    padding: 0rem 1.35rem 0rem 1rem;
+    background: linear-gradient(0deg, var(--bg-color) 0% 50%, transparent 70%);
+    z-index: 1;
   }
 
   .input-container {
     position: relative;
     display: flex;
-    padding: 0 0.3em 0.3em 0.3em;
-  }
-
-  .input-container :global(.role-toggle) {
-    top: -24px;
-    position: absolute;
   }
 
   textarea {
     flex: 1;
     border: 1px solid var(--component-border-color);
-    border-radius: 5px;
-    padding: 16px;
-    padding-right: 40px;
+    border-radius: 8px;
+    padding: 1rem;
+    padding-right: 3em;
     background: var(--bg-color);
     color: var(--text-color);
     resize: none;
@@ -145,7 +98,6 @@
     max-height: 200px;
     overflow-y: auto;
     line-height: 1;
-    z-index: 1;
     font-family: var(--text-font-family);
     font-size: var(--text-font-size);
   }
@@ -162,12 +114,11 @@
 
   button {
     position: absolute;
-    right: 1rem;
-    bottom: 6px;
+    right: 0rem;
+    bottom: 0.5rem;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -182,22 +133,13 @@
     color: var(--component-focus-color);
   }
 
-  button svg {
-    width: 24px;
-    height: 24px;
-  }
-
   textarea:disabled {
-    opacity: 0.7;
     cursor: not-allowed;
   }
 
-  .cancel-button {
-    color: #dc3545 !important;
-    opacity: 1 !important;
-  }
-
-  .cancel-button:hover {
-    color: #bd2130 !important;
+  .input-hint {
+    color: #8f9196;
+    padding: 0.5rem 0;
+    font-size: 0.75rem;
   }
 </style>

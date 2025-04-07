@@ -267,7 +267,6 @@
   .chat-window {
     height: 100vh;
     margin: 0rem auto;
-    border: 0px solid var(--text-color);
     display: flex;
     flex-direction: column;
   }
@@ -278,33 +277,29 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    scroll-behavior: smooth;
   }
 
   .message {
     width: 100%;
     position: relative;
-    padding: 24px 0px; /* Space for the role selector */
-    margin-top: -24px; /* Overlap with previous message */
+    padding: 1rem 0rem;
     background: var(--chat-bg);
+    transition: background 0.2s;
   }
 
-  .message:first-child {
-    margin-top: 0; /* Don't overlap for first message */
+  .message:last-child {
+    padding-bottom: 5rem;
   }
 
-  .role-container {
-    position: absolute;
-    top: 1px; /* Pull up to overlap */
-    z-index: 2;
+  .message:hover {
+    background: var(--bg-highlight-color);
   }
 
   .message-content {
-    padding: 0.2em 1rem;
+    padding: 0.375rem 1rem 0.75rem 1rem;
     word-break: break-word;
     position: relative;
     z-index: 1;
-    border-top: 1px solid var(--component-border-color);
   }
 
   .error-message {
@@ -435,7 +430,7 @@
     margin: 0;
     padding: 1em;
     border: 1px solid var(--component-border-color);
-    border-radius: 4px;
+    border-radius: 8px;
     overflow-x: auto;
   }
 

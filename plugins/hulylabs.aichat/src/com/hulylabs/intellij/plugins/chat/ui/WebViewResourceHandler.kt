@@ -5,7 +5,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.colors.ColorKey
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.TextAttributesKey
-import com.intellij.ui.jcef.JBCefScrollbarsHelper
 import org.cef.callback.CefCallback
 import org.cef.handler.CefResourceHandler
 import org.cef.misc.IntRef
@@ -35,6 +34,7 @@ class CustomResourceHandler : CefResourceHandler {
         "css" -> myMimeType = "text/css"
         "map" -> myMimeType = "application/json"
         "ttf" -> myMimeType = "font/ttf"
+        "svg" -> myMimeType = "image/svg+xml"
         else -> myMimeType = "text/plain"
       }
       val path = url.replace(STATIC_URL_PREFIX, "/webview")
@@ -88,10 +88,7 @@ class CustomResourceHandler : CefResourceHandler {
   }
 
   private fun Color.rgba(): String {
-    val r = red
-    val g = green
-    val b = blue
-    return String.format("#%02x%02x%02x%02x", r, g, b, alpha)
+    return String.format("#%02x%02x%02x%02x", red, green, blue, alpha)
   }
 
   private fun generateIdeCss(): String {
@@ -101,6 +98,7 @@ class CustomResourceHandler : CefResourceHandler {
       "TextPane.foreground" to "--text-color",
       "Button.default.focusColor" to "--component-focus-color",
       "Component.borderColor" to "--component-border-color",
+      "ActionButton.hoverBackground" to "--bg-highlight-color",
     )
     val schemeToCssMap = mutableMapOf<String, String>(
       "DEFAULT_DOC_COMMENT" to "--prism-color-comment",
@@ -143,7 +141,6 @@ class CustomResourceHandler : CefResourceHandler {
         LOG.warn("Can't find key $schemeKey")
       }
     }
-    css.append(JBCefScrollbarsHelper.buildScrollbarsStyle())
     css.append("}\n")
     return css.toString()
   }

@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.chat.providers.copilot
 
 import com.hulylabs.intellij.plugins.chat.api.ChatMessage
 import com.hulylabs.intellij.plugins.chat.api.LanguageModel
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.SystemProperties
 import com.intellij.util.io.HttpRequests
@@ -81,6 +82,8 @@ data class CopilotChatResponse(
   val usage: Usage? = null,
 )
 
+private val LOG = Logger.getInstance("#aichat.copilot")
+
 class CopilotService {
   private var authToken: String? = null
   private var apiToken: ApiToken? = null
@@ -142,8 +145,8 @@ class CopilotService {
         }
       }
     }
-    catch (_: Exception) {
-      // can be ignored
+    catch (e: Exception) {
+      LOG.error(e)
     }
     return null
   }

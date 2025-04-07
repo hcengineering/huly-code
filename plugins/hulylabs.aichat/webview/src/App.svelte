@@ -1,7 +1,13 @@
 <script lang="ts">
   import ChatWindow from "./lib/ChatWindow.svelte";
+  import initScrollHandler from "./lib/scrollHandler";
+  import { onMount } from "svelte";
 
   let chatWindow: ChatWindow;
+
+  onMount(() => {
+    initScrollHandler();
+  });
 
   window.onmessage = (event) => {
     let msg = event.data;

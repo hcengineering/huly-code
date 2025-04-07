@@ -2,5 +2,10 @@
   "caseSensitive": true,
   "workspaceSymbol": {
     "supportsGotoClass": true
+  },
+  "diagnostics": {
+    "diskSources": [
+      "rustc"
+    ]
   }
 }

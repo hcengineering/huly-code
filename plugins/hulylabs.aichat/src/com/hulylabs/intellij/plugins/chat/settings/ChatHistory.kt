@@ -88,6 +88,22 @@ class ChatHistory {
     }
   }
 
+  fun removeConversation(conversationId: Long): Boolean {
+    val wasCurrent = currentConversationId == conversationId
+    conversations.remove(conversationId)
+    if (currentConversationId == conversationId) {
+      currentConversationId = conversations.values.maxBy { it.lastUpdated }.created
+    }
+    try {
+      storageDir.resolve("conversation_${conversationId}.json").toFile().delete()
+    }
+    catch (e: Exception) {
+      LOG.error(e)
+    }
+    storeInfos()
+    return wasCurrent
+  }
+
   fun history(): List<ChatConversationInfo> {
     return conversations.values.sortedBy { -it.lastUpdated }.toList()
   }

@@ -30,6 +30,9 @@
       case "process-completed":
         chatWindow.processCompleted();
         break;
+      case "delete-message":
+        chatWindow.deleteChatMessage(msg.id);
+        break;
       default:
         break;
     }

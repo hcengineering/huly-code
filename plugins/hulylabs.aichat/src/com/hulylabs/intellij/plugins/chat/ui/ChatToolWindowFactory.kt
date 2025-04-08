@@ -29,6 +29,7 @@ import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.network.CefRequest
 import java.awt.BorderLayout
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
@@ -83,6 +84,7 @@ class ChatToolWindowFactory : ToolWindowFactory {
     val setRoleQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     val copyCodeQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     val cancelProcessingQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    val deleteMessageQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     postMessageQuery.addHandler(Function { msg: String? ->
       LOG.info("postMessageQuery $msg")
       msg?.let {
@@ -143,6 +145,15 @@ class ChatToolWindowFactory : ToolWindowFactory {
       model?.provider?.cancelProcessing()
       null
     })
+    deleteMessageQuery.addHandler(Function { messageId: String? ->
+      LOG.info("deleteMessage $messageId")
+      messageId?.let {
+        messages.removeIf { it.id == messageId }
+        ChatHistory.getInstance().updateConversationMessages(messages)
+        postDeleteMessage(messageId)
+      }
+      null
+    })
 
     manager.addContent(
       manager.factory.createContent(contentPanel, null, true)
@@ -151,8 +162,8 @@ class ChatToolWindowFactory : ToolWindowFactory {
 
     browser.loadURL("http://hulychat/index.html")
     browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
-      override fun onLoadEnd(browser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
-        browser.executeJavaScript("""
+      override fun onLoadStart(browser: CefBrowser?, frame: CefFrame?, transitionType: CefRequest.TransitionType?) {
+        browser?.executeJavaScript("""
           window.hulyChat = {};
           window.hulyChat.setChatWindow = function(chatWindow) {};
           window.hulyChat.postMessage = function(message) {
@@ -170,7 +181,13 @@ class ChatToolWindowFactory : ToolWindowFactory {
           window.hulyChat.cancelProcessing = function() {
             ${cancelProcessingQuery.inject(null)}
           };
+          window.hulyChat.deleteChatMessage = function(id) {
+            ${deleteMessageQuery.inject("id")}
+          };
         """, browser.url, 0)
+      }
+
+      override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
         loadHistory(ChatHistory.getInstance().currentConversationId)
       }
     }, browser.cefBrowser)
@@ -241,6 +258,11 @@ class ChatToolWindowFactory : ToolWindowFactory {
 
   private fun postProcessCompleted() {
     sendToWebView("process-completed")
+  }
+
+  private fun postDeleteMessage(messageId: String) {
+    sendToWebView("delete-message",
+                  "id: $messageId")
   }
 
   private fun postAddLoadedMessage(message: ChatMessage) {

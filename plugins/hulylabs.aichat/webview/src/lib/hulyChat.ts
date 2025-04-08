@@ -6,6 +6,7 @@ type ChatWindow = {
   addNewUserMessage: (message: Message, systemMessage: Message) => void;
   updateMessage: (content: string, role: string, isError: boolean) => void;
   processCompleted: () => void;
+  deleteChatMessage: (id: string) => void;
 };
 
 class HulyChat {
@@ -24,6 +25,10 @@ class HulyChat {
   }
 
   cancelProcessing() {
+    // empty block
+  }
+
+  deleteChatMessage(id: string) {
     // empty block
   }
 

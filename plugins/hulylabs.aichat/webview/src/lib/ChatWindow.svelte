@@ -86,6 +86,10 @@
     chatInput.setProcessing(false);
   }
 
+  export function deleteChatMessage(id: string) {
+    messages = messages.filter((message) => message.id != id);
+  }
+
   function handleMessage(message: { content: string; role: string }) {
     chatInput.setProcessing(true);
     if (message.role == null) {
@@ -97,6 +101,10 @@
 
   function handleChangeRole(message: Message) {
     hulyChat.setRole(message.id, message.role);
+  }
+
+  function handleDelete(id: string) {
+    hulyChat.deleteChatMessage(id);
   }
 
   function highlightCode(code: string, lang: string): string {
@@ -153,6 +161,7 @@
       addNewUserMessage,
       updateMessage,
       processCompleted,
+      deleteChatMessage,
     });
 
     window.toggleCollapsible = (id: string) => {
@@ -225,6 +234,11 @@
     {#each messages as message, i (message.id)}
       {@const isLast = i === messages.length - 1}
       <div class="message {message.role}">
+        <div class="message-toolbar">
+          <button class="delete-button" onclick={() => handleDelete(message.id)}>
+            <img src="assets/icon-delete.svg" alt="Delete" />
+          </button>
+        </div>
         <div class="role-container">
           <RoleSelect bind:role={message.role} changed={handleChangeRole(message)} />
         </div>
@@ -293,6 +307,53 @@
 
   .message:hover {
     background: var(--bg-highlight-color);
+  }
+
+  .message-toolbar {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background-color: var(--bg-color);
+    border: 1px solid var(--component-border-color);
+    border-radius: 8px;
+    padding: 3px;
+    z-index: 2;
+  }
+
+  .message:hover .message-toolbar {
+    opacity: 1;
+  }
+
+  .delete-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .delete-button:hover {
+    background: var(--bg-highlight-color);
+  }
+
+  .delete-button img {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
+  }
+
+  .delete-button:hover img {
+    opacity: 1;
+  }
+
+  .delete-button:active {
+    transform: scale(0.98);
   }
 
   .message-content {

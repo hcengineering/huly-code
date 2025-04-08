@@ -134,7 +134,8 @@ private class HistoryItemRenderer(
 
     val textPanel = JPanel(BorderLayout()).apply {
       isOpaque = false
-      add(JLabel(conversation.name), BorderLayout.NORTH)
+      val name = conversation.name.take(150)
+      add(JLabel(name), BorderLayout.NORTH)
       add(JLabel(formatDuration(conversation.lastUpdated)).apply {
         foreground = UIUtil.getContextHelpForeground()
         font = font.deriveFont(font.size - 2f)

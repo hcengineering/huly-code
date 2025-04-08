@@ -76,7 +76,7 @@
     left: 0px;
     right: 0px;
     padding: 0rem 1.35rem 0rem 1rem;
-    background: linear-gradient(0deg, var(--bg-color) 0% 50%, transparent 70%);
+    background: linear-gradient(0deg, var(--bg-color) 0% 70%, transparent 100%);
     z-index: 1;
   }
 

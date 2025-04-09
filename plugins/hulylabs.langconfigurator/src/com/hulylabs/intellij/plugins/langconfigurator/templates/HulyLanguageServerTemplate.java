@@ -17,6 +17,7 @@ public class HulyLanguageServerTemplate {
   private static final String OS_ARCH_KEY = OS_KEY + "-" + (CpuArch.isArm64() ? "aarch64" : "x86_64");
 
   public String id;
+  public long version;
   public String name;
   public String installCommand;
   public List<String> installNodeModules;

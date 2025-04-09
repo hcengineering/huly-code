@@ -68,6 +68,8 @@
     <callHierarchyProvider
       language="TreeSitter"
       implementationClass="com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvider"/>
+    <postStartupActivity implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerUpdateCheckActivity"/>
+    <editorNotificationProvider implementation="com.hulylabs.intellij.plugins.langconfigurator.LanguageServerUpdateNotificationProvider"/>
   </extensions>
 
   <applicationListeners>

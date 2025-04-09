@@ -17,6 +17,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.io.NioFiles
+import com.intellij.openapi.util.io.toCanonicalPath
 import com.intellij.platform.ide.progress.withBackgroundProgress
 import com.intellij.platform.util.progress.reportRawProgress
 import com.intellij.util.io.createDirectories
@@ -27,6 +28,7 @@ import com.redhat.devtools.lsp4ij.settings.UserDefinedLanguageServerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.*
 import java.io.IOException
 import java.net.MalformedURLException
 import java.net.URL
@@ -37,6 +39,7 @@ import kotlin.io.path.exists
 
 object LanguageServerTemplateInstaller {
   private val LOG = Logger.getInstance(LanguageServerTemplateInstaller::class.java)
+  val TEMPLATE_PREFIX = "huly-code-"
 
   @JvmStatic
   fun install(
@@ -71,6 +74,61 @@ object LanguageServerTemplateInstaller {
     }
   }
 
+  suspend fun cleanupOldVersions(template: HulyLanguageServerTemplate) {
+    withContext(Dispatchers.IO) {
+      if (template.version > 0) {
+        for (version in template.version - 1 downTo 0) {
+          val directory = getTemplateDirectory(template.id, version)
+          if (directory.exists()) {
+            LOG.info("Cleanup old version $version of template ${template.id}")
+            try {
+              NioFiles.deleteRecursively(directory)
+            } catch (ex: IOException) {
+              LOG.warn("Failed to cleanup old version $version of template ${template.id}", ex)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @JvmStatic
+  fun update(project: Project, serverDefinition: UserDefinedLanguageServerDefinition, template: HulyLanguageServerTemplate, onSuccess: Runnable, onFailure: (message: String) -> Unit) {
+    (project as ComponentManagerEx).getCoroutineScope().launch {
+      try {
+        var env = emptyMap<String, String>()
+        withBackgroundProgress(project, "Install binary") {
+          env = installBinary(project, template)
+        }
+        withContext(Dispatchers.EDT) {
+          updateTemplate(project, serverDefinition, template, env)
+          onSuccess.run()
+        }
+        cleanupOldVersions(template)
+      }
+      catch (ex: IOException) {
+        LOG.warn(ex.message, ex.cause)
+        val sb = StringBuilder()
+        sb.append(ex.message ?: "Unknown error")
+        if (ex.cause?.message != null) {
+          sb.append("\n")
+          sb.append(ex.cause?.message.toString())
+        }
+        withContext(Dispatchers.EDT) {
+          onFailure(sb.toString())
+        }
+      }
+    }
+  }
+
+  private fun getTemplateDirectory(templateId: String, templateVersion: Long): Path {
+    if (templateVersion > 0) {
+      return Path.of(PathManager.getConfigPath(), "lsp4ij", templateId + "-v" + templateVersion)
+    } else {
+      return Path.of(PathManager.getConfigPath(), "lsp4ij", templateId)
+    }
+  }
+
   @Throws(IOException::class)
   private suspend fun installBinary(project: Project, template: HulyLanguageServerTemplate): Map<String, String> {
     LOG.info("Install binary for template ${template.id}")
@@ -79,15 +137,15 @@ object LanguageServerTemplateInstaller {
       executeCommand(project, template)
     }
     else if (template.installNodeModules != null && template.installNodeModules.isNotEmpty()) {
-      val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
+      val directory = getTemplateDirectory(template.id, template.version)
       if (directory.exists()) {
         NioFiles.deleteRecursively(directory)
       }
       directory.createDirectories()
       val nodeRuntime = NodeRuntime.instance()
       nodeRuntime.npmInstallPackages(directory, *template.installNodeModules.toTypedArray())
-      env["PATH"] = nodeRuntime.binaryPath().parent.toString().replace('\\', '/')
-      env["LSP_ROOT"] = directory.toString().replace('\\', '/')
+      env["PATH"] = nodeRuntime.binaryPath().parent.toCanonicalPath()
+      env["LSP_ROOT"] = directory.toCanonicalPath()
     }
     else if (template.binaryUrl != null) {
       downloadBinary(project, template)
@@ -103,7 +161,7 @@ object LanguageServerTemplateInstaller {
     project: Project,
     template: HulyLanguageServerTemplate,
   ) {
-    val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
+    val directory = getTemplateDirectory(template.id, template.version)
     if (directory.exists()) {
       NioFiles.deleteRecursively(directory)
     }
@@ -153,7 +211,7 @@ object LanguageServerTemplateInstaller {
   @Throws(IOException::class)
   private suspend fun downloadBinary(project: Project, template: HulyLanguageServerTemplate) {
     LOG.info("Download binary")
-    val directory = Path.of(PathManager.getConfigPath(), "lsp4ij", template.id)
+    val directory = getTemplateDirectory(template.id, template.version)
     if (!directory.exists()) {
       directory.createDirectories()
     }
@@ -217,20 +275,64 @@ object LanguageServerTemplateInstaller {
     val definition =
       UserDefinedLanguageServerDefinition(
         serverId,
-        null,
+        TEMPLATE_PREFIX + template.id + "-v" + template.version,
         template.name,
         "",
-        template.commandLine,
+        template.commandLine.replace("\$TEMPLATE_DIR$", getTemplateDirectory(template.id, template.version).toCanonicalPath()),
         env,
         false,
         normalizeString(template.settingsJson, env),
         null,
-        normalizeString(template.initializationOptionsJson,env),
+        normalizeString(template.initializationOptionsJson, env),
         normalizeString(template.clientSettingsJson, env)
       )
     LanguageServersRegistry.getInstance().addServerDefinition(project, definition, template.serverMappingSettings)
     val settings = UserDefinedLanguageServerSettings.LanguageServerDefinitionSettings().setErrorReportingKind(ErrorReportingKind.none)
     UserDefinedLanguageServerSettings.getInstance(project).updateSettings(serverId, settings)
+  }
+
+  private fun mergeJson(oldJsonStr: String, newJsonStr: String): String {
+    val oldJson: JsonObject
+    val newJson: JsonObject
+    try {
+      oldJson = Json.parseToJsonElement(oldJsonStr).jsonObject
+      newJson = Json.parseToJsonElement(newJsonStr).jsonObject
+    } catch (e: Exception) {
+      LOG.warn("Failed to parse json", e)
+      return oldJsonStr
+    }
+    val resultJson = buildJsonObject {
+      for ((key, value) in oldJson.entries) {
+        put(key, value)
+      }
+      for ((key, value) in newJson.entries) {
+        if (!oldJson.containsKey(key)) {
+          put(key, value)
+        }
+      }
+    }
+    return resultJson.toString()
+  }
+
+  private fun updateTemplate(project: Project, languageServerDefinition: UserDefinedLanguageServerDefinition, template: HulyLanguageServerTemplate, env: Map<String, String>) {
+    LOG.info("Update template ${template.id}")
+    val configurationContent = normalizeString(template.settingsJson, env)?.let { mergeJson(languageServerDefinition.configurationContent, it) }
+    val initializationOptionsContent = normalizeString(template.initializationOptionsJson, env)?.let { mergeJson(languageServerDefinition.initializationOptionsContent, it) }
+    val update = LanguageServersRegistry.UpdateServerDefinitionRequest(
+      project,
+      languageServerDefinition,
+      template.name,
+      template.commandLine.replace("\$TEMPLATE_DIR$", getTemplateDirectory(template.id, template.version).toCanonicalPath()),
+      env,
+      false,
+      template.serverMappingSettings,
+      configurationContent,
+      languageServerDefinition.configurationSchemaContent,
+      initializationOptionsContent,
+      normalizeString(template.clientSettingsJson, env),
+      TEMPLATE_PREFIX + template.id + "-v" + template.version,
+    )
+    LanguageServersRegistry.getInstance().updateServerDefinition(update, true)
   }
 
   /**

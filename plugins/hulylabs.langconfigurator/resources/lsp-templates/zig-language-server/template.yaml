@@ -1,9 +1,10 @@
 id: zig-language-server
 name: ZIG Language Server
+version: 1
 
 programArgs:
-  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls' --config-path '$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls.json'\""
-  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls\" --config-path \"$APPLICATION_CONFIG_DIR$/lsp4ij/zig-language-server/zls.json\""
+  default: "sh -c \"'$TEMPLATE_DIR$/zls' --config-path '$TEMPLATE_DIR$/zls.json'\""
+  windows: "\"$TEMPLATE_DIR$/zls\" --config-path \"$TEMPLATE_DIR$/zls.json\""
 
 binaryUrls:
   windows-x86_64: "https://github.com/zigtools/zls/releases/download/0.14.0/zls-x86_64-windows.zip"

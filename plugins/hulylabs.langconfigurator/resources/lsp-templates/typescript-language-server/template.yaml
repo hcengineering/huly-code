@@ -1,9 +1,10 @@
 id: typescript-language-server
 name: TypeScript Language Server
+version: 0
 
 programArgs:
-  default: "sh -c \"'$APPLICATION_CONFIG_DIR$/lsp4ij/typescript-language-server/node_modules/.bin/typescript-language-server' --stdio\""
-  windows: "\"$APPLICATION_CONFIG_DIR$/lsp4ij/typescript-language-server/node_modules/.bin/typescript-language-server.cmd\" --stdio"
+  default: "sh -c \"'$TEMPLATE_DIR$/node_modules/.bin/typescript-language-server' --stdio\""
+  windows: "\"$TEMPLATE_DIR$/node_modules/.bin/typescript-language-server.cmd\" --stdio"
 
 installNodeModules: ["typescript-language-server", "typescript"]
 

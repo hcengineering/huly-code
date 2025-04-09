@@ -27,6 +27,7 @@ public final class HulyLanguageServerTemplateManager {
 
   private final Map<String, HulyLanguageServerTemplate> templatesByExt = new HashMap<>();
   private final Map<String, HulyLanguageServerTemplate> templatesByLangName = new HashMap<>();
+  private final Map<String, HulyLanguageServerTemplate> templatesById = new HashMap<>();
 
   private HulyLanguageServerTemplateManager() {
     VirtualFile templateRoot = getTemplateRoot();
@@ -36,6 +37,7 @@ public final class HulyLanguageServerTemplateManager {
           try {
             HulyLanguageServerTemplate template = importTemplate(templateDir);
             if (template != null) {
+              templatesById.put(template.id, template);
               template.mappingSettings.forEach(mapping -> {
                 if (mapping.language != null) {
                   templatesByLangName.put(mapping.language, template);
@@ -92,6 +94,21 @@ public final class HulyLanguageServerTemplateManager {
     String ext = file.getExtension();
     String langName = file.getFileType().getName();
     return templatesByLangName.getOrDefault(langName, ext != null ? templatesByExt.get(ext.toLowerCase(Locale.ROOT)) : null);
+  }
+
+  @Nullable
+  public HulyLanguageServerTemplate findTemplateByName(@NotNull String name) {
+    for (HulyLanguageServerTemplate template : templatesById.values()) {
+      if (template.name.equals(name)) {
+        return template;
+      }
+    }
+    return null;
+  }
+
+  @Nullable
+  public HulyLanguageServerTemplate getTemplateById(@NotNull String id) {
+    return templatesById.get(id);
   }
 
 

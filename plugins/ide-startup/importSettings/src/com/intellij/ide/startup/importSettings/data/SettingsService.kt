@@ -315,6 +315,8 @@ data class DialogImportItem(val item: SettingsContributor, val icon: Icon) {
       PlatformUtils.isRubyMine() -> StartupImportIcons.IdeIcons.RM_48
       PlatformUtils.isRustRover() -> StartupImportIcons.IdeIcons.RR_48
       PlatformUtils.isWebStorm() -> StartupImportIcons.IdeIcons.WS_48
+      PlatformUtils.isHulyCode() -> StartupImportIcons.IdeIcons.HulyCode_48
+
       // TODO: StartupImportIcons.IdeIcons.MPS_48
       else -> {
         logger<DialogImportItem>().error("Unknown IDE: ${PlatformUtils.getPlatformPrefix()}.")

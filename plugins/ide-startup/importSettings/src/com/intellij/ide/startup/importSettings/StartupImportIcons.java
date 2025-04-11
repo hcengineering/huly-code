@@ -45,6 +45,7 @@ public final class StartupImportIcons {
     /** 20x20 */ public static final @NotNull Icon GO_20 = load("ideIcons/GO_20.svg", -1868538832, 0);
     /** 24x24 */ public static final @NotNull Icon GO_24 = load("ideIcons/GO_24.svg", 1440377958, 0);
     /** 48x48 */ public static final @NotNull Icon GO_48 = load("ideIcons/GO_48.svg", 1561543628, 0);
+    /** 48x48 */ public static final @NotNull Icon HulyCode_48 = load("ideIcons/HulyCode_48.svg", 577015575, 0);
     /** 20x20 */ public static final @NotNull Icon IC_20 = load("ideIcons/IC_20.svg", -1970123839, 0);
     /** 24x24 */ public static final @NotNull Icon IC_24 = load("ideIcons/IC_24.svg", 1159411325, 0);
     /** 48x48 */ public static final @NotNull Icon IC_48 = load("ideIcons/IC_48.svg", 337830589, 0);

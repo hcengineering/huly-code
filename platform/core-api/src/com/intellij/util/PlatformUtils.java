@@ -50,6 +50,7 @@ public final class PlatformUtils {
   public static final String FLEET_PREFIX = "FleetBackend";
   public static final String RUSTROVER_PREFIX = "RustRover";
   public static final String WRITERSIDE_PREFIX = "Writerside";
+  public static final String HULYCODE_PREFIX = "Huly";
 
   /**
    * @deprecated Code With Me Guest is an old name for JetBrains Client
@@ -210,6 +211,10 @@ public final class PlatformUtils {
 
   public static boolean isQodana() {
     return SystemProperties.getBooleanProperty("qodana.application", false);
+  }
+
+  public static boolean isHulyCode() {
+    return is(HULYCODE_PREFIX);
   }
 
   private static boolean is(String idePrefix) {

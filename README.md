@@ -2,6 +2,9 @@
 
 A Code Editor for the Dawn of the AI Age While Humans Still Code
 
+
+![](https://hulylabs.com/_huly/huly-code.DY8Zrxbs_1IbRhf.webp)
+
 Huly Code is our integrated development environment (IDE) based on [IntelliJ IDEA](https://www.jetbrains.com/idea/) Community Edition. We are developing it to research efficient collaboration between humans and AI agents in software development.
 
 Soon, Huly Code will optionally integrate with Huly Platform to provide a seamless experience for developers working together.

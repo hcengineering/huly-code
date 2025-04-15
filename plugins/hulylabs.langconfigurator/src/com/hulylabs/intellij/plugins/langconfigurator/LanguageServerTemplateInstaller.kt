@@ -152,6 +152,8 @@ object LanguageServerTemplateInstaller {
     }
     else if (template.installGoPackages != null && template.installGoPackages.isNotEmpty()) {
       installGoPackages(project, template)
+    } else if (template.installPythonPackages != null && template.installPythonPackages.isNotEmpty()) {
+      env.putAll(installPythonPackages(project, template))
     }
     return env
   }
@@ -227,6 +229,54 @@ object LanguageServerTemplateInstaller {
     if (template.binaryExecutable != null) {
       FileUtil.setExecutable(directory.resolve(template.binaryExecutable).toFile())
     }
+  }
+
+  @Throws(IOException::class)
+  private suspend fun installPythonPackages(project: Project, template: HulyLanguageServerTemplate): Map<String, String> {
+    val directory = getTemplateDirectory(template.id, template.version)
+    directory.createDirectories()
+    val exePath = PathEnvironmentVariableUtil.findExecutableInWindowsPath("pip3")
+    val args = buildList<String>(template.installPythonPackages.size + 4) {
+      add("install")
+      add("--upgrade")
+      add("--target")
+      add(directory.toCanonicalPath())
+      addAll(template.installPythonPackages)
+    }
+    val commandLine =
+      GeneralCommandLine().withExePath(exePath).withParameters(args).withCharset(StandardCharsets.UTF_8)
+        .withRedirectErrorStream(true)
+    LOG.info("Run pip install: " + commandLine.commandLineString)
+    val processHandler: ProcessHandler
+    try {
+      processHandler = OSProcessHandler(commandLine)
+    }
+    catch (e: ExecutionException) {
+      throw IOException("Cannot execute command $commandLine", e)
+    }
+
+    val runner = CapturingProcessRunner(processHandler)
+    reportRawProgress { reporter ->
+      withContext(Dispatchers.IO) {
+        reporter.text("Execute command")
+        processHandler.addProcessListener(object : ProcessAdapter() {
+          override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+            LOG.info(event.text)
+            reporter.details(event.text)
+          }
+
+          override fun processTerminated(event: ProcessEvent) {
+            reporter.text("Command finished")
+          }
+        })
+        val output = runner.runProcess(100_000, true)
+        if (output.exitCode != 0) {
+          LOG.warn("pip install command failed with exit code: " + output.exitCode)
+          throw IOException("pip install command failed with exit code: " + output.exitCode)
+        }
+      }
+    }
+    return mapOf("PYTHONPATH" to directory.toCanonicalPath())
   }
 
   @Throws(IOException::class)

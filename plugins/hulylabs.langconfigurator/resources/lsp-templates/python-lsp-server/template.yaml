@@ -1,0 +1,15 @@
+id: python-lsp-server
+name: Python Language Server
+version: 0
+
+programArgs:
+  default: "sh -c \"'$TEMPLATE_DIR$/bin/pylsp'\""
+  windows: "\"$TEMPLATE_DIR$/bin/pylsp.exe\""
+
+installPythonPackages: ["python-lsp-server", "pylsp-mypy"]
+
+mappingSettings:
+  - languageId: "python"
+    fileType:
+      name: Python
+      patterns: ["*.py", "*.pyi", "*.mpy"]

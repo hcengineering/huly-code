@@ -1,6 +1,6 @@
 id: rust-analyzer
 name: Rust Language Server
-version: 1
+version: 2
 
 programArgs:
   default: "sh -c \"rustup component add rust-analyzer && rust-analyzer\""
